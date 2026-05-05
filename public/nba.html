@@ -599,13 +599,7 @@
     gap: 16px;
     line-height: 1.1;
   }
-  .team-btn:hover { background: var(--mint); transform: translateY(-2px); }
-  .team-btn:nth-child(7n+2) { background: var(--tile-yellow); }
-  .team-btn:nth-child(7n+2):hover { background: var(--mint); }
-  .team-btn:nth-child(7n+4) { background: var(--tile-pink); }
-  .team-btn:nth-child(7n+4):hover { background: var(--mint); }
-  .team-btn:nth-child(7n+6) { background: var(--tile-blue); }
-  .team-btn:nth-child(7n+6):hover { background: var(--mint); }
+  .team-btn:hover { filter: brightness(0.92); transform: translateY(-2px); }
 
   .empty-state {
     text-align: center;
@@ -1051,6 +1045,40 @@ const TEAMS = [
   "Utah Jazz","Washington Wizards"
 ];
 
+// Per-team palette: banner (detail header bg), bannerText, avatar bg, avatar text, card bg (grid)
+const TEAM_TEXT_COLORS = {
+  "Atlanta Hawks":          { banner:'#C8102E', bannerText:'#ffffff', avatar:'#E03A3E', avatarText:'#ffffff', card:'#ffeef0', cardText:'#131313' },
+  "Boston Celtics":         { banner:'#007A33', bannerText:'#ffffff', avatar:'#007A33', avatarText:'#ffffff', card:'#edf9f1', cardText:'#131313' },
+  "Brooklyn Nets":          { banner:'#000000', bannerText:'#ffffff', avatar:'#333333', avatarText:'#ffffff', card:'#f2f2f2', cardText:'#131313' },
+  "Charlotte Hornets":      { banner:'#1D1160', bannerText:'#00788C', avatar:'#00788C', avatarText:'#ffffff', card:'#edf6f8', cardText:'#131313' },
+  "Chicago Bulls":          { banner:'#CE1141', bannerText:'#ffffff', avatar:'#CE1141', avatarText:'#ffffff', card:'#ffeef2', cardText:'#131313' },
+  "Cleveland Cavaliers":    { banner:'#860038', bannerText:'#FDBB30', avatar:'#FDBB30', avatarText:'#860038', card:'#fffbee', cardText:'#131313' },
+  "Dallas Mavericks":       { banner:'#00538C', bannerText:'#ffffff', avatar:'#002B5E', avatarText:'#00B2FF', card:'#eef5fc', cardText:'#131313' },
+  "Denver Nuggets":         { banner:'#0E2240', bannerText:'#FEC524', avatar:'#FEC524', avatarText:'#0E2240', card:'#fffbee', cardText:'#131313' },
+  "Detroit Pistons":        { banner:'#C8102E', bannerText:'#1D428A', avatar:'#1D428A', avatarText:'#ffffff', card:'#eef3fc', cardText:'#131313' },
+  "Golden State Warriors":  { banner:'#1D428A', bannerText:'#FFC72C', avatar:'#FFC72C', avatarText:'#1D428A', card:'#fffbee', cardText:'#131313' },
+  "Houston Rockets":        { banner:'#CE1141', bannerText:'#ffffff', avatar:'#CE1141', avatarText:'#ffffff', card:'#ffeef2', cardText:'#131313' },
+  "Indiana Pacers":         { banner:'#002D62', bannerText:'#FDBB30', avatar:'#FDBB30', avatarText:'#002D62', card:'#fffbee', cardText:'#131313' },
+  "Los Angeles Clippers":   { banner:'#C8102E', bannerText:'#1D428A', avatar:'#1D428A', avatarText:'#ffffff', card:'#eef3fc', cardText:'#131313' },
+  "Los Angeles Lakers":     { banner:'#552583', bannerText:'#FDB927', avatar:'#FDB927', avatarText:'#552583', card:'#f9f0ff', cardText:'#131313' },
+  "Memphis Grizzlies":      { banner:'#5D76A9', bannerText:'#12173F', avatar:'#12173F', avatarText:'#5D76A9', card:'#eef1f8', cardText:'#131313' },
+  "Miami Heat":             { banner:'#98002E', bannerText:'#F9A01B', avatar:'#F9A01B', avatarText:'#98002E', card:'#fff8ee', cardText:'#131313' },
+  "Milwaukee Bucks":        { banner:'#00471B', bannerText:'#EEE1C6', avatar:'#EEE1C6', avatarText:'#00471B', card:'#edf8f1', cardText:'#131313' },
+  "Minnesota Timberwolves": { banner:'#0C2340', bannerText:'#78BE20', avatar:'#78BE20', avatarText:'#0C2340', card:'#f3fbe8', cardText:'#131313' },
+  "New Orleans Pelicans":   { banner:'#0C2340', bannerText:'#C8102E', avatar:'#C8102E', avatarText:'#ffffff', card:'#ffeef0', cardText:'#131313' },
+  "New York Knicks":        { banner:'#006BB6', bannerText:'#F58426', avatar:'#F58426', avatarText:'#006BB6', card:'#fff8ee', cardText:'#131313' },
+  "Oklahoma City Thunder":  { banner:'#007AC1', bannerText:'#EF3B24', avatar:'#EF3B24', avatarText:'#ffffff', card:'#fff4f2', cardText:'#131313' },
+  "Orlando Magic":          { banner:'#0077C0', bannerText:'#ffffff', avatar:'#C4CED4', avatarText:'#0077C0', card:'#eef5fc', cardText:'#131313' },
+  "Philadelphia 76ers":     { banner:'#006BB6', bannerText:'#ED174C', avatar:'#ED174C', avatarText:'#ffffff', card:'#eef3fc', cardText:'#131313' },
+  "Phoenix Suns":           { banner:'#1D1160', bannerText:'#E56020', avatar:'#E56020', avatarText:'#ffffff', card:'#fff7f2', cardText:'#131313' },
+  "Portland Trail Blazers": { banner:'#E03A3E', bannerText:'#ffffff', avatar:'#E03A3E', avatarText:'#ffffff', card:'#ffeef0', cardText:'#131313' },
+  "Sacramento Kings":       { banner:'#5A2D81', bannerText:'#63727A', avatar:'#63727A', avatarText:'#ffffff', card:'#f5f0ff', cardText:'#131313' },
+  "San Antonio Spurs":      { banner:'#C4CED4', bannerText:'#000000', avatar:'#000000', avatarText:'#C4CED4', card:'#f5f5f5', cardText:'#131313' },
+  "Toronto Raptors":        { banner:'#CE1141', bannerText:'#000000', avatar:'#000000', avatarText:'#CE1141', card:'#ffeef0', cardText:'#131313' },
+  "Utah Jazz":              { banner:'#002B5C', bannerText:'#F9A01B', avatar:'#F9A01B', avatarText:'#002B5C', card:'#fffbee', cardText:'#131313' },
+  "Washington Wizards":     { banner:'#002B5C', bannerText:'#E31837', avatar:'#E31837', avatarText:'#ffffff', card:'#ffeef0', cardText:'#131313' }
+};
+
 const TEAM_COLORS = {
   "Atlanta Hawks":"#C8102E","Boston Celtics":"#007A33","Brooklyn Nets":"#000000",
   "Charlotte Hornets":"#1D1160","Chicago Bulls":"#CE1141","Cleveland Cavaliers":"#860038",
@@ -1413,11 +1441,13 @@ function renderTeamGrid() {
     const tg = games.filter(g => g.local===t || g.away===t);
     const wins = tg.filter(g => (g.local===t && g.winner==='L') || (g.away===t && g.winner==='A')).length;
     const color = TEAM_COLORS[t] || '#3d89f5';
-    return `<button class="team-btn" onclick="openTeamDetail('${t.replace(/'/g,"\\'")}')">
-      <div style="width:32px;height:32px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">${getInitials(t)}</div>
+    const tc = TEAM_TEXT_COLORS[t] || { card:'#f5f5f5', cardText:'#131313', avatar: color, avatarText:'#ffffff' };
+    return `<button class="team-btn" onclick="openTeamDetail('${t.replace(/'/g,"\\'")}')"
+      style="background:${tc.card};border:2px solid ${color};">
+      <div style="width:40px;height:40px;border-radius:50%;background:${tc.avatar};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:${tc.avatarText};flex-shrink:0;border:2px solid ${color};">${getInitials(t)}</div>
       <div>
-        <div style="font-size:12px;font-weight:600;">${t}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${tg.length} PJ · ${wins}-${tg.length-wins}</div>
+        <div style="font-size:14px;font-weight:700;color:${tc.cardText};">${t}</div>
+        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;color:${color};margin-top:3px;">${tg.length} PJ &nbsp;·&nbsp; ${wins}W – ${tg.length-wins}L</div>
       </div>
     </button>`;
   }).join('');
@@ -1471,9 +1501,19 @@ function openTeamDetail(team) {
     .sort((a,b) => a.date > b.date ? 1 : -1);
 
   const color = TEAM_COLORS[team] || '#3d89f5';
-  document.getElementById('td-avatar').style.background = color;
-  document.getElementById('td-avatar').textContent = getInitials(team);
-  document.getElementById('td-name').textContent = team;
+  const tc = TEAM_TEXT_COLORS[team] || { banner: color, bannerText:'#ffffff', avatar:'#ffffff', avatarText: color };
+  const header = document.querySelector('.team-header');
+  header.style.background = tc.banner;
+  header.style.borderColor = color;
+  const avatar = document.getElementById('td-avatar');
+  avatar.style.background = tc.avatar;
+  avatar.style.color = tc.avatarText;
+  avatar.style.borderColor = tc.bannerText || '#ffffff';
+  avatar.textContent = getInitials(team);
+  const nameEl = document.getElementById('td-name');
+  nameEl.textContent = team;
+  nameEl.style.color = tc.bannerText;
+  document.getElementById('td-record').style.color = tc.bannerText;
 
   const wins = allGames.filter(g=>(g.local===team&&g.winner==='L')||(g.away===team&&g.winner==='A')).length;
   document.getElementById('td-record').textContent = `${wins}W - ${allGames.length-wins}L  ·  ${allGames.length} partidos jugados`;
