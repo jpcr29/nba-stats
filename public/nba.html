@@ -601,6 +601,47 @@
   }
   .team-btn:hover { filter: brightness(0.92); transform: translateY(-2px); }
 
+  /* ─── PREDICCIÓN ─── */
+  .pred-container{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:32px;}
+  .pred-selector{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px;}
+  .pred-team-pick{display:flex;flex-direction:column;gap:10px;}
+  .pred-pick-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--outline);text-transform:uppercase;}
+  .pred-vs{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:900;color:var(--hairline);text-align:center;margin-top:28px;}
+  .pred-team-badge{height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:900;transition:all 0.2s;border:2px solid transparent;letter-spacing:-0.5px;}
+  .pred-run-btn{background:var(--hairline);color:var(--canvas);border:none;border-radius:9999px;padding:14px 40px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;display:block;margin:0 auto;}
+  .pred-run-btn:hover:not(:disabled){background:var(--violet);}
+  .pred-run-btn:disabled{opacity:0.35;cursor:not-allowed;}
+  #pred-result{display:flex;flex-direction:column;gap:24px;}
+  .pred-prob-wrap{display:grid;grid-template-columns:140px 1fr 140px;align-items:center;gap:16px;}
+  .pred-prob-team{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--hairline);line-height:1.2;}
+  .pred-prob-team.right{text-align:right;}
+  .pred-prob-bar-outer{height:22px;border-radius:9999px;overflow:hidden;display:flex;border:1px solid var(--outline-var);}
+  .pred-prob-bar-local,.pred-prob-bar-away{height:100%;transition:width 0.7s cubic-bezier(.4,0,.2,1);}
+  .pred-prob-pcts{display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;padding:0 4px;margin-top:-10px;}
+  .pred-score-wrap{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;border:1px solid var(--hairline);border-radius:24px;padding:28px 32px;}
+  .pred-score-card{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .pred-score-team-lbl{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--outline);}
+  .pred-score-pts{font-family:'Space Grotesk',sans-serif;font-size:64px;font-weight:900;letter-spacing:-2px;line-height:1;}
+  .pred-score-sub{font-size:11px;color:var(--outline);}
+  .pred-score-sep{font-family:'Space Grotesk',sans-serif;font-size:48px;font-weight:900;color:var(--outline-var);}
+  .pred-total{text-align:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--outline);letter-spacing:1px;margin-top:-10px;}
+  .pred-breakdown{border:1px solid var(--hairline);border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:16px;}
+  .pred-breakdown-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--outline);margin-bottom:2px;}
+  .pred-factors{display:flex;flex-direction:column;gap:14px;}
+  .pred-factor-row{display:grid;grid-template-columns:200px 1fr 100px;align-items:center;gap:12px;}
+  .pred-factor-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--outline);text-transform:uppercase;letter-spacing:0.8px;}
+  .pred-factor-bar-outer{height:8px;border-radius:9999px;background:var(--surface-low);overflow:hidden;}
+  .pred-factor-bar-inner{height:100%;border-radius:9999px;transition:width 0.5s ease;}
+  .pred-factor-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;text-align:right;}
+  .pred-recent-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .pred-recent-col{border:1px solid var(--outline-var);border-radius:16px;padding:16px 20px;display:flex;flex-direction:column;gap:10px;}
+  .pred-recent-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+  .pred-recent-dots{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  .pred-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;}
+  .pred-dot.W{background:var(--win);color:white;}
+  .pred-dot.L{background:var(--lose);color:white;}
+  .pred-recent-record{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;}
+
   .empty-state {
     text-align: center;
     color: var(--secondary-tx);
@@ -728,6 +769,7 @@
     <button class="active" onclick="showSection('entrada')">Ingresar Partido</button>
     <button onclick="showSection('partidos')">Partidos</button>
     <button onclick="showSection('consolidado')">Consolidado</button>
+      <button onclick="showSection('prediccion')" id="nav-s-prediccion">🎯 Predicción</button>
     <button onclick="showSection('equipos')">Por Equipo</button>
   </nav>
 </header>
@@ -930,6 +972,68 @@
   </div>
   <div id="games-pagination" class="pagination"></div>
 </section>
+
+<section class="section" id="s-prediccion">
+    <div class="pred-container">
+      <div>
+        <div class="form-title" style="font-size:36px;">Predicción de Partido</div>
+        <div class="form-subtitle" style="margin-bottom:0;">Elo Rating · Forma Reciente Ponderada · Factor Local · Regresión de Puntos</div>
+      </div>
+      <div class="pred-selector">
+        <div class="pred-team-pick">
+          <div class="pred-pick-label">Equipo Local</div>
+          <select id="pred-local" onchange="updatePredPreview()"><option value="">— Selecciona equipo —</option></select>
+          <div class="pred-team-badge" id="pred-local-badge"></div>
+        </div>
+        <div class="pred-vs">VS</div>
+        <div class="pred-team-pick">
+          <div class="pred-pick-label">Equipo Visitante</div>
+          <select id="pred-away" onchange="updatePredPreview()"><option value="">— Selecciona equipo —</option></select>
+          <div class="pred-team-badge" id="pred-away-badge"></div>
+        </div>
+      </div>
+      <button class="pred-run-btn" id="pred-run-btn" onclick="runPrediction()" disabled>Calcular Predicción</button>
+      <div id="pred-result" style="display:none;">
+        <div style="display:flex;flex-direction:column;gap:24px;">
+          <div class="pred-prob-wrap">
+            <div class="pred-prob-team" id="pred-prob-local-name"></div>
+            <div class="pred-prob-bar-outer">
+              <div class="pred-prob-bar-local" id="pred-prob-bar-local"></div>
+              <div class="pred-prob-bar-away" id="pred-prob-bar-away"></div>
+            </div>
+            <div class="pred-prob-team right" id="pred-prob-away-name"></div>
+          </div>
+          <div class="pred-prob-pcts">
+            <span id="pred-pct-local" style="font-size:18px;"></span>
+            <span style="color:var(--outline);font-size:12px;font-family:'JetBrains Mono',monospace;letter-spacing:0.5px;">probabilidad de victoria</span>
+            <span id="pred-pct-away" style="font-size:18px;"></span>
+          </div>
+          <div class="pred-score-wrap">
+            <div class="pred-score-card">
+              <div class="pred-score-team-lbl" id="pred-score-local-name"></div>
+              <div class="pred-score-pts" id="pred-score-local-pts"></div>
+              <div class="pred-score-sub">pts estimados</div>
+            </div>
+            <div class="pred-score-sep">–</div>
+            <div class="pred-score-card">
+              <div class="pred-score-team-lbl" id="pred-score-away-name"></div>
+              <div class="pred-score-pts" id="pred-score-away-pts"></div>
+              <div class="pred-score-sub">pts estimados</div>
+            </div>
+          </div>
+          <div class="pred-total" id="pred-total"></div>
+          <div class="pred-breakdown">
+            <div class="pred-breakdown-title">Desglose del Modelo</div>
+            <div class="pred-factors" id="pred-factors"></div>
+          </div>
+          <div class="pred-recent-wrap">
+            <div class="pred-recent-col" id="pred-recent-local"></div>
+            <div class="pred-recent-col" id="pred-recent-away"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
 <!-- ═══ CONSOLIDADO ═══ -->
 <section id="s-consolidado" class="section">
@@ -1658,6 +1762,331 @@ function initDate() {
 
 populateTeamSelects();
 initDate();
+
+// ────────────────────────────────────────────────────
+//  MOTOR DE PREDICCIÓN
+//  4 componentes: Elo + Weighted Recent Form + Factor Local + Regresión de Puntos
+// ────────────────────────────────────────────────────
+
+// Poblar selects de predicción con los equipos que tienen partidos
+function populatePredSelects() {
+  const teams = [...new Set(games.flatMap(g => [g.local, g.away]))].sort();
+  const opts = teams.map(t => `<option value="${t}">${t}</option>`).join('');
+  const base = '<option value="">— Selecciona equipo —</option>';
+  document.getElementById('pred-local').innerHTML = base + opts;
+  document.getElementById('pred-away').innerHTML  = base + opts;
+}
+
+// Actualiza los badges de color cuando el usuario elige un equipo
+function updatePredPreview() {
+  const local = document.getElementById('pred-local').value;
+  const away  = document.getElementById('pred-away').value;
+
+  function setBadge(id, team) {
+    const el = document.getElementById(id);
+    if (!team) { el.textContent = ''; el.style.background = 'transparent'; el.style.borderColor = 'transparent'; return; }
+    const tc = TEAM_TEXT_COLORS[team] || { banner:'#131313', bannerText:'#ffffff' };
+    el.style.background   = tc.banner;
+    el.style.color        = tc.bannerText;
+    el.style.borderColor  = tc.banner;
+    el.textContent = team;
+  }
+
+  setBadge('pred-local-badge', local);
+  setBadge('pred-away-badge',  away);
+
+  const canRun = local && away && local !== away &&
+    games.some(g => g.local === local || g.away === local) &&
+    games.some(g => g.local === away  || g.away === away);
+  document.getElementById('pred-run-btn').disabled = !canRun;
+  document.getElementById('pred-result').style.display = 'none';
+}
+
+// ─── COMPONENTE 1: ELO RATING ───
+// Recalcula el Elo procesando todos los partidos en orden cronológico.
+// K=20, se ajusta por margen de victoria con un factor logarítmico.
+function computeElo() {
+  const K = 20;
+  const BASE = 1500;
+  const elo = {};
+  TEAMS.forEach(t => { elo[t] = BASE; });
+
+  const sorted = [...games].sort((a, b) => a.date < b.date ? -1 : 1);
+
+  sorted.forEach(g => {
+    if (!(g.local in elo)) elo[g.local] = BASE;
+    if (!(g.away  in elo)) elo[g.away]  = BASE;
+
+    const elL = elo[g.local];
+    const elA = elo[g.away];
+    const diff = elL - elA;
+    const expL = 1 / (1 + Math.pow(10, -diff / 400));
+    const expA = 1 - expL;
+    const localWon = g.ptsL > g.ptsA;
+
+    // Multiplicador por margen de victoria (evita que partidos ajustados valgan igual que paleas)
+    const margin = Math.abs(g.ptsL - g.ptsA);
+    const mov = Math.log(margin + 1) * (2.2 / ((diff * (localWon ? 1 : -1)) * 0.001 + 2.2));
+    const Kadj = K * Math.max(0.4, Math.min(mov, 3));
+
+    elo[g.local] += Kadj * ((localWon ? 1 : 0) - expL);
+    elo[g.away]  += Kadj * ((localWon ? 0 : 1) - expA);
+  });
+
+  return elo;
+}
+
+// ─── COMPONENTE 2: WEIGHTED RECENT FORM ───
+// Devuelve un modificador de Elo basado en los últimos N partidos.
+// Los más recientes pesan más (decaimiento exponencial con lambda).
+function computeRecentForm(team, n = 10) {
+  const teamGames = games
+    .filter(g => g.local === team || g.away === team)
+    .sort((a, b) => a.date < b.date ? -1 : 1)
+    .slice(-n);
+
+  if (!teamGames.length) return { modifier: 0, last: [], winsRecent: 0, totalRecent: 0 };
+
+  const lambda = 0.3; // tasa de decaimiento — partido más reciente pesa ~e^0 = 1, el más antiguo ~e^(-lambda*n)
+  let weightedWins = 0, totalWeight = 0;
+  const results = [];
+
+  teamGames.forEach((g, i) => {
+    const age = teamGames.length - 1 - i; // 0 = más reciente
+    const w = Math.exp(-lambda * age);
+    const won = (g.local === team && g.ptsL > g.ptsA) || (g.away === team && g.ptsA > g.ptsL);
+    weightedWins += won ? w : 0;
+    totalWeight  += w;
+    results.push(won ? 'W' : 'L');
+  });
+
+  const weightedPct = weightedWins / totalWeight; // 0–1
+  // Convierte en modificador de Elo: rango [-60, +60]
+  const modifier = (weightedPct - 0.5) * 120;
+  const winsRecent = results.filter(r => r === 'W').length;
+
+  return { modifier, last: results, winsRecent, totalRecent: teamGames.length };
+}
+
+// ─── COMPONENTE 3: FACTOR LOCAL ───
+// Calcula el win rate de cada equipo jugando en casa, comparado con su win rate global.
+// La diferencia se traduce a puntos de ventaja estimados en el marcador.
+function computeHomeAdvantage(team) {
+  const homeGames = games.filter(g => g.local === team);
+  if (!homeGames.length) return { bonus: 3.5, homeWinPct: null, gamesPlayed: 0 }; // default NBA avg
+
+  const homeWins = homeGames.filter(g => g.ptsL > g.ptsA).length;
+  const homeWinPct = homeWins / homeGames.length;
+
+  // El promedio NBA de ventaja de local es ~3.5 pts. Ajustamos según la diferencia del equipo.
+  const leagueAvgHomeWinPct = 0.60;
+  const deviation = homeWinPct - leagueAvgHomeWinPct; // positivo = mejor en casa que el promedio
+  const bonus = 3.5 + deviation * 10; // cada 10% mejor en casa = +1pt extra
+
+  return { bonus: Math.max(0, Math.min(bonus, 8)), homeWinPct, gamesPlayed: homeGames.length };
+}
+
+// ─── COMPONENTE 4: REGRESIÓN DE PUNTOS (ponderada por forma reciente) ───
+// Combina la ofensiva del equipo A vs la defensiva del equipo B y viceversa.
+// Los promedios se calculan con pesos: forma reciente (last 10) cuenta 60%, temporada completa 40%.
+function computeProjectedScore(teamA, teamB, homeBonus, n = 10) {
+  function weightedAvg(arr) {
+    if (!arr.length) return 0;
+    const lambda = 0.2;
+    let wSum = 0, totalW = 0;
+    arr.forEach((v, i) => {
+      const age = arr.length - 1 - i;
+      const w = Math.exp(-lambda * age);
+      wSum  += v * w;
+      totalW += w;
+    });
+    return wSum / totalW;
+  }
+
+  function getOffDef(team) {
+    const tg = games
+      .filter(g => g.local === team || g.away === team)
+      .sort((a, b) => a.date < b.date ? -1 : 1);
+    const ptsFor     = tg.map(g => g.local === team ? g.ptsL : g.ptsA);
+    const ptsAgainst = tg.map(g => g.local === team ? g.ptsA : g.ptsL);
+    return {
+      offFull: ptsFor.reduce((s, v) => s + v, 0) / (ptsFor.length || 1),
+      defFull: ptsAgainst.reduce((s, v) => s + v, 0) / (ptsAgainst.length || 1),
+      offRecent: weightedAvg(ptsFor.slice(-n)),
+      defRecent: weightedAvg(ptsAgainst.slice(-n)),
+    };
+  }
+
+  const A = getOffDef(teamA); // local
+  const B = getOffDef(teamB); // visitante
+
+  // Liga: promedio de puntos por partido para normalizar
+  const leagueAvgPts = games.length
+    ? (games.reduce((s, g) => s + g.ptsL + g.ptsA, 0) / (games.length * 2))
+    : 112;
+
+  // Mezcla forma reciente (60%) + temporada completa (40%)
+  const offA = A.offRecent * 0.6 + A.offFull * 0.4;
+  const defA = A.defRecent * 0.6 + A.defFull * 0.4;
+  const offB = B.offRecent * 0.6 + B.offFull * 0.4;
+  const defB = B.defRecent * 0.6 + B.defFull * 0.4;
+
+  // Pts esperados de A = (ofensiva A + defensiva opuesta) / 2, ajustado al promedio liga
+  const ptsA = ((offA + (leagueAvgPts - defB + leagueAvgPts)) / 2 + homeBonus);
+  const ptsB = ((offB + (leagueAvgPts - defA + leagueAvgPts)) / 2);
+
+  // Suavizado al promedio de liga para evitar outliers extremos
+  const blend = 0.75;
+  return {
+    ptsA: Math.round(ptsA * blend + leagueAvgPts * (1 - blend)),
+    ptsB: Math.round(ptsB * blend + leagueAvgPts * (1 - blend)),
+    leagueAvg: leagueAvgPts,
+    offA, defA, offB, defB,
+  };
+}
+
+// ─── MOTOR PRINCIPAL ───
+function runPrediction() {
+  const local = document.getElementById('pred-local').value;
+  const away  = document.getElementById('pred-away').value;
+  if (!local || !away || local === away) return;
+
+  // 1. Elo base
+  const elo = computeElo();
+  const eloL = elo[local] || 1500;
+  const eloA = elo[away]  || 1500;
+
+  // 2. Forma reciente (modificador sobre Elo)
+  const formL = computeRecentForm(local);
+  const formA = computeRecentForm(away);
+
+  // 3. Factor local
+  const home = computeHomeAdvantage(local);
+
+  // Elo ajustado con forma reciente
+  const adjEloL = eloL + formL.modifier;
+  const adjEloA = eloA + formA.modifier;
+
+  // Diferencia total incluyendo ventaja de local (cada 25 pts de Elo ≈ 1% prob)
+  const localEloBonus = 50; // ventaja de campo en términos de Elo
+  const eloDiff = (adjEloL + localEloBonus) - adjEloA;
+  const probL = 1 / (1 + Math.pow(10, -eloDiff / 400));
+  const probA = 1 - probL;
+
+  // 4. Marcador proyectado
+  const score = computeProjectedScore(local, away, home.bonus);
+
+  // ─── RENDER ───
+  const tcL = TEAM_TEXT_COLORS[local] || { banner:'#131313', bannerText:'#ffffff' };
+  const tcA = TEAM_TEXT_COLORS[away]  || { banner:'#555555', bannerText:'#ffffff' };
+  const colorL = tcL.banner;
+  const colorA = tcA.banner;
+
+  // Barra de probabilidad
+  document.getElementById('pred-prob-local-name').textContent = local;
+  document.getElementById('pred-prob-away-name').textContent  = away;
+  document.getElementById('pred-prob-bar-local').style.width      = (probL * 100).toFixed(1) + '%';
+  document.getElementById('pred-prob-bar-local').style.background = colorL;
+  document.getElementById('pred-prob-bar-away').style.width       = (probA * 100).toFixed(1) + '%';
+  document.getElementById('pred-prob-bar-away').style.background  = colorA;
+  document.getElementById('pred-pct-local').textContent = (probL * 100).toFixed(1) + '%';
+  document.getElementById('pred-pct-local').style.color = colorL;
+  document.getElementById('pred-pct-away').textContent  = (probA * 100).toFixed(1) + '%';
+  document.getElementById('pred-pct-away').style.color  = colorA;
+
+  // Marcador
+  document.getElementById('pred-score-local-name').textContent = local.split(' ').pop();
+  document.getElementById('pred-score-away-name').textContent  = away.split(' ').pop();
+  document.getElementById('pred-score-local-pts').textContent  = score.ptsA;
+  document.getElementById('pred-score-local-pts').style.color  = colorL;
+  document.getElementById('pred-score-away-pts').textContent   = score.ptsB;
+  document.getElementById('pred-score-away-pts').style.color   = colorA;
+  document.getElementById('pred-total').textContent =
+    `Total estimado: ${score.ptsA + score.ptsB} pts · Promedio liga: ${score.leagueAvg.toFixed(1)} pts/equipo`;
+
+  // Desglose de factores
+  const winner = probL >= probA ? local : away;
+  const winnerColor = probL >= probA ? colorL : colorA;
+  const factors = [
+    {
+      name: 'Elo Base',
+      desc: `${local.split(' ').pop()} ${Math.round(eloL)} · ${away.split(' ').pop()} ${Math.round(eloA)}`,
+      localVal: eloL, awayVal: eloA,
+      bar: Math.abs(eloL - eloA) / 400, // normalizado sobre una diferencia grande
+      color: eloL >= eloA ? colorL : colorA,
+      label: `Δ${Math.round(Math.abs(eloL - eloA))} pts`,
+      favor: eloL >= eloA ? local.split(' ').pop() : away.split(' ').pop(),
+    },
+    {
+      name: 'Forma Reciente',
+      desc: `${local.split(' ').pop()} ${formL.winsRecent}W–${formL.totalRecent - formL.winsRecent}L (last ${formL.totalRecent}) · ${away.split(' ').pop()} ${formA.winsRecent}W–${formA.totalRecent - formA.winsRecent}L (last ${formA.totalRecent})`,
+      bar: Math.abs(formL.modifier - formA.modifier) / 120,
+      color: formL.modifier >= formA.modifier ? colorL : colorA,
+      label: formL.modifier >= 0 ? `+${Math.round(formL.modifier)} Elo` : `${Math.round(formL.modifier)} Elo`,
+      favor: formL.modifier >= formA.modifier ? local.split(' ').pop() : away.split(' ').pop(),
+    },
+    {
+      name: 'Factor Local',
+      desc: `${local.split(' ').pop()} juega de local · ${home.gamesPlayed} PJ en casa${home.homeWinPct !== null ? ' · ' + (home.homeWinPct * 100).toFixed(0) + '% victorias' : ''}`,
+      bar: home.bonus / 8,
+      color: colorL,
+      label: `+${home.bonus.toFixed(1)} pts`,
+      favor: local.split(' ').pop(),
+    },
+    {
+      name: 'Proyección Ofensiva',
+      desc: `${local.split(' ').pop()} ${score.offA.toFixed(1)} pts/p (of) · ${away.split(' ').pop()} ${score.offB.toFixed(1)} pts/p (of)`,
+      bar: Math.abs(score.offA - score.offB) / 20,
+      color: score.offA >= score.offB ? colorL : colorA,
+      label: `Δ${Math.abs(score.offA - score.offB).toFixed(1)} pts/p`,
+      favor: score.offA >= score.offB ? local.split(' ').pop() : away.split(' ').pop(),
+    },
+    {
+      name: 'Proyección Defensiva',
+      desc: `${local.split(' ').pop()} concede ${score.defA.toFixed(1)} pts/p · ${away.split(' ').pop()} concede ${score.defB.toFixed(1)} pts/p`,
+      bar: Math.abs(score.defA - score.defB) / 20,
+      color: score.defA <= score.defB ? colorL : colorA, // menor es mejor en defensa
+      label: `Δ${Math.abs(score.defA - score.defB).toFixed(1)} pts/p`,
+      favor: score.defA <= score.defB ? local.split(' ').pop() : away.split(' ').pop(),
+    },
+  ];
+
+  document.getElementById('pred-factors').innerHTML = factors.map(f => `
+    <div class="pred-factor-row">
+      <div>
+        <div class="pred-factor-name">${f.name}</div>
+        <div style="font-size:11px;color:var(--outline);margin-top:2px;">${f.desc}</div>
+      </div>
+      <div>
+        <div class="pred-factor-bar-outer">
+          <div class="pred-factor-bar-inner" style="width:${Math.min(100, f.bar * 100).toFixed(1)}%;background:${f.color};"></div>
+        </div>
+      </div>
+      <div class="pred-factor-val" style="color:${f.color};">→ ${f.favor}</div>
+    </div>`
+  ).join('');
+
+  // Forma reciente (dots)
+  function renderRecentCol(elId, team, form, color, tc) {
+    const el = document.getElementById(elId);
+    const dots = [...form.last].map(r =>
+      `<div class="pred-dot ${r}">${r}</div>`
+    ).join('');
+    el.innerHTML = `
+      <div class="pred-recent-title" style="color:${color};">${team}</div>
+      <div class="pred-recent-dots">${dots || '<span style="color:var(--outline);font-size:12px;">Sin datos suficientes</span>'}</div>
+      <div class="pred-recent-record" style="color:${color};">${form.winsRecent}V – ${form.totalRecent - form.winsRecent}D en últimos ${form.totalRecent} PJ</div>
+    `;
+  }
+  renderRecentCol('pred-recent-local', local, formL, colorL, tcL);
+  renderRecentCol('pred-recent-away',  away,  formA, colorA, tcA);
+
+  document.getElementById('pred-result').style.display = '';
+  document.getElementById('pred-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Inicializar selects de predicción cuando se carga la página
+populatePredSelects();
 
 </script>
 </body>
