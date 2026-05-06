@@ -1553,17 +1553,35 @@ function renderTeamDetail() {
   const limit = teamFilter==='5' ? 5 : teamFilter==='10' ? 10 : null;
   const subset = limit ? allGames.slice(-limit) : allGames;
 
-  // Stats cards
+  // Stats cards — per-team color palette
   const stats = computeTeamStats(team, subset);
   const label = limit ? `Últimos ${limit} partidos` : `Todos (${allGames.length} PJ)`;
+  const tc2 = TEAM_TEXT_COLORS[team] || { banner:'#131313', bannerText:'#ffffff', avatar:'#cccccc', avatarText:'#131313' };
+  const p = tc2.banner;   // primary colour
+  const s2 = tc2.avatar;  // secondary colour
+  const pt = tc2.bannerText; // text on primary
+  const st = tc2.avatarText; // text on secondary
+  // 8 distinct card styles cycling through team colours
+  const cardStyles = [
+    { bg: p,                      border: p,  label: pt,       value: pt,       sub: pt+'aa' },
+    { bg: '#ffffff',              border: p,  label: p,        value: '#131313',sub: '#666' },
+    { bg: s2,                     border: s2, label: st,       value: st,       sub: st+'aa' },
+    { bg: '#ffffff',              border: s2, label: s2,       value: '#131313',sub: '#666' },
+    { bg: p+'22',                 border: p,  label: p,        value: '#131313',sub: '#666' },
+    { bg: s2+'22',                border: s2, label: s2,       value: '#131313',sub: '#666' },
+    { bg: '#ffffff',              border: p,  label: p,        value: '#131313',sub: '#666' },
+    { bg: p,                      border: p,  label: pt+'cc',  value: pt,       sub: pt+'88' },
+  ];
   document.getElementById('td-stats').innerHTML =
-    `<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:-4px;">${label}</div>` +
-    stats.map(s => `
-    <div class="stat-card">
-      <div class="stat-card-label">${s.label}</div>
-      <div class="stat-card-value">${s.val}</div>
-      ${s.sub ? `<div class="stat-card-sub">${s.sub}</div>` : ''}
-    </div>`).join('');
+    `<div style="grid-column:1/-1;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${p};text-transform:uppercase;letter-spacing:1.5px;margin-bottom:-4px;">${label}</div>` +
+    stats.map((s, i) => {
+      const cs = cardStyles[i % cardStyles.length];
+      return `<div class="stat-card" style="background:${cs.bg};border-color:${cs.border};">
+        <div class="stat-card-label" style="color:${cs.label};">${s.label}</div>
+        <div class="stat-card-value" style="color:${cs.value};">${s.val}</div>
+        ${s.sub ? `<div class="stat-card-sub" style="color:${cs.sub};">${s.sub}</div>` : ''}
+      </div>`;
+    }).join('');
 
   // History table — always show all games, paginated, newest first
   const hist = [...allGames].reverse();
