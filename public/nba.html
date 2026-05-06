@@ -1561,16 +1561,16 @@ function renderTeamDetail() {
   const s2 = tc2.avatar;  // secondary colour
   const pt = tc2.bannerText; // text on primary
   const st = tc2.avatarText; // text on secondary
-  // 8 distinct card styles cycling through team colours
+  // 8 card styles — palindrome: P S p s | s p S P
   const cardStyles = [
-    { bg: p,                      border: p,  label: pt,       value: pt,       sub: pt+'aa' },
-    { bg: '#ffffff',              border: p,  label: p,        value: '#131313',sub: '#666' },
-    { bg: s2,                     border: s2, label: st,       value: st,       sub: st+'aa' },
-    { bg: '#ffffff',              border: s2, label: s2,       value: '#131313',sub: '#666' },
-    { bg: p+'22',                 border: p,  label: p,        value: '#131313',sub: '#666' },
-    { bg: s2+'22',                border: s2, label: s2,       value: '#131313',sub: '#666' },
-    { bg: '#ffffff',              border: p,  label: p,        value: '#131313',sub: '#666' },
-    { bg: p,                      border: p,  label: pt+'cc',  value: pt,       sub: pt+'88' },
+    { bg: p,     border: p,  label: pt,       value: pt,        sub: pt+'99' },  // 1 — solid primary
+    { bg: s2,    border: s2, label: st,       value: st,        sub: st+'99' },  // 2 — solid secondary
+    { bg: p+'1a',border: p,  label: p,        value: '#131313', sub: '#66666699' },  // 3 — tint primary
+    { bg: s2+'1a',border:s2, label: s2,       value: '#131313', sub: '#66666699' },  // 4 — tint secondary
+    { bg: s2+'1a',border:s2, label: s2,       value: '#131313', sub: '#66666699' },  // 5 — tint secondary
+    { bg: p+'1a',border: p,  label: p,        value: '#131313', sub: '#66666699' },  // 6 — tint primary
+    { bg: s2,    border: s2, label: st,       value: st,        sub: st+'99' },  // 7 — solid secondary
+    { bg: p,     border: p,  label: pt,       value: pt,        sub: pt+'99' },  // 8 — solid primary
   ];
   document.getElementById('td-stats').innerHTML =
     `<div style="grid-column:1/-1;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${p};text-transform:uppercase;letter-spacing:1.5px;margin-bottom:-4px;">${label}</div>` +
