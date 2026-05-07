@@ -1238,26 +1238,41 @@ function v(id) { return document.getElementById(id).value; }
 
 function saveGame() {
   const local = v('f-local');
-  const away = v('f-away');
-  const date = v('f-date');
-  const ptsL = n('f-ptsL');
-  const ptsA = n('f-ptsA');
+  const away  = v('f-away');
+  const date  = v('f-date');
+  const ptsL  = n('f-ptsL');
+  const ptsA  = n('f-ptsA');
+  const rebL  = n('f-rebL'),  rebA  = n('f-rebA');
+  const astL  = n('f-astL'),  astA  = n('f-astA');
+  const bptsL = n('f-bptsL'), bptsA = n('f-bptsA');
+  const q1L   = n('f-1qL'),   q1A   = n('f-1qA');
+  const q2L   = n('f-2qL'),   q2A   = n('f-2qA');
+  const q3L   = n('f-3qL'),   q3A   = n('f-3qA');
+  const q4L   = n('f-4qL'),   q4A   = n('f-4qA');
+  const otL   = n('f-otL'),   otA   = n('f-otA'); // opcionales
 
-  if(!local || !away || !date) { toast('Completa fecha y equipos.','var(--red)'); return; }
-  if(local === away) { toast('Local y visitante no pueden ser el mismo equipo.','var(--red)'); return; }
-  if(!ptsL && !ptsA) { toast('Ingresa al menos los puntos finales.','var(--red)'); return; }
+  // Validaciones obligatorias
+  if (!local || !away || !date) { toast('Completa fecha y equipos.', 'var(--red)'); return; }
+  if (local === away)            { toast('Local y visitante no pueden ser el mismo equipo.', 'var(--red)'); return; }
+  if (!ptsL && !ptsA)            { toast('Ingresa los puntos finales de ambos equipos.', 'var(--red)'); return; }
+  if (!rebL || !rebA)            { toast('Ingresa los rebotes de ambos equipos.', 'var(--red)'); return; }
+  if (!astL || !astA)            { toast('Ingresa las asistencias de ambos equipos.', 'var(--red)'); return; }
+  if (!bptsL || !bptsA)          { toast('Ingresa los bench points de ambos equipos.', 'var(--red)'); return; }
+  if (!q1L || !q2L || !q3L || !q4L) { toast('Ingresa los 4 cuartos del equipo local (OT es opcional).', 'var(--red)'); return; }
+  if (!q1A || !q2A || !q3A || !q4A) { toast('Ingresa los 4 cuartos del equipo visitante (OT es opcional).', 'var(--red)'); return; }
+
+  // Validación de sumas de cuartos
+  const sumL = q1L + q2L + q3L + q4L + otL;
+  const sumA = q1A + q2A + q3A + q4A + otA;
+  if (sumL !== ptsL) { toast(`Cuartos local suman ${sumL} ≠ ${ptsL} pts finales.`, 'var(--red)'); return; }
+  if (sumA !== ptsA) { toast(`Cuartos visitante suman ${sumA} ≠ ${ptsA} pts finales.`, 'var(--red)'); return; }
 
   const game = {
     id: Date.now(),
     date, local, away, ptsL, ptsA,
-    rebL: n('f-rebL'), rebA: n('f-rebA'),
-    astL: n('f-astL'), astA: n('f-astA'),
-    bptsL: n('f-bptsL'), bptsA: n('f-bptsA'),
-    q1L: n('f-1qL'), q1A: n('f-1qA'),
-    q2L: n('f-2qL'), q2A: n('f-2qA'),
-    q3L: n('f-3qL'), q3A: n('f-3qA'),
-    q4L: n('f-4qL'), q4A: n('f-4qA'),
-    otL: n('f-otL'), otA: n('f-otA'),
+    rebL, rebA, astL, astA, bptsL, bptsA,
+    q1L, q1A, q2L, q2A, q3L, q3A,
+    q4L, q4A, otL, otA,
     ouPred: n('f-ouPred') || null,
     linea: n('f-linea') || null,
     ou: v('f-ou'),
@@ -2091,8 +2106,12 @@ function runPrediction() {
   document.getElementById('pred-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Inicializar selects de predicción cuando se carga la página
-populatePredSelects();
+// Llamar populatePredSelects cada vez que se muestra la sección de predicción
+const _origShowSection = showSection;
+function showSection(id) {
+  _origShowSection.call(this, id);
+  if (id === 'prediccion') populatePredSelects();
+}
 
 </script>
 </body>
