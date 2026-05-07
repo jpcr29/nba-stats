@@ -977,7 +977,7 @@
     <div class="pred-container">
       <div>
         <div class="form-title" style="font-size:36px;">Predicción de Partido</div>
-        <div class="form-subtitle" style="margin-bottom:0;">Elo Rating · Forma Reciente Ponderada · Factor Local · Regresión de Puntos</div>
+        <div class="form-subtitle" style="margin-bottom:0;">Elo Rating · Forma Reciente Ponderada · Factor Local · Four-Factor de Puntos (splits casa/fuera)</div>
       </div>
       <div class="pred-selector">
         <div class="pred-team-pick">
@@ -1886,62 +1886,68 @@ function computeHomeAdvantage(team) {
   return { bonus: Math.max(0, Math.min(bonus, 8)), homeWinPct, gamesPlayed: homeGames.length };
 }
 
-// ─── COMPONENTE 4: REGRESIÓN DE PUNTOS (ponderada por forma reciente) ───
-// Combina la ofensiva del equipo A vs la defensiva del equipo B y viceversa.
-// Los promedios se calculan con pesos: forma reciente (last 10) cuenta 60%, temporada completa 40%.
-function computeProjectedScore(teamA, teamB, homeBonus, n = 10) {
-  function weightedAvg(arr) {
-    if (!arr.length) return 0;
-    const lambda = 0.2;
-    let wSum = 0, totalW = 0;
-    arr.forEach((v, i) => {
-      const age = arr.length - 1 - i;
-      const w = Math.exp(-lambda * age);
-      wSum  += v * w;
-      totalW += w;
-    });
-    return wSum / totalW;
-  }
+// ─── COMPONENTE 4: REGRESIÓN DE PUNTOS (Four-Factor por splits casa/fuera) ───
+// Pts Local = (OfensaLocal_en_casa / PromLiga) × (DefensaVisit_fuera / PromLiga) × PromLiga
+// Pts Visit = (OfensaVisit_fuera  / PromLiga) × (DefensaLocal_en_casa / PromLiga) × PromLiga
+// No se suma bonus por localía ni se pondera por forma reciente: la localía ya está
+// implícita al usar splits (casa para el local, fuera para el visitante).
+// Cada split se mezcla con el promedio general del equipo via confianza logística:
+//   confianza = n / (n + K)  con K=5 (escepticismo). Con pocos partidos en el split,
+// el promedio general domina; con muchos, el split toma el control.
+function computeProjectedScore(teamA, teamB) {
+  const K_CONFIDENCE = 5;
 
-  function getOffDef(team) {
-    const tg = games
-      .filter(g => g.local === team || g.away === team)
-      .sort((a, b) => a.date < b.date ? -1 : 1);
-    const ptsFor     = tg.map(g => g.local === team ? g.ptsL : g.ptsA);
-    const ptsAgainst = tg.map(g => g.local === team ? g.ptsA : g.ptsL);
+  function getStats(team) {
+    const tg   = games.filter(g => g.local === team || g.away === team);
+    const home = tg.filter(g => g.local === team);
+    const away = tg.filter(g => g.away  === team);
+    const avg  = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+
     return {
-      offFull: ptsFor.reduce((s, v) => s + v, 0) / (ptsFor.length || 1),
-      defFull: ptsAgainst.reduce((s, v) => s + v, 0) / (ptsAgainst.length || 1),
-      offRecent: weightedAvg(ptsFor.slice(-n)),
-      defRecent: weightedAvg(ptsAgainst.slice(-n)),
+      offFull: avg(tg.map(g => g.local === team ? g.ptsL : g.ptsA)),
+      defFull: avg(tg.map(g => g.local === team ? g.ptsA : g.ptsL)),
+      offHome: avg(home.map(g => g.ptsL)),
+      defHome: avg(home.map(g => g.ptsA)),
+      offAway: avg(away.map(g => g.ptsA)),
+      defAway: avg(away.map(g => g.ptsL)),
+      nHome: home.length,
+      nAway: away.length,
     };
   }
 
-  const A = getOffDef(teamA); // local
-  const B = getOffDef(teamB); // visitante
+  // Mezcla split con promedio general según confianza logística
+  function blendSplit(splitVal, fullVal, n) {
+    if (!n) return fullVal;
+    const conf = n / (n + K_CONFIDENCE);
+    return conf * splitVal + (1 - conf) * fullVal;
+  }
 
-  // Liga: promedio de puntos por partido para normalizar
+  const A = getStats(teamA); // local
+  const B = getStats(teamB); // visitante
+
   const leagueAvgPts = games.length
     ? (games.reduce((s, g) => s + g.ptsL + g.ptsA, 0) / (games.length * 2))
     : 112;
 
-  // Mezcla forma reciente (60%) + temporada completa (40%)
-  const offA = A.offRecent * 0.6 + A.offFull * 0.4;
-  const defA = A.defRecent * 0.6 + A.defFull * 0.4;
-  const offB = B.offRecent * 0.6 + B.offFull * 0.4;
-  const defB = B.defRecent * 0.6 + B.defFull * 0.4;
+  // Splits ajustados con confianza
+  const offA_home = blendSplit(A.offHome, A.offFull, A.nHome);
+  const defA_home = blendSplit(A.defHome, A.defFull, A.nHome);
+  const offB_away = blendSplit(B.offAway, B.offFull, B.nAway);
+  const defB_away = blendSplit(B.defAway, B.defFull, B.nAway);
 
-  // Pts esperados de A = (ofensiva A + defensiva opuesta) / 2, ajustado al promedio liga
-  const ptsA = ((offA + (leagueAvgPts - defB + leagueAvgPts)) / 2 + homeBonus);
-  const ptsB = ((offB + (leagueAvgPts - defA + leagueAvgPts)) / 2);
+  // Four-Factor: ratio ofensivo × ratio defensivo opuesto × promedio liga
+  const ptsA = (offA_home / leagueAvgPts) * (defB_away / leagueAvgPts) * leagueAvgPts;
+  const ptsB = (offB_away / leagueAvgPts) * (defA_home / leagueAvgPts) * leagueAvgPts;
 
-  // Suavizado al promedio de liga para evitar outliers extremos
-  const blend = 0.75;
   return {
-    ptsA: Math.round(ptsA * blend + leagueAvgPts * (1 - blend)),
-    ptsB: Math.round(ptsB * blend + leagueAvgPts * (1 - blend)),
+    ptsA: Math.round(ptsA),
+    ptsB: Math.round(ptsB),
     leagueAvg: leagueAvgPts,
-    offA, defA, offB, defB,
+    offA: offA_home, defA: defA_home,
+    offB: offB_away, defB: defB_away,
+    confA: A.nHome / (A.nHome + K_CONFIDENCE),
+    confB: B.nAway / (B.nAway + K_CONFIDENCE),
+    nHomeA: A.nHome, nAwayB: B.nAway,
   };
 }
 
@@ -1973,8 +1979,8 @@ function runPrediction() {
   const probL = 1 / (1 + Math.pow(10, -eloDiff / 400));
   const probA = 1 - probL;
 
-  // 4. Marcador proyectado
-  const score = computeProjectedScore(local, away, home.bonus);
+  // 4. Marcador proyectado (Four-Factor con splits casa/fuera, sin home bonus ni forma reciente)
+  const score = computeProjectedScore(local, away);
 
   // ─── RENDER ───
   const tcL = TEAM_TEXT_COLORS[local] || { banner:'#131313', bannerText:'#ffffff' };
@@ -2034,16 +2040,16 @@ function runPrediction() {
       favor: local.split(' ').pop(),
     },
     {
-      name: 'Proyección Ofensiva',
-      desc: `${local.split(' ').pop()} ${score.offA.toFixed(1)} pts/p (of) · ${away.split(' ').pop()} ${score.offB.toFixed(1)} pts/p (of)`,
+      name: 'Ofensiva (split casa/fuera)',
+      desc: `${local.split(' ').pop()} en casa: ${score.offA.toFixed(1)} pts/p (${score.nHomeA} PJ, conf ${(score.confA*100).toFixed(0)}%) · ${away.split(' ').pop()} fuera: ${score.offB.toFixed(1)} pts/p (${score.nAwayB} PJ, conf ${(score.confB*100).toFixed(0)}%)`,
       bar: Math.abs(score.offA - score.offB) / 20,
       color: score.offA >= score.offB ? colorL : colorA,
       label: `Δ${Math.abs(score.offA - score.offB).toFixed(1)} pts/p`,
       favor: score.offA >= score.offB ? local.split(' ').pop() : away.split(' ').pop(),
     },
     {
-      name: 'Proyección Defensiva',
-      desc: `${local.split(' ').pop()} concede ${score.defA.toFixed(1)} pts/p · ${away.split(' ').pop()} concede ${score.defB.toFixed(1)} pts/p`,
+      name: 'Defensiva (split casa/fuera)',
+      desc: `${local.split(' ').pop()} en casa concede ${score.defA.toFixed(1)} pts/p · ${away.split(' ').pop()} fuera concede ${score.defB.toFixed(1)} pts/p`,
       bar: Math.abs(score.defA - score.defB) / 20,
       color: score.defA <= score.defB ? colorL : colorA, // menor es mejor en defensa
       label: `Δ${Math.abs(score.defA - score.defB).toFixed(1)} pts/p`,
