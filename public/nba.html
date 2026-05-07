@@ -1223,6 +1223,7 @@ function showSection(id) {
   if(id==='partidos') renderGames();
   if(id==='consolidado') renderConsolidado();
   if(id==='equipos') renderTeamGrid();
+  if(id==='prediccion') populatePredSelects();
 }
 
 function toast(msg, color='var(--green)') {
@@ -2106,12 +2107,7 @@ function runPrediction() {
   document.getElementById('pred-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Llamar populatePredSelects cada vez que se muestra la sección de predicción
-const _origShowSection = showSection;
-function showSection(id) {
-  _origShowSection.call(this, id);
-  if (id === 'prediccion') populatePredSelects();
-}
+// (populatePredSelects se llama desde showSection al entrar a la pestaña)
 
 </script>
 </body>
