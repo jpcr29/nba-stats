@@ -642,6 +642,41 @@
   .pred-dot.L{background:var(--lose);color:white;}
   .pred-recent-record{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;}
 
+  /* ─── BACKTEST ─── */
+  .bt-container{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:28px;}
+  .bt-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+  .bt-metric{background:var(--surface);border:1px solid var(--outline-var);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:6px;}
+  .bt-metric-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--outline);}
+  .bt-metric-value{font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:900;letter-spacing:-1px;color:var(--hairline);line-height:1;}
+  .bt-metric-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);}
+  .bt-section-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--outline);margin-bottom:-8px;}
+  .bt-calib-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .bt-calib-card{background:var(--surface);border:1px solid var(--outline-var);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;}
+  .bt-calib-range{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--outline);}
+  .bt-calib-bar-outer{height:8px;background:var(--surface-low);border-radius:9999px;overflow:hidden;}
+  .bt-calib-bar-inner{height:100%;border-radius:9999px;background:var(--violet);transition:width 0.5s ease;}
+  .bt-calib-pct{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;color:var(--hairline);}
+  .bt-calib-count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);}
+  .bt-curve-wrap{border:1px solid var(--outline-var);border-radius:16px;padding:20px;}
+  .bt-table-wrap{border:1px solid var(--outline-var);border-radius:16px;overflow:hidden;}
+  .bt-table-header{display:grid;grid-template-columns:80px 1fr 1fr 90px 90px 60px 60px 60px;gap:8px;padding:10px 16px;background:var(--surface-low);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--outline);}
+  .bt-row{display:grid;grid-template-columns:80px 1fr 1fr 90px 90px 60px 60px 60px;gap:8px;padding:10px 16px;border-top:1px solid var(--surface-high);font-size:12px;align-items:center;}
+  .bt-row:hover{background:var(--surface);}
+  .bt-row.correct{border-left:3px solid var(--win);}
+  .bt-row.wrong{border-left:3px solid var(--lose);}
+  .bt-team{font-weight:700;font-size:12px;}
+  .bt-score{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;}
+  .bt-prob{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
+  .bt-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:900;}
+  .bt-badge.W{background:var(--win);color:white;}
+  .bt-badge.L{background:var(--lose);color:white;}
+  .bt-filter{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+  .bt-search{flex:1;min-width:200px;}
+  .bt-pages{display:flex;gap:8px;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;margin-top:8px;}
+  .bt-pages button{background:var(--surface);border:1px solid var(--outline-var);border-radius:8px;padding:6px 12px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;}
+  .bt-pages button:hover{background:var(--surface-high);}
+  .bt-pages button.active-page{background:var(--hairline);color:var(--canvas);border-color:var(--hairline);}
+
   .empty-state {
     text-align: center;
     color: var(--secondary-tx);
@@ -770,6 +805,7 @@
     <button onclick="showSection('partidos')">Partidos</button>
     <button onclick="showSection('consolidado')">Consolidado</button>
       <button onclick="showSection('prediccion')" id="nav-s-prediccion">🎯 Predicción</button>
+      <button onclick="showSection('backtest')" id="nav-s-backtest">📊 Backtest</button>
     <button onclick="showSection('equipos')">Por Equipo</button>
   </nav>
 </header>
@@ -973,7 +1009,46 @@
   <div id="games-pagination" class="pagination"></div>
 </section>
 
-<section class="section" id="s-prediccion">
+<section class="section" id="s-backtest">
+    <div class="bt-container">
+      <div>
+        <div class="form-title" style="font-size:36px;">Backtest del Modelo</div>
+        <div class="form-subtitle" style="margin-bottom:0;">Temporada NBA 2024–25 · Walk-forward · Mínimo 10 PJ de calentamiento por equipo</div>
+      </div>
+      <div id="bt-loading" style="text-align:center;padding:60px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--outline);">Cargando datos del backtest...</div>
+      <div id="bt-content" style="display:none;flex-direction:column;gap:28px;">
+        <!-- Métricas principales -->
+        <div class="bt-summary-grid" id="bt-metrics"></div>
+        <!-- Calibración -->
+        <div class="bt-section-title">Calibración del Modelo</div>
+        <div class="bt-calib-grid" id="bt-calib"></div>
+        <!-- Curva de accuracy acumulado -->
+        <div class="bt-section-title">Accuracy Acumulado a lo Largo de la Temporada</div>
+        <div class="bt-curve-wrap"><canvas id="bt-curve-chart" height="80"></canvas></div>
+        <!-- Tabla de partidos -->
+        <div class="bt-section-title">Partidos Evaluados</div>
+        <div class="bt-filter">
+          <input class="search-input bt-search" type="text" placeholder="Buscar equipo..." id="bt-search" oninput="btRender()">
+          <select class="search-input" id="bt-filter-result" onchange="btRender()" style="width:auto;">
+            <option value="all">Todos</option>
+            <option value="correct">✔ Acertados</option>
+            <option value="wrong">✘ Fallados</option>
+          </select>
+        </div>
+        <div class="bt-table-wrap">
+          <div class="bt-table-header">
+            <div>Fecha</div><div>Local</div><div>Visitante</div>
+            <div>Pred</div><div>Real</div>
+            <div>Prob</div><div>ΔPts</div><div></div>
+          </div>
+          <div id="bt-tbody"></div>
+        </div>
+        <div class="bt-pages" id="bt-pages"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="s-prediccion">
     <div class="pred-container">
       <div>
         <div class="form-title" style="font-size:36px;">Predicción de Partido</div>
@@ -1224,6 +1299,7 @@ function showSection(id) {
   if(id==='consolidado') renderConsolidado();
   if(id==='equipos') renderTeamGrid();
   if(id==='prediccion') populatePredSelects();
+  if(id==='backtest') initBacktest();
 }
 
 function toast(msg, color='var(--green)') {
@@ -2108,6 +2184,176 @@ function runPrediction() {
 }
 
 // (populatePredSelects se llama desde showSection al entrar a la pestaña)
+
+// ────────────────────────────────────────────────────
+// BACKTEST
+// ────────────────────────────────────────────────────
+let btData = null;      // { summary, games[] }
+let btFiltered = [];    // partidos filtrados actualmente
+let btPage = 0;
+const BT_PAGE_SIZE = 30;
+let btCurveChart = null;
+
+async function initBacktest() {
+  if (btData) { btRender(); return; } // ya cargado
+  try {
+    const res = await fetch('backtest.json');
+    if (!res.ok) throw new Error('No encontrado');
+    btData = await res.json();
+    document.getElementById('bt-loading').style.display = 'none';
+    const c = document.getElementById('bt-content');
+    c.style.display = 'flex';
+    btBuildSummary();
+    btBuildCalibration();
+    btBuildCurve();
+    btRender();
+  } catch(e) {
+    document.getElementById('bt-loading').textContent =
+      'No se encontró backtest.json. Copia el archivo a la carpeta public/ del proyecto.';
+  }
+}
+
+function btBuildSummary() {
+  const s = btData.summary;
+  const metrics = [
+    { label:'Accuracy Ganador',  value: (s.accuracy*100).toFixed(1)+'%',  sub: `${s.totalGames} partidos evaluados` },
+    { label:'MAE Pts Local',     value: s.maeLocal.toFixed(1),             sub: 'error absoluto medio' },
+    { label:'MAE Pts Visitante', value: s.maeAway.toFixed(1),             sub: 'error absoluto medio' },
+    { label:'MAE Total',         value: s.maeTotal.toFixed(1),            sub: 'pts por partido' },
+  ];
+  document.getElementById('bt-metrics').innerHTML = metrics.map(m => `
+    <div class="bt-metric">
+      <div class="bt-metric-label">${m.label}</div>
+      <div class="bt-metric-value">${m.value}</div>
+      <div class="bt-metric-sub">${m.sub}</div>
+    </div>`).join('');
+}
+
+function btBuildCalibration() {
+  const c = btData.summary.calibration;
+  const order = ['50-60','60-70','70-80','80+'];
+  document.getElementById('bt-calib').innerHTML = order.map(k => {
+    const b = c[k];
+    const pct = b.pct !== null ? (b.pct*100).toFixed(1) : 'N/A';
+    const bar = b.pct !== null ? b.pct*100 : 0;
+    // Color: verde si calibrado bien (±5%), rojo si muy desviado
+    const diff = b.pct !== null ? Math.abs(b.pct*100 - (k==='80+' ? 82.5 : parseFloat(k))) : 0;
+    const barColor = diff < 8 ? 'var(--win)' : 'var(--lose)';
+    return `<div class="bt-calib-card">
+      <div class="bt-calib-range">Predicho: ${k}%</div>
+      <div class="bt-calib-pct">${pct}%</div>
+      <div class="bt-calib-bar-outer"><div class="bt-calib-bar-inner" style="width:${bar}%;background:${barColor};"></div></div>
+      <div class="bt-calib-count">${b.total} partidos</div>
+    </div>`;
+  }).join('');
+}
+
+function btBuildCurve() {
+  const games = btData.games;
+  // Accuracy acumulado cada 10 partidos
+  const labels = [], data = [];
+  let correct = 0;
+  games.forEach((g, i) => {
+    if (g.correct) correct++;
+    if ((i+1) % 10 === 0 || i === games.length-1) {
+      labels.push(`PJ ${i+1}`);
+      data.push(+((correct/(i+1))*100).toFixed(1));
+    }
+  });
+  const ctx = document.getElementById('bt-curve-chart').getContext('2d');
+  if (btCurveChart) btCurveChart.destroy();
+  btCurveChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Accuracy acumulado %',
+        data,
+        borderColor: 'var(--violet)',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3,
+      }, {
+        label: 'Línea 65%',
+        data: labels.map(() => 65),
+        borderColor: 'var(--outline-var)',
+        borderDash: [4,4],
+        borderWidth: 1,
+        pointRadius: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 45, max: 85, ticks: { callback: v => v+'%' }, grid: { color: 'var(--surface-high)' } },
+        x: { ticks: { maxTicksLimit: 12 }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+function btRender() {
+  if (!btData) return;
+  const q      = (document.getElementById('bt-search').value || '').toLowerCase();
+  const filter = document.getElementById('bt-filter-result').value;
+  btFiltered = btData.games.filter(g => {
+    const matchQ = !q || g.local.toLowerCase().includes(q) || g.away.toLowerCase().includes(q);
+    const matchF = filter==='all' || (filter==='correct' && g.correct) || (filter==='wrong' && !g.correct);
+    return matchQ && matchF;
+  });
+  btPage = 0;
+  btRenderPage();
+}
+
+function btRenderPage() {
+  const total = btFiltered.length;
+  const pages = Math.ceil(total / BT_PAGE_SIZE);
+  const slice = btFiltered.slice(btPage*BT_PAGE_SIZE, (btPage+1)*BT_PAGE_SIZE);
+
+  document.getElementById('bt-tbody').innerHTML = slice.map(g => {
+    const tcL = TEAM_TEXT_COLORS[g.local]  || { banner:'#131313', bannerText:'#fff' };
+    const tcA = TEAM_TEXT_COLORS[g.away]   || { banner:'#555',    bannerText:'#fff' };
+    const predWon  = g.predProbL >= 0.5;
+    const realWon  = g.realPtsL  > g.realPtsA;
+    const prob     = Math.max(g.predProbL, g.predProbA);
+    const errTotal = g.errTotal;
+    const badge    = g.correct
+      ? '<span class="bt-badge W">✔</span>'
+      : '<span class="bt-badge L">✘</span>';
+    return `<div class="bt-row ${g.correct ? 'correct' : 'wrong'}">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">${g.date.slice(5)}</div>
+      <div><span class="bt-team" style="color:${tcL.banner};">${g.local.split(' ').slice(-1)[0]}</span></div>
+      <div><span class="bt-team" style="color:${tcA.banner};">${g.away.split(' ').slice(-1)[0]}</span></div>
+      <div class="bt-score" style="color:${predWon ? tcL.banner : tcA.banner};">${g.predPtsL}–${g.predPtsA}</div>
+      <div class="bt-score" style="color:${realWon  ? tcL.banner : tcA.banner};">${g.realPtsL}–${g.realPtsA}</div>
+      <div class="bt-prob" style="color:${prob>=0.7?'var(--violet)':'var(--outline)'}">${(prob*100).toFixed(0)}%</div>
+      <div class="bt-score" style="color:${errTotal<=10?'var(--win)':errTotal<=20?'var(--outline)':'var(--lose)'}">±${errTotal}</div>
+      <div>${badge}</div>
+    </div>`;
+  }).join('');
+
+  // Paginación
+  const pp = document.getElementById('bt-pages');
+  if (pages <= 1) { pp.innerHTML = ''; return; }
+  let html = `<button onclick="btGoPage(${btPage-1})" ${btPage===0?'disabled':''}>&#8592;</button>`;
+  const start = Math.max(0, btPage-2), end = Math.min(pages-1, btPage+2);
+  if (start>0) html += `<button onclick="btGoPage(0)">1</button>${start>1?'<span>…</span>':''}`;
+  for (let i=start;i<=end;i++)
+    html += `<button class="${i===btPage?'active-page':''}" onclick="btGoPage(${i})">${i+1}</button>`;
+  if (end<pages-1) html += `${end<pages-2?'<span>…</span>':''}<button onclick="btGoPage(${pages-1})">${pages}</button>`;
+  html += `<button onclick="btGoPage(${btPage+1})" ${btPage===pages-1?'disabled':''}>&#8594;</button>`;
+  html += `<span style="color:var(--outline);">${total} partidos</span>`;
+  pp.innerHTML = html;
+}
+
+function btGoPage(p) {
+  btPage = p;
+  btRenderPage();
+  document.getElementById('s-backtest').scrollTo(0,0);
+  window.scrollTo({top:0, behavior:'instant'});
+}
 
 </script>
 </body>
