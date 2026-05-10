@@ -698,7 +698,7 @@
   .bt-bet-row.bet-lost{border-left:3px solid var(--lose);}
   .bt-pl-pos{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--win);}
   .bt-pl-neg{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--lose);}
-  .bt-strat-select{font-family:'JetBrains Mono',monospace;font-size:11px;}
+  .bt-strat-select{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 8px;height:28px;border-radius:8px;border:1px solid var(--outline-var);background:var(--surface);color:var(--hairline);cursor:pointer;}
 
   .empty-state {
     text-align: center;
@@ -1074,8 +1074,8 @@
           <!-- ML bets -->
           <div id="bt-bets-ml">
             <div class="bt-bet-table-wrap" style="margin-top:12px;">
-              <div class="bt-bet-header" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 60px 70px 70px;"
-                ><div>Fecha</div><div>Apuesta (ML)</div><div>Cuota</div><div>Modelo</div><div>Mercado</div><div>Edge</div><div>Tamaño</div><div>P&amp;L</div><div>Bankroll</div></div>
+              <div class="bt-bet-header" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 60px 80px 70px 70px;"
+                ><div>Fecha</div><div>Apuesta (ML)</div><div>Cuota</div><div>Modelo</div><div>Mercado</div><div>Edge</div><div>Tamaño</div><div>Resultado</div><div>P&amp;L</div><div>Bankroll</div></div>
               <div id="bt-bets-ml-body"></div>
             </div>
             <div class="bt-pages" id="bt-pages-ml"></div>
@@ -2460,6 +2460,10 @@ function _renderMlPage(betList, strat) {
   const pages  = Math.ceil(total / BT_BET_PAGE);
   const slice  = betList.slice(btMlPage * BT_BET_PAGE, (btMlPage+1) * BT_BET_PAGE);
 
+  // Index games by date+local for quick score lookup
+  const gameIdx = {};
+  (btData.games || []).forEach(g => { gameIdx[g.date+'|'+g.local] = g; gameIdx[g.date+'|'+g.away] = g; });
+
   const formatML = ml => ml == null ? '—' :
     ml > 0 ? `<span style="color:var(--outline)">+${ml}</span>` :
              `<span style="color:var(--outline)">${ml}</span>`;
@@ -2470,10 +2474,24 @@ function _renderMlPage(betList, strat) {
       ? `<span class="bt-pl-pos">+${b.pl.toFixed(2)}u</span>`
       : `<span class="bt-pl-neg">${b.pl.toFixed(2)}u</span>`;
     const edgeColor = b.edge > 0 ? 'var(--win)' : 'var(--lose)';
-    const sizeEl = strat === 'kelly'
-      ? `${(b.betSize*100).toFixed(1)}%`
-      : '1u';
-    return `<div class="bt-bet-row ${b.correct ? 'bet-won':'bet-lost'}" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 60px 70px 70px;">
+    const sizeEl = strat === 'kelly' ? `${(b.betSize*100).toFixed(1)}%` : '1u';
+
+    // Result: show actual score with winner highlighted
+    const g = gameIdx[b.date+'|'+b.pick];
+    let resultEl = '—';
+    if (g) {
+      const pickIsLocal = g.local === b.pick;
+      const pickPts  = pickIsLocal ? g.realPtsL : g.realPtsA;
+      const otherPts = pickIsLocal ? g.realPtsA : g.realPtsL;
+      const pickWon  = pickPts > otherPts;
+      const pickColor  = pickWon ? 'var(--win)' : 'var(--lose)';
+      const otherColor = pickWon ? 'var(--outline)' : 'var(--win)';
+      resultEl = `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${pickColor};">${pickPts}</span>`
+               + `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);"> – </span>`
+               + `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${otherColor};">${otherPts}</span>`;
+    }
+
+    return `<div class="bt-bet-row ${b.correct ? 'bet-won':'bet-lost'}" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 60px 80px 70px 70px;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">${b.date.slice(5)}</div>
       <div style="font-weight:700;color:${tcP.banner};font-size:12px;">${b.pick.split(' ').slice(-1)[0]}</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${formatML(b.ml)}</div>
@@ -2481,6 +2499,7 @@ function _renderMlPage(betList, strat) {
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${b.mktProb}%</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${edgeColor};">${b.edge>0?'+':''}${b.edge}pp</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${sizeEl}</div>
+      <div>${resultEl}</div>
       <div>${plEl}</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${b.bankroll.toFixed(1)}u</div>
     </div>`;
