@@ -675,7 +675,18 @@
   .bt-pages{display:flex;gap:8px;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;margin-top:8px;}
   .bt-pages button{background:var(--surface);border:1px solid var(--outline-var);border-radius:8px;padding:6px 12px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;}
   .bt-pages button:hover{background:var(--surface-high);}
-  .bt-pages button.active-page{background:var(--hairline);color:var(--canvas);border-color:var(--hairline);}
+  .bt-roi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .bt-roi-card{border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:5px;border:1px solid var(--outline-var);}
+  .bt-roi-name{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--outline);}
+  .bt-roi-roi{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:900;letter-spacing:-0.5px;line-height:1;}
+  .bt-roi-detail{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);}
+  .bt-roi-card.positive{background:color-mix(in srgb,var(--win) 8%,transparent);border-color:var(--win);}
+  .bt-roi-card.negative{background:color-mix(in srgb,var(--lose) 8%,transparent);border-color:var(--lose);}
+  .bt-roi-card.neutral{background:var(--surface);}
+  .bt-season-tabs{display:flex;gap:8px;}
+  .bt-season-tab{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:6px 16px;border-radius:9999px;border:1px solid var(--outline-var);cursor:pointer;background:transparent;letter-spacing:0.5px;transition:all 0.15s;}
+  .bt-season-tab.active{background:var(--hairline);color:var(--canvas);border-color:var(--hairline);}
+  .bt-season-tab:hover:not(.active){background:var(--surface-high);}
 
   .empty-state {
     text-align: center;
@@ -1013,7 +1024,12 @@
     <div class="bt-container">
       <div>
         <div class="form-title" style="font-size:36px;">Backtest del Modelo</div>
-        <div class="form-subtitle" style="margin-bottom:0;">Temporada NBA 2024–25 · Walk-forward · Mínimo 10 PJ de calentamiento por equipo</div>
+        <div class="form-subtitle" style="margin-bottom:0;">Walk-forward · Mínimo 10 PJ de calentamiento por equipo</div>
+      </div>
+      <!-- Selector de temporada -->
+      <div class="bt-season-tabs">
+        <button class="bt-season-tab active" onclick="btLoadSeason('backtest.json','2024-25',this)">Temporada 2024–25</button>
+        <button class="bt-season-tab" onclick="btLoadSeason('backtest_2022_23.json','2022-23',this)">Temporada 2022–23</button>
       </div>
       <div id="bt-loading" style="text-align:center;padding:60px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--outline);">Cargando datos del backtest...</div>
       <div id="bt-content" style="display:none;flex-direction:column;gap:28px;">
@@ -1022,10 +1038,16 @@
         <!-- Calibración -->
         <div class="bt-section-title">Calibración del Modelo</div>
         <div class="bt-calib-grid" id="bt-calib"></div>
-        <!-- Curva de accuracy acumulado -->
+        <!-- ROI -->
+        <div class="bt-section-title" id="bt-roi-title" style="display:none;">Simulación de ROI vs Mercado (Pinnacle Closing Lines)</div>
+        <div class="bt-roi-grid" id="bt-roi" style="display:none;"></div>
+        <!-- Curva bankroll -->
+        <div class="bt-section-title" id="bt-bankroll-title" style="display:none;">Curva de Bankroll por Estrategia</div>
+        <div class="bt-curve-wrap" id="bt-bankroll-wrap" style="display:none;"><canvas id="bt-bankroll-chart" height="100"></canvas></div>
+        <!-- Curva accuracy -->
         <div class="bt-section-title">Accuracy Acumulado a lo Largo de la Temporada</div>
         <div class="bt-curve-wrap"><canvas id="bt-curve-chart" height="80"></canvas></div>
-        <!-- Tabla de partidos -->
+        <!-- Tabla -->
         <div class="bt-section-title">Partidos Evaluados</div>
         <div class="bt-filter">
           <input class="search-input bt-search" type="text" placeholder="Buscar equipo..." id="bt-search" oninput="btRender()">
@@ -1033,13 +1055,14 @@
             <option value="all">Todos</option>
             <option value="correct">✔ Acertados</option>
             <option value="wrong">✘ Fallados</option>
+            <option value="value">💰 Con edge (value)</option>
           </select>
         </div>
         <div class="bt-table-wrap">
-          <div class="bt-table-header">
+          <div class="bt-table-header" style="grid-template-columns:80px 1fr 1fr 90px 90px 60px 80px 60px;">
             <div>Fecha</div><div>Local</div><div>Visitante</div>
             <div>Pred</div><div>Real</div>
-            <div>Prob</div><div>ΔPts</div><div></div>
+            <div>Prob</div><div>Mercado</div><div></div>
           </div>
           <div id="bt-tbody"></div>
         </div>
@@ -2188,28 +2211,44 @@ function runPrediction() {
 // ────────────────────────────────────────────────────
 // BACKTEST
 // ────────────────────────────────────────────────────
-let btData = null;      // { summary, games[] }
-let btFiltered = [];    // partidos filtrados actualmente
+let btData = null;
+let btFiltered = [];
 let btPage = 0;
 const BT_PAGE_SIZE = 30;
 let btCurveChart = null;
+let btBankrollChart = null;
 
 async function initBacktest() {
-  if (btData) { btRender(); return; } // ya cargado
+  if (btData) { btRender(); return; }
+  await btLoadSeason('backtest.json', '2024-25',
+    document.querySelector('.bt-season-tab.active'));
+}
+
+async function btLoadSeason(file, season, tabEl) {
+  // Update active tab
+  document.querySelectorAll('.bt-season-tab').forEach(b => b.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+
+  btData = null;
+  const loading = document.getElementById('bt-loading');
+  const content = document.getElementById('bt-content');
+  loading.style.display = '';
+  loading.textContent = `Cargando datos de la temporada ${season}...`;
+  content.style.display = 'none';
+
   try {
-    const res = await fetch('backtest.json');
-    if (!res.ok) throw new Error('No encontrado');
+    const res = await fetch(file);
+    if (!res.ok) throw new Error(`${file} no encontrado`);
     btData = await res.json();
-    document.getElementById('bt-loading').style.display = 'none';
-    const c = document.getElementById('bt-content');
-    c.style.display = 'flex';
+    loading.style.display = 'none';
+    content.style.display = 'flex';
     btBuildSummary();
     btBuildCalibration();
+    btBuildROI();
     btBuildCurve();
     btRender();
   } catch(e) {
-    document.getElementById('bt-loading').textContent =
-      'No se encontró backtest.json. Copia el archivo a la carpeta public/ del proyecto.';
+    loading.textContent = `No se encontró ${file}. Copia el archivo a la carpeta public/ del proyecto.`;
   }
 }
 
@@ -2246,6 +2285,84 @@ function btBuildCalibration() {
       <div class="bt-calib-count">${b.total} partidos</div>
     </div>`;
   }).join('');
+}
+
+function btBuildROI() {
+  const roi = btData.summary.roi;
+  const roiEl       = document.getElementById('bt-roi');
+  const roiTitle    = document.getElementById('bt-roi-title');
+  const bankEl      = document.getElementById('bt-bankroll-wrap');
+  const bankTitle   = document.getElementById('bt-bankroll-title');
+
+  if (!roi) {
+    roiEl.style.display = roiTitle.style.display = 'none';
+    bankEl.style.display = bankTitle.style.display = 'none';
+    return;
+  }
+
+  roiEl.style.display    = roiTitle.style.display    = '';
+  bankEl.style.display   = bankTitle.style.display   = '';
+
+  const labels = {
+    flat:    { name:'Flat Betting',   desc:'1u en cada partido' },
+    value:   { name:'Value Betting',  desc:'1u cuando modelo > mercado' },
+    value15: { name:'Value ≤15pp',    desc:'edge pequeño (zona óptima)' },
+    kelly:   { name:'Kelly Mejorado', desc:'Kelly 10% con cap ≤15pp' },
+  };
+
+  roiEl.innerHTML = Object.entries(roi).map(([key, r]) => {
+    const lbl  = labels[key] || { name: key, desc: '' };
+    const pos  = r.roi >= 0;
+    const cls  = r.roi > 0.5 ? 'positive' : r.roi < -0.5 ? 'negative' : 'neutral';
+    const arrow = pos ? '▲' : '▼';
+    const color = pos ? 'var(--win)' : 'var(--lose)';
+    return `<div class="bt-roi-card ${cls}">
+      <div class="bt-roi-name">${lbl.name}</div>
+      <div class="bt-roi-roi" style="color:${color};">${arrow} ${Math.abs(r.roi).toFixed(1)}%</div>
+      <div class="bt-roi-detail">${r.bets} apuestas · ${r.winPct.toFixed(1)}% win</div>
+      <div class="bt-roi-detail">${r.finalBank.toFixed(1)}u bankroll final</div>
+      <div class="bt-roi-detail" style="color:var(--outline);font-size:9px;margin-top:2px;">${lbl.desc}</div>
+    </div>`;
+  }).join('');
+
+  // Curva de bankroll
+  const ctx = document.getElementById('bt-bankroll-chart').getContext('2d');
+  if (btBankrollChart) btBankrollChart.destroy();
+  const colors = { flat:'#888', value:'var(--violet)', value15:'#00b894', kelly:'#e17055' };
+  const datasets = Object.entries(roi)
+    .filter(([, r]) => r.history && r.history.length > 1)
+    .map(([key, r]) => ({
+      label: labels[key]?.name || key,
+      data:  r.history,
+      borderColor: colors[key] || '#888',
+      backgroundColor: 'transparent',
+      borderWidth: key === 'kelly' ? 2.5 : 1.5,
+      pointRadius: 0,
+      tension: 0.3,
+    }));
+
+  const maxLen = Math.max(...datasets.map(d => d.data.length));
+  const xLabels = Array.from({length: maxLen}, (_, i) => i === 0 ? '0' : i % 50 === 0 ? String(i) : '');
+
+  btBankrollChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: xLabels, datasets },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'top',
+          labels: { font: { family: "'JetBrains Mono'", size: 10 }, boxWidth: 12 } },
+        tooltip: { callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}u`
+        }}
+      },
+      scales: {
+        y: { ticks: { callback: v => v+'u' }, grid: { color: 'var(--surface-high)' } },
+        x: { ticks: { maxTicksLimit: 10 }, grid: { display: false } }
+      }
+    }
+  });
 }
 
 function btBuildCurve() {
@@ -2300,7 +2417,12 @@ function btRender() {
   const filter = document.getElementById('bt-filter-result').value;
   btFiltered = btData.games.filter(g => {
     const matchQ = !q || g.local.toLowerCase().includes(q) || g.away.toLowerCase().includes(q);
-    const matchF = filter==='all' || (filter==='correct' && g.correct) || (filter==='wrong' && !g.correct);
+    const matchF = filter==='all'
+      || (filter==='correct' && g.correct)
+      || (filter==='wrong'   && !g.correct)
+      || (filter==='value'   && g.hasOdds &&
+          (g.predProbL >= 0.5 ? g.predProbL - g.mktProbHome : g.predProbA - g.mktProbAway) > 0 &&
+          Math.abs(g.predProbL - (g.mktProbHome||g.predProbL)) <= 0.15);
     return matchQ && matchF;
   });
   btPage = 0;
@@ -2318,18 +2440,29 @@ function btRenderPage() {
     const predWon  = g.predProbL >= 0.5;
     const realWon  = g.realPtsL  > g.realPtsA;
     const prob     = Math.max(g.predProbL, g.predProbA);
-    const errTotal = g.errTotal;
     const badge    = g.correct
       ? '<span class="bt-badge W">✔</span>'
       : '<span class="bt-badge L">✘</span>';
-    return `<div class="bt-row ${g.correct ? 'correct' : 'wrong'}">
+    // Market odds column — show mktProb and edge if available
+    let mktCol = '';
+    if (g.hasOdds && g.mktProbHome) {
+      const mktFav   = g.mktProbHome >= 0.5 ? g.mktProbHome : g.mktProbAway;
+      const modelFav = predWon ? g.predProbL : g.predProbA;
+      const edge     = modelFav - mktFav;
+      const edgeColor = edge > 0 ? 'var(--win)' : edge < 0 ? 'var(--lose)' : 'var(--outline)';
+      mktCol = `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);">${(mktFav*100).toFixed(0)}%</span>`
+             + `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${edgeColor};margin-left:3px;">${edge>=0?'+':''}${(edge*100).toFixed(0)}pp</span>`;
+    } else {
+      mktCol = `<span style="color:var(--outline-var);font-size:10px;">—</span>`;
+    }
+    return `<div class="bt-row ${g.correct ? 'correct' : 'wrong'}" style="grid-template-columns:80px 1fr 1fr 90px 90px 60px 80px 60px;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">${g.date.slice(5)}</div>
       <div><span class="bt-team" style="color:${tcL.banner};">${g.local.split(' ').slice(-1)[0]}</span></div>
       <div><span class="bt-team" style="color:${tcA.banner};">${g.away.split(' ').slice(-1)[0]}</span></div>
       <div class="bt-score" style="color:${predWon ? tcL.banner : tcA.banner};">${g.predPtsL}–${g.predPtsA}</div>
       <div class="bt-score" style="color:${realWon  ? tcL.banner : tcA.banner};">${g.realPtsL}–${g.realPtsA}</div>
       <div class="bt-prob" style="color:${prob>=0.7?'var(--violet)':'var(--outline)'}">${(prob*100).toFixed(0)}%</div>
-      <div class="bt-score" style="color:${errTotal<=10?'var(--win)':errTotal<=20?'var(--outline)':'var(--lose)'}">±${errTotal}</div>
+      <div>${mktCol}</div>
       <div>${badge}</div>
     </div>`;
   }).join('');
