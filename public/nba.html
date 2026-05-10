@@ -2464,9 +2464,11 @@ function _renderMlPage(betList, strat) {
   const gameIdx = {};
   (btData.games || []).forEach(g => { gameIdx[g.date+'|'+g.local] = g; gameIdx[g.date+'|'+g.away] = g; });
 
-  const formatML = ml => ml == null ? '—' :
-    ml > 0 ? `<span style="color:var(--outline)">+${ml}</span>` :
-             `<span style="color:var(--outline)">${ml}</span>`;
+  const formatML = ml => {
+    if (ml == null) return '—';
+    const dec = ml > 0 ? 1 + ml/100 : 1 + 100/Math.abs(ml);
+    return dec.toFixed(2);
+  };
 
   document.getElementById('bt-bets-ml-body').innerHTML = slice.map(b => {
     const tcP = TEAM_TEXT_COLORS[b.pick] || { banner:'#131313' };
