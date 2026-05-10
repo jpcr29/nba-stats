@@ -686,7 +686,19 @@
   .bt-season-tabs{display:flex;gap:8px;}
   .bt-season-tab{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:6px 16px;border-radius:9999px;border:1px solid var(--outline-var);cursor:pointer;background:transparent;letter-spacing:0.5px;transition:all 0.15s;}
   .bt-season-tab.active{background:var(--hairline);color:var(--canvas);border-color:var(--hairline);}
-  .bt-season-tab:hover:not(.active){background:var(--surface-high);}
+  .bt-bet-tabs{display:flex;gap:6px;margin-bottom:-4px;}
+  .bt-bet-tab{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:5px 14px;border-radius:9999px;border:1px solid var(--outline-var);cursor:pointer;background:transparent;letter-spacing:0.5px;transition:all 0.15s;}
+  .bt-bet-tab.active{background:var(--hairline);color:var(--canvas);border-color:var(--hairline);}
+  .bt-bet-tab:hover:not(.active){background:var(--surface-high);}
+  .bt-bet-table-wrap{border:1px solid var(--outline-var);border-radius:16px;overflow:hidden;}
+  .bt-bet-header{display:grid;gap:8px;padding:10px 16px;background:var(--surface-low);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--outline);}
+  .bt-bet-row{display:grid;gap:8px;padding:9px 16px;border-top:1px solid var(--surface-high);font-size:12px;align-items:center;}
+  .bt-bet-row:hover{background:var(--surface);}
+  .bt-bet-row.bet-won{border-left:3px solid var(--win);}
+  .bt-bet-row.bet-lost{border-left:3px solid var(--lose);}
+  .bt-pl-pos{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--win);}
+  .bt-pl-neg{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--lose);}
+  .bt-strat-select{font-family:'JetBrains Mono',monospace;font-size:11px;}
 
   .empty-state {
     text-align: center;
@@ -1044,6 +1056,40 @@
         <!-- Curva bankroll -->
         <div class="bt-section-title" id="bt-bankroll-title" style="display:none;">Curva de Bankroll por Estrategia</div>
         <div class="bt-curve-wrap" id="bt-bankroll-wrap" style="display:none;"><canvas id="bt-bankroll-chart" height="100"></canvas></div>
+        <!-- Tablas de apuestas -->
+        <div id="bt-bets-section" style="display:none;">
+          <div class="bt-section-title">Detalle de Apuestas Simuladas</div>
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div class="bt-bet-tabs">
+              <button class="bt-bet-tab active" id="bt-tab-ml" onclick="btSwitchBetTab('ml',this)">Moneyline</button>
+              <button class="bt-bet-tab" id="bt-tab-ou" onclick="btSwitchBetTab('ou',this)">O/U Puntos</button>
+            </div>
+            <select class="search-input bt-strat-select" id="bt-strat-select" onchange="btRenderBets()" style="width:auto;display:none;">
+              <option value="kelly">Kelly Mejorado</option>
+              <option value="value15">Value ≤15pp</option>
+              <option value="value">Value Betting</option>
+              <option value="flat">Flat Betting</option>
+            </select>
+          </div>
+          <!-- ML bets -->
+          <div id="bt-bets-ml">
+            <div class="bt-bet-table-wrap" style="margin-top:12px;">
+              <div class="bt-bet-header" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 60px 70px 70px;"
+                ><div>Fecha</div><div>Apuesta (ML)</div><div>Cuota</div><div>Modelo</div><div>Mercado</div><div>Edge</div><div>Tamaño</div><div>P&amp;L</div><div>Bankroll</div></div>
+              <div id="bt-bets-ml-body"></div>
+            </div>
+            <div class="bt-pages" id="bt-pages-ml"></div>
+          </div>
+          <!-- O/U bets -->
+          <div id="bt-bets-ou" style="display:none;">
+            <div class="bt-bet-table-wrap" style="margin-top:12px;">
+              <div class="bt-bet-header" style="grid-template-columns:70px 1fr 1fr 70px 70px 60px 60px 60px 70px;"
+                ><div>Fecha</div><div>Local</div><div>Visitante</div><div>Línea</div><div>Modelo</div><div>Diff</div><div>Pick</div><div>P&amp;L</div><div>Bankroll</div></div>
+              <div id="bt-bets-ou-body"></div>
+            </div>
+            <div class="bt-pages" id="bt-pages-ou"></div>
+          </div>
+        </div>
         <!-- Curva accuracy -->
         <div class="bt-section-title">Accuracy Acumulado a lo Largo de la Temporada</div>
         <div class="bt-curve-wrap"><canvas id="bt-curve-chart" height="80"></canvas></div>
@@ -2288,20 +2334,26 @@ function btBuildCalibration() {
 }
 
 function btBuildROI() {
-  const roi = btData.summary.roi;
-  const roiEl       = document.getElementById('bt-roi');
-  const roiTitle    = document.getElementById('bt-roi-title');
-  const bankEl      = document.getElementById('bt-bankroll-wrap');
-  const bankTitle   = document.getElementById('bt-bankroll-title');
+  const roi   = btData.summary.roi;
+  const roiOU = btData.summary.roiOU;
+  const roiEl      = document.getElementById('bt-roi');
+  const roiTitle   = document.getElementById('bt-roi-title');
+  const bankEl     = document.getElementById('bt-bankroll-wrap');
+  const bankTitle  = document.getElementById('bt-bankroll-title');
+  const betsSection = document.getElementById('bt-bets-section');
+  const stratSelect = document.getElementById('bt-strat-select');
 
   if (!roi) {
     roiEl.style.display = roiTitle.style.display = 'none';
     bankEl.style.display = bankTitle.style.display = 'none';
+    betsSection.style.display = 'none';
     return;
   }
 
-  roiEl.style.display    = roiTitle.style.display    = '';
-  bankEl.style.display   = bankTitle.style.display   = '';
+  roiEl.style.display   = roiTitle.style.display   = '';
+  bankEl.style.display  = bankTitle.style.display  = '';
+  betsSection.style.display = '';
+  stratSelect.style.display = '';
 
   const labels = {
     flat:    { name:'Flat Betting',   desc:'1u en cada partido' },
@@ -2310,8 +2362,14 @@ function btBuildROI() {
     kelly:   { name:'Kelly Mejorado', desc:'Kelly 10% con cap ≤15pp' },
   };
 
-  roiEl.innerHTML = Object.entries(roi).map(([key, r]) => {
-    const lbl  = labels[key] || { name: key, desc: '' };
+  // ROI cards — ML + O/U juntos
+  const allRoi = {...roi};
+  if (roiOU) allRoi['ou'] = roiOU;
+  const ouLabel = { name:'O/U (≥3pts)',  desc:`${roiOU?.minDiff || 3}pts de diferencia mínima` };
+  const fullLabels = {...labels, ou: ouLabel};
+
+  roiEl.innerHTML = Object.entries(allRoi).map(([key, r]) => {
+    const lbl  = fullLabels[key] || { name: key, desc: '' };
     const pos  = r.roi >= 0;
     const cls  = r.roi > 0.5 ? 'positive' : r.roi < -0.5 ? 'negative' : 'neutral';
     const arrow = pos ? '▲' : '▼';
@@ -2325,24 +2383,25 @@ function btBuildROI() {
     </div>`;
   }).join('');
 
-  // Curva de bankroll
+  // Curva de bankroll (ML strategies + O/U)
   const ctx = document.getElementById('bt-bankroll-chart').getContext('2d');
   if (btBankrollChart) btBankrollChart.destroy();
-  const colors = { flat:'#888', value:'var(--violet)', value15:'#00b894', kelly:'#e17055' };
-  const datasets = Object.entries(roi)
+  const colors = { flat:'#888', value:'var(--violet)', value15:'#00b894', kelly:'#e17055', ou:'#0984e3' };
+  const datasets = Object.entries(allRoi)
     .filter(([, r]) => r.history && r.history.length > 1)
     .map(([key, r]) => ({
-      label: labels[key]?.name || key,
+      label: fullLabels[key]?.name || key,
       data:  r.history,
       borderColor: colors[key] || '#888',
       backgroundColor: 'transparent',
-      borderWidth: key === 'kelly' ? 2.5 : 1.5,
+      borderWidth: key === 'kelly' || key === 'ou' ? 2.5 : 1.5,
       pointRadius: 0,
       tension: 0.3,
     }));
 
   const maxLen = Math.max(...datasets.map(d => d.data.length));
-  const xLabels = Array.from({length: maxLen}, (_, i) => i === 0 ? '0' : i % 50 === 0 ? String(i) : '');
+  const xLabels = Array.from({length: maxLen}, (_, i) =>
+    i === 0 ? '0' : i % 50 === 0 ? String(i) : '');
 
   btBankrollChart = new Chart(ctx, {
     type: 'line',
@@ -2363,6 +2422,123 @@ function btBuildROI() {
       }
     }
   });
+
+  // Render inicial de tablas de apuestas
+  btRenderBets();
+}
+
+let btBetTab = 'ml';
+let btMlPage = 0;
+let btOuPage = 0;
+const BT_BET_PAGE = 25;
+
+function btSwitchBetTab(tab, el) {
+  btBetTab = tab;
+  document.querySelectorAll('.bt-bet-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('bt-bets-ml').style.display = tab === 'ml' ? '' : 'none';
+  document.getElementById('bt-bets-ou').style.display = tab === 'ou' ? '' : 'none';
+  document.getElementById('bt-strat-select').style.display = tab === 'ml' ? '' : 'none';
+  btRenderBets();
+}
+
+function btRenderBets() {
+  if (!btData?.summary?.roi) return;
+  if (btBetTab === 'ml') btRenderMlBets();
+  else                   btRenderOuBets();
+}
+
+function btRenderMlBets() {
+  const strat   = document.getElementById('bt-strat-select')?.value || 'kelly';
+  const betList = btData.summary.roi?.[strat]?.betList || [];
+  btMlPage = 0;
+  _renderMlPage(betList, strat);
+}
+
+function _renderMlPage(betList, strat) {
+  const total  = betList.length;
+  const pages  = Math.ceil(total / BT_BET_PAGE);
+  const slice  = betList.slice(btMlPage * BT_BET_PAGE, (btMlPage+1) * BT_BET_PAGE);
+
+  const formatML = ml => ml == null ? '—' :
+    ml > 0 ? `<span style="color:var(--outline)">+${ml}</span>` :
+             `<span style="color:var(--outline)">${ml}</span>`;
+
+  document.getElementById('bt-bets-ml-body').innerHTML = slice.map(b => {
+    const tcP = TEAM_TEXT_COLORS[b.pick] || { banner:'#131313' };
+    const plEl = b.pl > 0
+      ? `<span class="bt-pl-pos">+${b.pl.toFixed(2)}u</span>`
+      : `<span class="bt-pl-neg">${b.pl.toFixed(2)}u</span>`;
+    const edgeColor = b.edge > 0 ? 'var(--win)' : 'var(--lose)';
+    const sizeEl = strat === 'kelly'
+      ? `${(b.betSize*100).toFixed(1)}%`
+      : '1u';
+    return `<div class="bt-bet-row ${b.correct ? 'bet-won':'bet-lost'}" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 60px 70px 70px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">${b.date.slice(5)}</div>
+      <div style="font-weight:700;color:${tcP.banner};font-size:12px;">${b.pick.split(' ').slice(-1)[0]}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${formatML(b.ml)}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${b.modelProb}%</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${b.mktProb}%</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${edgeColor};">${b.edge>0?'+':''}${b.edge}pp</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${sizeEl}</div>
+      <div>${plEl}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${b.bankroll.toFixed(1)}u</div>
+    </div>`;
+  }).join('');
+
+  _renderBetPages('bt-pages-ml', pages, btMlPage, p => { btMlPage=p; _renderMlPage(betList, strat); });
+}
+
+function btRenderOuBets() {
+  const betList = btData.summary.roiOU?.betList || [];
+  btOuPage = 0;
+  _renderOuPage(betList);
+}
+
+function _renderOuPage(betList) {
+  const total = betList.length;
+  const pages = Math.ceil(total / BT_BET_PAGE);
+  const slice = betList.slice(btOuPage * BT_BET_PAGE, (btOuPage+1) * BT_BET_PAGE);
+
+  document.getElementById('bt-bets-ou-body').innerHTML = slice.map(b => {
+    const tcL = TEAM_TEXT_COLORS[b.local] || { banner:'#131313' };
+    const tcA = TEAM_TEXT_COLORS[b.away]  || { banner:'#555' };
+    const plEl = b.pl > 0
+      ? `<span class="bt-pl-pos">+${b.pl.toFixed(2)}u</span>`
+      : `<span class="bt-pl-neg">${b.pl.toFixed(2)}u</span>`;
+    const pickColor = b.pick === 'Over' ? 'var(--win)' : 'var(--violet)';
+    const diffColor = b.ouDiff > 0 ? 'var(--win)' : 'var(--violet)';
+    const realVsLine = b.realTotal > b.ouLine
+      ? `<span style="color:var(--win)">${b.realTotal} ▲</span>`
+      : `<span style="color:var(--lose)">${b.realTotal} ▼</span>`;
+    return `<div class="bt-bet-row ${b.correct ? 'bet-won':'bet-lost'}" style="grid-template-columns:70px 1fr 1fr 70px 70px 60px 60px 60px 70px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">${b.date.slice(5)}</div>
+      <div style="font-weight:700;color:${tcL.banner};font-size:12px;">${b.local.split(' ').slice(-1)[0]}</div>
+      <div style="font-weight:700;color:${tcA.banner};font-size:12px;">${b.away.split(' ').slice(-1)[0]}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${b.ouLine}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${b.predTotal}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${diffColor};">${b.ouDiff>0?'+':''}${b.ouDiff}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${pickColor};">${b.pick}</div>
+      <div>${plEl}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${b.bankroll.toFixed(1)}u</div>
+    </div>`;
+  }).join('');
+
+  _renderBetPages('bt-pages-ou', pages, btOuPage, p => { btOuPage=p; _renderOuPage(betList); });
+}
+
+function _renderBetPages(containerId, pages, current, onPage) {
+  const pp = document.getElementById(containerId);
+  if (pages <= 1) { pp.innerHTML = ''; return; }
+  let html = `<button onclick="(${onPage.toString()})(${current-1})" ${current===0?'disabled':''}>&#8592;</button>`;
+  const start = Math.max(0, current-2), end = Math.min(pages-1, current+2);
+  if (start>0) html += `<button onclick="(${onPage.toString()})(0)">1</button>${start>1?'<span>…</span>':''}`;
+  for (let i=start;i<=end;i++)
+    html += `<button class="${i===current?'active-page':''}" onclick="(${onPage.toString()})(${i})">${i+1}</button>`;
+  if (end<pages-1) html += `${end<pages-2?'<span>…</span>':''}<button onclick="(${onPage.toString()})(${pages-1})">${pages}</button>`;
+  html += `<button onclick="(${onPage.toString()})(${current+1})" ${current===pages-1?'disabled':''}>&#8594;</button>`;
+  html += `<span style="color:var(--outline);">${pages*BT_BET_PAGE > 999 ? pages*BT_BET_PAGE+' apuestas' : ''}</span>`;
+  pp.innerHTML = html;
 }
 
 function btBuildCurve() {
