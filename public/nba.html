@@ -2477,8 +2477,8 @@ function _renderMlPage(betList, strat) {
       : `<span class="bt-pl-neg">${b.pl.toFixed(2)}u</span>`;
     const edgeColor = b.edge > 0 ? 'var(--win)' : 'var(--lose)';
     const sizeEl = strat === 'kelly'
-      ? `${(b.betSize*100).toFixed(1)}% <span style="color:var(--outline);font-size:10px;">(${(b.betSize * (b.bankroll - b.pl)).toFixed(2)}u)</span>`
-      : '1u';
+      ? `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;">${(b.betFrac*100).toFixed(2)}%</span> <span style="color:var(--outline);font-size:10px;">(${b.betUnits.toFixed(2)}u)</span>`
+      : `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;">1u</span>`;
 
     // Result: show actual score with winner highlighted
     const g = gameIdx[b.date+'|'+b.pick];
