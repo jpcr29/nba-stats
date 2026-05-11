@@ -1074,7 +1074,7 @@
           <!-- ML bets -->
           <div id="bt-bets-ml">
             <div class="bt-bet-table-wrap" style="margin-top:12px;">
-              <div class="bt-bet-header" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 60px 80px 70px 70px;"
+              <div class="bt-bet-header" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 110px 80px 70px 70px;"
                 ><div>Fecha</div><div>Apuesta (ML)</div><div>Cuota</div><div>Modelo</div><div>Mercado</div><div>Edge</div><div>Tamaño</div><div>Resultado</div><div>P&amp;L</div><div>Bankroll</div></div>
               <div id="bt-bets-ml-body"></div>
             </div>
@@ -2476,7 +2476,9 @@ function _renderMlPage(betList, strat) {
       ? `<span class="bt-pl-pos">+${b.pl.toFixed(2)}u</span>`
       : `<span class="bt-pl-neg">${b.pl.toFixed(2)}u</span>`;
     const edgeColor = b.edge > 0 ? 'var(--win)' : 'var(--lose)';
-    const sizeEl = strat === 'kelly' ? `${(b.betSize*100).toFixed(1)}%` : '1u';
+    const sizeEl = strat === 'kelly'
+      ? `${(b.betSize*100).toFixed(1)}% <span style="color:var(--outline);font-size:10px;">(${(b.betSize * (b.bankroll - b.pl)).toFixed(2)}u)</span>`
+      : '1u';
 
     // Result: show actual score with winner highlighted
     const g = gameIdx[b.date+'|'+b.pick];
@@ -2493,7 +2495,7 @@ function _renderMlPage(betList, strat) {
                + `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${otherColor};">${otherPts}</span>`;
     }
 
-    return `<div class="bt-bet-row ${b.correct ? 'bet-won':'bet-lost'}" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 60px 80px 70px 70px;">
+    return `<div class="bt-bet-row ${b.correct ? 'bet-won':'bet-lost'}" style="grid-template-columns:70px 1fr 80px 60px 60px 50px 110px 80px 70px 70px;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">${b.date.slice(5)}</div>
       <div style="font-weight:700;color:${tcP.banner};font-size:12px;">${b.pick.split(' ').slice(-1)[0]}</div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${formatML(b.ml)}</div>
