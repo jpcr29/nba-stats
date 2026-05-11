@@ -2509,7 +2509,7 @@ function _renderMlPage(betList, strat) {
     </div>`;
   }).join('');
 
-  _renderBetPages('bt-pages-ml', pages, btMlPage, p => { btMlPage=p; _renderMlPage(betList, strat); });
+  _renderBetPages('bt-pages-ml', pages, btMlPage, 'btGoMlPage');
 }
 
 function btRenderOuBets() {
@@ -2547,20 +2547,20 @@ function _renderOuPage(betList) {
     </div>`;
   }).join('');
 
-  _renderBetPages('bt-pages-ou', pages, btOuPage, p => { btOuPage=p; _renderOuPage(betList); });
+  _renderBetPages('bt-pages-ou', pages, btOuPage, 'btGoOuPage');
 }
 
-function _renderBetPages(containerId, pages, current, onPage) {
+function _renderBetPages(containerId, pages, current, fnName) {
   const pp = document.getElementById(containerId);
-  if (pages <= 1) { pp.innerHTML = ''; return; }
-  let html = `<button onclick="(${onPage.toString()})(${current-1})" ${current===0?'disabled':''}>&#8592;</button>`;
+  if (!pp || pages <= 1) { if(pp) pp.innerHTML = ''; return; }
+  let html = `<button onclick="${fnName}(${current-1})" ${current===0?'disabled':''}>&#8592;</button>`;
   const start = Math.max(0, current-2), end = Math.min(pages-1, current+2);
-  if (start>0) html += `<button onclick="(${onPage.toString()})(0)">1</button>${start>1?'<span>…</span>':''}`;
+  if (start>0) html += `<button onclick="${fnName}(0)">1</button>${start>1?'<span>…</span>':''}`;
   for (let i=start;i<=end;i++)
-    html += `<button class="${i===current?'active-page':''}" onclick="(${onPage.toString()})(${i})">${i+1}</button>`;
-  if (end<pages-1) html += `${end<pages-2?'<span>…</span>':''}<button onclick="(${onPage.toString()})(${pages-1})">${pages}</button>`;
-  html += `<button onclick="(${onPage.toString()})(${current+1})" ${current===pages-1?'disabled':''}>&#8594;</button>`;
-  html += `<span style="color:var(--outline);">${pages*BT_BET_PAGE > 999 ? pages*BT_BET_PAGE+' apuestas' : ''}</span>`;
+    html += `<button class="${i===current?'active-page':''}" onclick="${fnName}(${i})">${i+1}</button>`;
+  if (end<pages-1) html += `${end<pages-2?'<span>…</span>':''}<button onclick="${fnName}(${pages-1})">${pages}</button>`;
+  html += `<button onclick="${fnName}(${current+1})" ${current===pages-1?'disabled':''}>&#8594;</button>`;
+  html += `<span style="color:var(--outline);">${pages*BT_BET_PAGE}+ apuestas</span>`;
   pp.innerHTML = html;
 }
 
@@ -2642,14 +2642,17 @@ function btRenderPage() {
     const badge    = g.correct
       ? '<span class="bt-badge W">✔</span>'
       : '<span class="bt-badge L">✘</span>';
-    // Market odds column — show mktProb and edge if available
+    // Market odds column — siempre comparar el MISMO equipo (favorito del modelo)
+    // predWon = modelo acertó, pero necesitamos saber a quién favoreció el modelo
     let mktCol = '';
     if (g.hasOdds && g.mktProbHome) {
-      const mktFav   = g.mktProbHome >= 0.5 ? g.mktProbHome : g.mktProbAway;
-      const modelFav = predWon ? g.predProbL : g.predProbA;
-      const edge     = modelFav - mktFav;
+      const modelPicksLocal = g.predProbL >= g.predProbA;
+      const modelFav = modelPicksLocal ? g.predProbL : g.predProbA;
+      // Probabilidad del mercado para el MISMO equipo que favorece el modelo
+      const mktSameTeam = modelPicksLocal ? g.mktProbHome : g.mktProbAway;
+      const edge = modelFav - mktSameTeam;
       const edgeColor = edge > 0 ? 'var(--win)' : edge < 0 ? 'var(--lose)' : 'var(--outline)';
-      mktCol = `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);">${(mktFav*100).toFixed(0)}%</span>`
+      mktCol = `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);">${(mktSameTeam*100).toFixed(0)}%</span>`
              + `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${edgeColor};margin-left:3px;">${edge>=0?'+':''}${(edge*100).toFixed(0)}pp</span>`;
     } else {
       mktCol = `<span style="color:var(--outline-var);font-size:10px;">—</span>`;
@@ -2683,8 +2686,18 @@ function btRenderPage() {
 function btGoPage(p) {
   btPage = p;
   btRenderPage();
-  document.getElementById('s-backtest').scrollTo(0,0);
-  window.scrollTo({top:0, behavior:'instant'});
+  // Sin scroll — el usuario se queda donde está
+}
+
+function btGoMlPage(p) {
+  btMlPage = p;
+  const strat = document.getElementById('bt-strat-select')?.value || 'kelly';
+  _renderMlPage(btData.summary.roi?.[strat]?.betList || [], strat);
+}
+
+function btGoOuPage(p) {
+  btOuPage = p;
+  _renderOuPage(btData.summary.roiOU?.betList || []);
 }
 
 </script>
