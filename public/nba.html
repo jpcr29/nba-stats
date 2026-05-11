@@ -2651,9 +2651,19 @@ function btRenderPage() {
       // Probabilidad del mercado para el MISMO equipo que favorece el modelo
       const mktSameTeam = modelPicksLocal ? g.mktProbHome : g.mktProbAway;
       const edge = modelFav - mktSameTeam;
-      const edgeColor = edge > 0 ? 'var(--win)' : edge < 0 ? 'var(--lose)' : 'var(--outline)';
+      // Color del edge refleja si es apostable o no:
+      // verde  = apostable (0<edge<=15pp, fuera de zona 5-9pp)
+      // naranja = zona excluida 5-9pp (el "valle" donde el modelo falla)
+      // rojo   = edge negativo o >15pp
+      const inExclZone  = edge >= 0.05 && edge < 0.09;
+      const overCap     = edge > 0.15;
+      const edgeColor   = edge <= 0 || overCap ? 'var(--lose)'
+                        : inExclZone            ? '#e67e22'
+                        :                        'var(--win)';
+      const edgeLabel   = inExclZone ? `${(edge*100).toFixed(0)}pp ⚠` 
+                        : `${edge>=0?'+':''}${(edge*100).toFixed(0)}pp`;
       mktCol = `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);">${(mktSameTeam*100).toFixed(0)}%</span>`
-             + `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${edgeColor};margin-left:3px;">${edge>=0?'+':''}${(edge*100).toFixed(0)}pp</span>`;
+             + `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${edgeColor};margin-left:3px;" title="${inExclZone?'Zona excluida 5-9pp':overCap?'Edge >15pp (cap)':edge>0?'Apostable':'Sin edge'}">${edgeLabel}</span>`;
     } else {
       mktCol = `<span style="color:var(--outline-var);font-size:10px;">—</span>`;
     }
