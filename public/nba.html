@@ -642,6 +642,52 @@
   .pred-dot.L{background:var(--lose);color:white;}
   .pred-recent-record{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;}
 
+  /* ─── SUGERENCIAS DE APUESTA ─── */
+  .bet-section{display:flex;flex-direction:column;gap:20px;border:1px solid var(--hairline);border-radius:20px;padding:24px;}
+  .bet-section-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .bet-section-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--outline);}
+  .bet-profile-btn{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:5px 12px;border-radius:9999px;border:1px solid var(--outline-var);background:transparent;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all 0.15s;}
+  .bet-profile-btn:hover{background:var(--surface-high);}
+  .bet-odds-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .bet-odds-card{background:var(--surface);border:1px solid var(--outline-var);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;}
+  .bet-odds-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--outline);display:flex;align-items:center;justify-content:space-between;}
+  .bet-odds-inputs{display:flex;gap:8px;align-items:center;}
+  .bet-odds-input{background:var(--surface-low);border:1px solid var(--outline-var);border-radius:8px;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;width:90px;color:var(--hairline);}
+  .bet-odds-auto{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--win);}
+  .bet-odds-stale{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);}
+  .bet-suggest-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .bet-suggest-card{border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;border:1px solid transparent;}
+  .bet-suggest-card.apostable{border-color:var(--win);background:color-mix(in srgb,var(--win) 6%,transparent);}
+  .bet-suggest-card.no-edge{border-color:var(--outline-var);background:var(--surface);}
+  .bet-suggest-card.excluded{border-color:#e67e22;background:color-mix(in srgb,#e67e22 6%,transparent);}
+  .bet-suggest-type{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
+  .bet-suggest-pick{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:900;letter-spacing:-0.5px;line-height:1.1;}
+  .bet-suggest-detail{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);}
+  .bet-suggest-size{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.5px;}
+  .bet-suggest-reason{font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:2px;}
+  .bet-api-status{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);display:flex;align-items:center;gap:6px;}
+  .bet-api-dot{width:6px;height:6px;border-radius:50%;display:inline-block;}
+  .bet-api-dot.live{background:var(--win);}
+  .bet-api-dot.manual{background:var(--outline-var);}
+  .bet-api-dot.loading{background:#f39c12;animation:blink 1s infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  /* ─── POPUP PERFIL ─── */
+  .profile-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .profile-modal{background:var(--canvas);border-radius:24px;padding:32px;max-width:740px;width:100%;display:flex;flex-direction:column;gap:24px;max-height:90vh;overflow-y:auto;}
+  .profile-modal-title{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:900;}
+  .profile-modal-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);margin-top:-16px;line-height:1.6;}
+  .profile-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .profile-card{border:2px solid var(--outline-var);border-radius:16px;padding:18px;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;gap:8px;}
+  .profile-card:hover{border-color:var(--hairline);background:var(--surface);}
+  .profile-card.selected{border-color:var(--violet);background:color-mix(in srgb,var(--violet) 5%,transparent);}
+  .profile-card-name{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:900;}
+  .profile-card-roi{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1;}
+  .profile-card-stats{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);display:flex;flex-direction:column;gap:2px;}
+  .profile-chart-wrap{border:1px solid var(--outline-var);border-radius:12px;padding:16px;}
+  .profile-note{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);background:var(--surface);border-radius:8px;padding:10px 14px;line-height:1.6;}
+  .profile-confirm-btn{align-self:center;background:var(--hairline);color:var(--canvas);border:none;border-radius:9999px;padding:12px 36px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:background 0.15s;}
+  .profile-confirm-btn:hover{background:var(--violet);}
+
   /* ─── BACKTEST ─── */
   .bt-container{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:28px;}
   .bt-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
@@ -1139,6 +1185,7 @@
       <button class="pred-run-btn" id="pred-run-btn" onclick="runPrediction()" disabled>Calcular Predicción</button>
       <div id="pred-result" style="display:none;">
         <div style="display:flex;flex-direction:column;gap:24px;">
+          <!-- existing prediction content stays -->
           <div class="pred-prob-wrap">
             <div class="pred-prob-team" id="pred-prob-local-name"></div>
             <div class="pred-prob-bar-outer">
@@ -1173,6 +1220,67 @@
           <div class="pred-recent-wrap">
             <div class="pred-recent-col" id="pred-recent-local"></div>
             <div class="pred-recent-col" id="pred-recent-away"></div>
+          </div>
+          <!-- Sugerencias de apuesta -->
+          <div class="bet-section" id="bet-section">
+            <div class="bet-section-header">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <div class="bet-section-title">Sugerencias de Apuesta</div>
+                <div class="bet-api-status" id="bet-api-status">
+                  <span class="bet-api-dot manual" id="bet-api-dot"></span>
+                  <span id="bet-api-status-text">Cuotas manuales</span>
+                </div>
+              </div>
+              <button class="bet-profile-btn" onclick="openProfileModal()">
+                <span id="bet-profile-label">🎯 Moderado</span>
+                <span style="color:var(--outline);">&#9660;</span>
+              </button>
+            </div>
+            <!-- Cuotas ML -->
+            <div class="bet-odds-row">
+              <div class="bet-odds-card">
+                <div class="bet-odds-label">
+                  <span>Moneyline Local</span>
+                  <span class="bet-odds-auto" id="bet-ml-local-auto"></span>
+                </div>
+                <div class="bet-odds-inputs">
+                  <input class="bet-odds-input" type="number" id="bet-ml-local" placeholder="1.85" step="0.01" oninput="calcBetSuggestions()">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);">decimal</span>
+                </div>
+              </div>
+              <div class="bet-odds-card">
+                <div class="bet-odds-label">
+                  <span>Moneyline Visitante</span>
+                  <span class="bet-odds-auto" id="bet-ml-away-auto"></span>
+                </div>
+                <div class="bet-odds-inputs">
+                  <input class="bet-odds-input" type="number" id="bet-ml-away" placeholder="2.05" step="0.01" oninput="calcBetSuggestions()">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);">decimal</span>
+                </div>
+              </div>
+            </div>
+            <!-- Cuota O/U -->
+            <div class="bet-odds-row">
+              <div class="bet-odds-card">
+                <div class="bet-odds-label">
+                  <span>Línea O/U (totales)</span>
+                  <span class="bet-odds-auto" id="bet-ou-auto"></span>
+                </div>
+                <div class="bet-odds-inputs">
+                  <input class="bet-odds-input" type="number" id="bet-ou-line" placeholder="224.5" step="0.5" oninput="calcBetSuggestions()" style="width:110px;">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);">pts totales</span>
+                </div>
+              </div>
+              <div class="bet-odds-card" style="justify-content:center;">
+                <div class="bet-odds-label"><span>Cuota Over/Under</span></div>
+                <div class="bet-odds-inputs">
+                  <input class="bet-odds-input" type="number" id="bet-ou-odds" placeholder="1.909" step="0.01" value="1.909" oninput="calcBetSuggestions()">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);">decimal</span>
+                </div>
+              </div>
+            </div>
+            <!-- Sugerencias calculadas -->
+            <div class="bet-suggest-grid" id="bet-suggest-grid"></div>
           </div>
         </div>
       </div>
@@ -1278,6 +1386,26 @@
 </main>
 
 <div class="toast" id="toast"></div>
+
+<!-- Popup de perfil de riesgo -->
+<div class="profile-overlay" id="profile-overlay" style="display:none;" onclick="if(event.target===this)closeProfileModal()">
+  <div class="profile-modal">
+    <div>
+      <div class="profile-modal-title">Perfil de Riesgo</div>
+      <div class="profile-modal-sub">Los tres perfiles apuestan en los mismos partidos. La diferencia es el tamaño de cada apuesta.<br>Datos reales de la temporada NBA 2022–23 (106 apuestas ML · 84 apuestas O/U).</div>
+    </div>
+    <div class="profile-cards" id="profile-cards"></div>
+    <div class="profile-chart-wrap">
+      <div class="bet-section-title" style="margin-bottom:12px;">Curva de Bankroll ML — Temporada 2022–23</div>
+      <canvas id="profile-chart" height="80"></canvas>
+    </div>
+    <div class="profile-note">
+      ⚠ Estos resultados son históricos de una temporada específica. El rendimiento futuro puede variar.<br>
+      Los tres perfiles usan los mismos filtros del modelo (cap 15pp, exclusión 5–9pp). Solo cambia la fracción Kelly.
+    </div>
+    <button class="profile-confirm-btn" onclick="confirmProfile()">Confirmar Perfil</button>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
@@ -2248,8 +2376,329 @@ function runPrediction() {
   renderRecentCol('pred-recent-local', local, formL, colorL, tcL);
   renderRecentCol('pred-recent-away',  away,  formA, colorA, tcA);
 
+  // Guardar estado para sugerencias de apuesta
+  currentPredLocal = local;
+  currentPredAway  = away;
+  currentPredProbs = {
+    probL:      probL,
+    probA:      probA,
+    predTotal:  score.ptsLocal + score.ptsAway,
+  };
+
   document.getElementById('pred-result').style.display = '';
   document.getElementById('pred-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Limpiar cuotas anteriores y buscar nuevas
+  ['bet-ml-local','bet-ml-away','bet-ou-line'].forEach(id => document.getElementById(id).value = '');
+  ['bet-ml-local-auto','bet-ml-away-auto','bet-ou-auto'].forEach(id => document.getElementById(id).textContent = '');
+  fetchOddsForMatchup(local, away);
+  calcBetSuggestions();
+}
+
+// ────────────────────────────────────────────────────
+// SISTEMA DE APUESTAS
+// ────────────────────────────────────────────────────
+
+const ODDS_API_KEY = 'fc220930933817e623a7a8886a68b99c';
+const ODDS_CACHE_KEY = 'nba_odds_cache';
+const ODDS_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 horas en ms
+
+// Datos de perfiles de riesgo con curvas reales del backtest 2022-23
+const RISK_PROFILES = {
+  conservador: {
+    label: '🟢 Conservador',
+    mlFrac: 0.10, mlCap: 0.03,
+    ouFrac: 0.15, ouCap: 0.03,
+    ml: { roi: 30.2, maxDD: 9.0,  maxLose: 3, bets: 106, winPct: 71.7,
+      history: [100,100.78,100.69,101.97,103.53,105.35,104.43,108.5,109.23,106.18,106,104.48,103.2,104.92,109.9,111.97,117.19,121.98,124.23,140.2,136.31,139.95,133.72,134.54,130.19] },
+    ou: { roi: 15.0, maxDD: 3.9,  maxLose: 4, bets:  84, winPct: 63.1 },
+  },
+  moderado: {
+    label: '🟡 Moderado',
+    mlFrac: 0.15, mlCap: 0.05,
+    ouFrac: 0.25, ouCap: 0.05,
+    ml: { roi: 48.2, maxDD: 13.3, maxLose: 3, bets: 106, winPct: 71.7,
+      history: [100,101.21,101.08,103,105.37,108.15,106.97,113.51,114.09,109.34,109.06,106.69,104.66,107.22,115.3,117.87,126.17,133.89,137.6,165.51,158.62,165.06,154.1,155.52,148.23] },
+    ou: { roi: 25.9, maxDD: 6.4,  maxLose: 4, bets:  84, winPct: 63.1 },
+  },
+  agresivo: {
+    label: '🔴 Agresivo',
+    mlFrac: 0.20, mlCap: 0.07,
+    ouFrac: 0.30, ouCap: 0.07,
+    ml: { roi: 67.1, maxDD: 17.8, maxLose: 3, bets: 106, winPct: 71.7,
+      history: [100,101.57,101.39,103.95,107.14,110.92,109.45,118.62,118.8,112.12,111.74,108.46,105.64,109.01,120.04,123.32,134.97,145.98,151.39,193.68,182.92,192.86,175.88,178.03,167.1] },
+    ou: { roi: 31.6, maxDD: 7.6,  maxLose: 4, bets:  84, winPct: 63.1 },
+  },
+};
+
+let currentProfile = 'moderado';
+let currentPredLocal = null;
+let currentPredAway  = null;
+let currentPredProbs = null;  // { probL, probA, predTotal }
+let profileChartInst = null;
+let selectedProfileInModal = 'moderado';
+
+// ── The-odds-api: cargar cuotas en vivo ──────────────────────────────────────
+async function fetchOddsForMatchup(local, away) {
+  const dot  = document.getElementById('bet-api-dot');
+  const txt  = document.getElementById('bet-api-status-text');
+  dot.className = 'bet-api-dot loading';
+  txt.textContent = 'Buscando cuotas...';
+
+  // Verificar caché (TTL 2 horas)
+  try {
+    const cached = JSON.parse(localStorage.getItem(ODDS_CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.ts < ODDS_CACHE_TTL) {
+      applyOddsFromCache(cached.data, local, away);
+      dot.className = 'bet-api-dot live';
+      const mins = Math.round((ODDS_CACHE_TTL - (Date.now() - cached.ts)) / 60000);
+      txt.textContent = `Cuotas en vivo · actualiza en ${mins}min`;
+      return;
+    }
+  } catch(e) {}
+
+  // Llamar a la API
+  try {
+    const url = `https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,totals&oddsFormat=decimal`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const events = await resp.json();
+    const remaining = resp.headers.get('x-requests-remaining');
+
+    // Guardar en caché
+    localStorage.setItem(ODDS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: events }));
+
+    applyOddsFromCache(events, local, away);
+    dot.className = 'bet-api-dot live';
+    txt.textContent = `Cuotas en vivo · ${remaining || '?'} requests restantes`;
+  } catch(e) {
+    dot.className = 'bet-api-dot manual';
+    txt.textContent = 'Sin cuotas en vivo — ingresa manualmente';
+  }
+}
+
+function applyOddsFromCache(events, local, away) {
+  // Buscar el partido que coincida con local/away
+  const match = events.find(ev => {
+    const h = ev.home_team?.toLowerCase() || '';
+    const a = ev.away_team?.toLowerCase() || '';
+    const lLast = local.split(' ').pop().toLowerCase();
+    const aLast = away.split(' ').pop().toLowerCase();
+    return (h.includes(lLast) || h.includes(local.toLowerCase())) &&
+           (a.includes(aLast) || a.includes(away.toLowerCase()));
+  });
+  if (!match) return;
+
+  let mlHome = null, mlAway = null, ouLine = null;
+
+  for (const book of match.bookmakers || []) {
+    for (const market of book.markets || []) {
+      if (market.key === 'h2h' && !mlHome) {
+        for (const o of market.outcomes) {
+          const t = o.name.toLowerCase();
+          if (t.includes(match.home_team.split(' ').pop().toLowerCase()))
+            mlHome = o.price;
+          else
+            mlAway = o.price;
+        }
+      }
+      if (market.key === 'totals' && !ouLine) {
+        const over = market.outcomes.find(o => o.name === 'Over');
+        if (over) ouLine = over.point;
+      }
+    }
+    if (mlHome && mlAway && ouLine) break;
+  }
+
+  if (mlHome) {
+    document.getElementById('bet-ml-local').value = mlHome.toFixed(2);
+    document.getElementById('bet-ml-local-auto').textContent = '★ auto';
+  }
+  if (mlAway) {
+    document.getElementById('bet-ml-away').value = mlAway.toFixed(2);
+    document.getElementById('bet-ml-away-auto').textContent = '★ auto';
+  }
+  if (ouLine) {
+    document.getElementById('bet-ou-line').value = ouLine;
+    document.getElementById('bet-ou-auto').textContent = '★ auto';
+  }
+  calcBetSuggestions();
+}
+
+// ── Motor de sugerencias ────────────────────────────────────────────────────
+function calcBetSuggestions() {
+  if (!currentPredLocal || !currentPredProbs) return;
+  const grid = document.getElementById('bet-suggest-grid');
+  const p    = RISK_PROFILES[currentProfile];
+
+  const mlL  = parseFloat(document.getElementById('bet-ml-local').value)  || null;
+  const mlA  = parseFloat(document.getElementById('bet-ml-away').value)   || null;
+  const ouLn = parseFloat(document.getElementById('bet-ou-line').value)   || null;
+  const ouOd = parseFloat(document.getElementById('bet-ou-odds').value)   || 1.909;
+
+  const { probL, probA, predTotal } = currentPredProbs;
+  const cards = [];
+
+  // ── Sugerencia ML ──
+  if (mlL && mlA) {
+    const probHomeImplied = 1 / mlL;
+    const probAwayImplied = 1 / mlA;
+    const vigTotal = probHomeImplied + probAwayImplied;
+    const mktProbL = probHomeImplied / vigTotal;
+    const mktProbA = probAwayImplied / vigTotal;
+
+    const modelLocal = probL >= probA;
+    const pickProb   = modelLocal ? probL : probA;
+    const mktProb    = modelLocal ? mktProbL : mktProbA;
+    const pickDec    = modelLocal ? mlL : mlA;
+    const pickName   = modelLocal ? currentPredLocal : currentPredAway;
+    const edge       = pickProb - mktProb;
+
+    const inExcl  = edge >= 0.05 && edge < 0.09;
+    const overCap = edge > 0.15;
+    const noEdge  = edge <= 0;
+
+    if (noEdge) {
+      cards.push({ type:'Moneyline', cls:'no-edge', pick: pickName.split(' ').pop(),
+        detail: `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%`,
+        size: '—', reason: 'Sin edge sobre el mercado', sizeColor:'var(--outline)' });
+    } else if (inExcl) {
+      cards.push({ type:'Moneyline', cls:'excluded', pick: pickName.split(' ').pop(),
+        detail: `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%  ·  +${(edge*100).toFixed(0)}pp`,
+        size: '⚠ Excluido', reason: 'Zona 5–9pp — accuracy histórico 52% (azar)', sizeColor:'#e67e22' });
+    } else if (overCap) {
+      cards.push({ type:'Moneyline', cls:'excluded', pick: pickName.split(' ').pop(),
+        detail: `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%  ·  +${(edge*100).toFixed(0)}pp`,
+        size: '⚠ Excluido', reason: 'Edge >15pp — modelo diverge demasiado del mercado', sizeColor:'#e67e22' });
+    } else {
+      const ev    = pickProb * pickDec - 1;
+      const scale = 0.5 + (edge / 0.15) * 0.5;
+      const f     = Math.min((ev / (pickDec - 1)) * p.mlFrac * scale, p.mlCap);
+      const units = (f * 100).toFixed(2);
+      cards.push({ type:'Moneyline', cls:'apostable', pick: pickName.split(' ').pop(),
+        detail: `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%  ·  Edge +${(edge*100).toFixed(0)}pp  ·  ${pickDec.toFixed(2)}`,
+        size: `${units}% del bankroll`, reason: `Kelly adaptativo · cap ${(p.mlCap*100).toFixed(0)}%`, sizeColor:'var(--win)' });
+    }
+  } else {
+    cards.push({ type:'Moneyline', cls:'no-edge', pick:'—',
+      detail:'Ingresa las cuotas ML', size:'—', reason:'Cuotas requeridas', sizeColor:'var(--outline)' });
+  }
+
+  // ── Sugerencia O/U ──
+  if (ouLn && predTotal) {
+    const adjDiff = (predTotal - ouLn) + 3;  // bias +3
+    if (adjDiff >= 3) {
+      const absDiff = Math.abs(adjDiff);
+      const scale   = 0.5 + Math.min(absDiff / 15.0, 1.0) * 0.5;
+      const estAcc  = 0.50 + Math.min(absDiff / 15.0, 1.0) * 0.10;
+      const ev      = estAcc * ouOd - 1;
+      if (ev > 0) {
+        const f     = Math.min((ev / (ouOd - 1)) * p.ouFrac * scale, p.ouCap);
+        const units = (f * 100).toFixed(2);
+        cards.push({ type:'Over/Under', cls:'apostable', pick:`Over ${ouLn}`,
+          detail: `Modelo ${predTotal}pts  ·  Línea ${ouLn}  ·  Diff ajust. ${adjDiff > 0 ? '+' : ''}${adjDiff.toFixed(1)}pts`,
+          size: `${units}% del bankroll`, reason: `Kelly adaptativo · solo Over · bias +3pts`, sizeColor:'var(--win)' });
+      } else {
+        cards.push({ type:'Over/Under', cls:'no-edge', pick:`Over ${ouLn}`,
+          detail:`Modelo ${predTotal}pts · Línea ${ouLn}`, size:'—', reason:'EV negativo con estas cuotas', sizeColor:'var(--outline)' });
+      }
+    } else {
+      const rawDiff = predTotal - ouLn;
+      cards.push({ type:'Over/Under', cls:'no-edge',
+        pick: rawDiff > 0 ? `Over ${ouLn}` : `Under ${ouLn}`,
+        detail:`Modelo ${predTotal}pts · Línea ${ouLn} · Diff ajust. ${adjDiff.toFixed(1)}pts`,
+        size:'—', reason:'Diferencia insuficiente (<3pts con bias)', sizeColor:'var(--outline)' });
+    }
+  } else {
+    cards.push({ type:'Over/Under', cls:'no-edge', pick:'—',
+      detail:'Ingresa la línea de totales', size:'—', reason:'Línea requerida', sizeColor:'var(--outline)' });
+  }
+
+  grid.innerHTML = cards.map(c => `
+    <div class="bet-suggest-card ${c.cls}">
+      <div class="bet-suggest-type" style="color:${c.cls==='apostable'?'var(--win)':c.cls==='excluded'?'#e67e22':'var(--outline)'}">${c.type}</div>
+      <div class="bet-suggest-pick">${c.pick}</div>
+      <div class="bet-suggest-detail">${c.detail}</div>
+      <div class="bet-suggest-size" style="color:${c.sizeColor};">${c.size}</div>
+      <div class="bet-suggest-reason" style="color:${c.cls==='apostable'?'var(--win)':c.cls==='excluded'?'#e67e22':'var(--outline)'}">${c.reason}</div>
+    </div>`).join('');
+}
+
+// ── Popup de perfil de riesgo ────────────────────────────────────────────────
+function openProfileModal() {
+  selectedProfileInModal = currentProfile;
+  renderProfileCards();
+  renderProfileChart();
+  document.getElementById('profile-overlay').style.display = 'flex';
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-overlay').style.display = 'none';
+}
+
+function confirmProfile() {
+  currentProfile = selectedProfileInModal;
+  const lbl = { conservador:'🟢 Conservador', moderado:'🟡 Moderado', agresivo:'🔴 Agresivo' };
+  document.getElementById('bet-profile-label').textContent = lbl[currentProfile];
+  closeProfileModal();
+  calcBetSuggestions();
+}
+
+function renderProfileCards() {
+  const container = document.getElementById('profile-cards');
+  const colors    = { conservador:'var(--win)', moderado:'var(--violet)', agresivo:'var(--lose)' };
+  container.innerHTML = Object.entries(RISK_PROFILES).map(([key, p]) => `
+    <div class="profile-card ${key === selectedProfileInModal ? 'selected' : ''}" onclick="selectProfile('${key}')">
+      <div class="profile-card-name" style="color:${colors[key]};">${{conservador:'Conservador',moderado:'Moderado',agresivo:'Agresivo'}[key]}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--outline);margin-top:-4px;">ML frac ${(p.mlFrac*100).toFixed(0)}% · cap ${(p.mlCap*100).toFixed(0)}%</div>
+      <div class="profile-card-roi" style="color:${colors[key]};">${p.ml.roi > 0 ? '+' : ''}${p.ml.roi}%</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--outline);">ROI ML · temporada 2022–23</div>
+      <div class="profile-card-stats">
+        <span>ML: ${p.ml.winPct}% win · DD máx ${p.ml.maxDD}% · racha ${p.ml.maxLose}</span>
+        <span>O/U: ${p.ou.roi > 0 ? '+' : ''}${p.ou.roi}% ROI · DD máx ${p.ou.maxDD}%</span>
+        <span>Apuesta ML avg: ~${(100 * p.mlFrac * 0.5).toFixed(1)}u (100u bankroll)</span>
+      </div>
+    </div>`).join('');
+}
+
+function selectProfile(key) {
+  selectedProfileInModal = key;
+  renderProfileCards();
+  renderProfileChart();
+}
+
+function renderProfileChart() {
+  const ctx    = document.getElementById('profile-chart').getContext('2d');
+  const colors = { conservador:'#00b894', moderado:'#6c5ce7', agresivo:'#e17055' };
+  const labels_arr = RISK_PROFILES.moderado.ml.history.map((_, i) =>
+    i % 5 === 0 ? String(i * 4) : '');
+
+  if (profileChartInst) profileChartInst.destroy();
+  profileChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels_arr,
+      datasets: Object.entries(RISK_PROFILES).map(([key, p]) => ({
+        label: { conservador:'Conservador', moderado:'Moderado', agresivo:'Agresivo' }[key],
+        data:  p.ml.history,
+        borderColor: colors[key],
+        backgroundColor: key === selectedProfileInModal
+          ? colors[key].replace(')', ',0.08)').replace('rgb','rgba') : 'transparent',
+        borderWidth: key === selectedProfileInModal ? 3 : 1.5,
+        pointRadius: 0, tension: 0.3,
+      })),
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top',
+          labels: { font: { family:"'JetBrains Mono'", size:10 }, boxWidth:10 } }
+      },
+      scales: {
+        y: { ticks: { callback: v => v+'u' }, grid: { color:'var(--surface-high)' } },
+        x: { ticks: { maxTicksLimit: 8 }, grid: { display:false } }
+      }
+    }
+  });
 }
 
 // (populatePredSelects se llama desde showSection al entrar a la pestaña)
