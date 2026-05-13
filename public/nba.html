@@ -2292,12 +2292,12 @@ function runPrediction() {
   // Marcador
   document.getElementById('pred-score-local-name').textContent = local.split(' ').pop();
   document.getElementById('pred-score-away-name').textContent  = away.split(' ').pop();
-  document.getElementById('pred-score-local-pts').textContent  = score.ptsLocal;
+  document.getElementById('pred-score-local-pts').textContent  = score.ptsA;
   document.getElementById('pred-score-local-pts').style.color  = colorL;
-  document.getElementById('pred-score-away-pts').textContent   = score.ptsAway;
+  document.getElementById('pred-score-away-pts').textContent   = score.ptsB;
   document.getElementById('pred-score-away-pts').style.color   = colorA;
   document.getElementById('pred-total').textContent =
-    `Total estimado: ${score.ptsLocal + score.ptsAway} pts · Promedio liga: ${score.leagueAvg.toFixed(1)} pts/equipo`;
+    `Total estimado: ${score.ptsA + score.ptsB} pts · Promedio liga: ${score.leagueAvg.toFixed(1)} pts/equipo`;
 
   // Desglose de factores
   const winner = probL >= probA ? local : away;
@@ -2382,7 +2382,7 @@ function runPrediction() {
   currentPredProbs = {
     probL:      probL,
     probA:      probA,
-    predTotal:  score.ptsLocal + score.ptsAway,
+    predTotal:  score.ptsA + score.ptsB,
   };
 
   document.getElementById('pred-result').style.display = '';
