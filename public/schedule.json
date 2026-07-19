@@ -1,0 +1,13 @@
+[
+  { "date": "2026-07-18", "local": "Los Angeles Lakers", "away": "Golden State Warriors" },
+  { "date": "2026-07-18", "local": "Boston Celtics", "away": "New York Knicks" },
+  { "date": "2026-07-18", "local": "Denver Nuggets", "away": "Phoenix Suns" },
+
+  { "date": "2026-07-19", "local": "Miami Heat", "away": "Milwaukee Bucks" },
+  { "date": "2026-07-19", "local": "Dallas Mavericks", "away": "Oklahoma City Thunder" },
+
+  { "date": "2026-07-20", "local": "Golden State Warriors", "away": "Los Angeles Clippers" },
+  { "date": "2026-07-20", "local": "Philadelphia 76ers", "away": "Toronto Raptors" },
+  { "date": "2026-07-20", "local": "Chicago Bulls", "away": "Cleveland Cavaliers" },
+  { "date": "2026-07-20", "local": "Sacramento Kings", "away": "Utah Jazz" }
+]

@@ -660,6 +660,7 @@
   .bet-suggest-card.apostable{border-color:var(--win);background:color-mix(in srgb,var(--win) 6%,transparent);}
   .bet-suggest-card.no-edge{border-color:var(--outline-var);background:var(--surface);}
   .bet-suggest-card.excluded{border-color:#e67e22;background:color-mix(in srgb,#e67e22 6%,transparent);}
+  .bet-suggest-card.warmup{border-color:var(--outline-var);background:var(--surface);}
   .bet-suggest-type{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
   .bet-suggest-pick{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:900;letter-spacing:-0.5px;line-height:1.1;}
   .bet-suggest-detail{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);}
@@ -867,6 +868,16 @@
 </head>
 <body>
 
+<div id="auth-gate" style="position:fixed;inset:0;z-index:2000;background:var(--canvas);display:flex;align-items:center;justify-content:center;">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center;padding:40px;">
+    <div class="logo"><div class="logo-stripe"><span></span><span></span><span></span></div>NBA STATS</div>
+    <div style="font-family:'Hanken Grotesk',sans-serif;font-size:14px;color:var(--secondary-tx);max-width:340px;">Acceso privado. Inicia sesión con la cuenta de Google autorizada para continuar.</div>
+    <button id="google-login-btn" class="btn btn-primary">Iniciar sesión con Google</button>
+    <div id="auth-status" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--lose);min-height:16px;max-width:340px;"></div>
+  </div>
+</div>
+
+<div id="app-content" style="display:none;">
 <header>
   <div class="logo"><div class="logo-stripe"><span></span><span></span><span></span></div>NBA STATS</div>
   <nav>
@@ -874,7 +885,8 @@
     <button onclick="showSection('partidos')">Partidos</button>
     <button onclick="showSection('consolidado')">Consolidado</button>
       <button onclick="showSection('prediccion')" id="nav-s-prediccion">🎯 Predicción</button>
-      <button onclick="showSection('backtest')" id="nav-s-backtest">📊 Backtest</button>
+      <button onclick="showSection('backtest')" id="nav-s-backtest" style="display:none;">📊 Backtest</button>
+      <button onclick="showSection('apuestas')" id="nav-s-apuestas">📈 Apuestas</button>
     <button onclick="showSection('equipos')">Por Equipo</button>
   </nav>
 </header>
@@ -883,8 +895,23 @@
 
 <!-- ═══ ENTRADA ═══ -->
 <section id="s-entrada" class="section active">
+
+<div class="form-card" id="schedule-picker-card" style="display:none;margin-bottom:24px;">
+  <div class="form-title" style="font-size:32px;">Calendario Oficial</div>
+  <div class="form-subtitle">Elige una fecha y haz clic en el partido para registrar su resultado — así evitamos duplicados y rivales equivocados.</div>
+  <div class="form-group" style="max-width:280px;">
+    <label>Fecha</label>
+    <select id="sched-date-select" onchange="renderScheduleDay()"></select>
+  </div>
+  <div class="team-select-grid" id="sched-day-games" style="margin-top:16px;"></div>
+</div>
+
 <div class="form-card">
-  <div class="form-title">Registrar Resultado</div>
+  <div class="page-header" style="margin-bottom:8px;align-items:center;">
+    <div class="form-title" style="margin-bottom:0;">Registrar Resultado</div>
+    <button class="btn btn-secondary" id="toggle-manual-btn" style="display:none;" onclick="toggleManualEntry()">+ Partido fuera del calendario</button>
+  </div>
+  <div id="entry-fixture-banner" style="display:none;"></div>
   <div class="form-grid">
 
     <div class="form-group">
@@ -1329,6 +1356,39 @@
   </div>
 </section>
 
+<!-- ═══ SEGUIMIENTO DE APUESTAS ═══ -->
+<section class="section" id="s-apuestas">
+  <div class="bt-container">
+    <div>
+      <div class="form-title" style="font-size:36px;">Seguimiento de Apuestas</div>
+      <div class="form-subtitle" style="margin-bottom:0;">Desempeño real de tus apuestas registradas — calculado sobre los partidos que ingresaste con datos de apuesta</div>
+    </div>
+    <div class="bt-summary-grid" id="ap-metrics"></div>
+    <div class="bt-section-title">Curva de P&amp;L Acumulado (real)</div>
+    <div class="bt-curve-wrap"><canvas id="ap-bankroll-chart" height="90"></canvas></div>
+    <div class="bt-section-title">Historial de Apuestas</div>
+    <div class="bt-filter">
+      <input class="search-input bt-search" type="text" placeholder="Buscar equipo..." id="ap-search" oninput="renderApuestas()">
+      <select class="search-input" id="ap-filter" onchange="renderApuestas()" style="width:auto;">
+        <option value="all">Todas</option>
+        <option value="won">✔ Ganadas</option>
+        <option value="lost">✘ Perdidas</option>
+        <option value="pending">⏳ Pendientes</option>
+      </select>
+    </div>
+    <div class="bt-table-wrap">
+      <div class="bt-table-header" style="grid-template-columns:80px 1fr 1fr 60px 70px 60px 70px 90px 80px;">
+        <div>Fecha</div><div>Local</div><div>Visitante</div><div>O/U</div><div>Línea</div><div>Cuota</div><div>Apuesta</div><div>Resultado</div><div>P&amp;L</div>
+      </div>
+      <div id="ap-tbody"></div>
+    </div>
+    <div id="ap-empty" class="empty-state" style="display:none;">
+      <div class="empty-icon">📈</div>
+      No has registrado apuestas todavía. Completa la sección "Apuesta (Opcional)" al guardar un partido para que aparezca aquí.
+    </div>
+  </div>
+</section>
+
 <!-- ═══ EQUIPOS ═══ -->
 <section id="s-equipos" class="section">
   <div id="team-selector">
@@ -1406,9 +1466,85 @@
     <button class="profile-confirm-btn" onclick="confirmProfile()">Confirmar Perfil</button>
   </div>
 </div>
+</div><!-- /#app-content -->
 
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
+
+// ──────────────────────────────────────────────
+//  FIREBASE — AUTENTICACIÓN Y DATOS PRIVADOS
+// ──────────────────────────────────────────────
+
+// 1) Reemplaza esto con el config de TU proyecto Firebase
+//    (Firebase Console → Configuración del proyecto → Tus apps → Config del SDK)
+const firebaseConfig = {
+  apiKey: "AIzaSyDRzI9z4pc7DcH2cEklrFBgt9PG4rhzT6Q",
+  authDomain: "nba-stats-8e618.firebaseapp.com",
+  projectId: "nba-stats-8e618",
+  storageBucket: "nba-stats-8e618.firebasestorage.app",
+  messagingSenderId: "19407203006",
+  appId: "1:19407203006:web:e3f5f788aa2c01428e8cef"
+};
+
+// Correo autorizado para usar la app (único correo permitido)
+const ALLOWED_EMAILS = ["carrenor902isb@gmail.com"];
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+let currentUid = null;
+
+document.getElementById('google-login-btn').addEventListener('click', () => {
+  document.getElementById('auth-status').textContent = '';
+  auth.signInWithPopup(googleProvider).catch(err => {
+    document.getElementById('auth-status').textContent = 'Error al iniciar sesión: ' + err.message;
+  });
+});
+
+auth.onAuthStateChanged(async (user) => {
+  const gate = document.getElementById('auth-gate');
+  const content = document.getElementById('app-content');
+  const statusEl = document.getElementById('auth-status');
+
+  if (!user) {
+    currentUid = null;
+    gate.style.display = 'flex';
+    content.style.display = 'none';
+    return;
+  }
+
+  if (!ALLOWED_EMAILS.includes(user.email)) {
+    statusEl.textContent = `Acceso denegado para ${user.email}. Esta app es privada.`;
+    await auth.signOut();
+    return;
+  }
+
+  currentUid = user.uid;
+  gate.style.display = 'none';
+  content.style.display = '';
+  await loadGamesFromFirestore(currentUid);
+  startApp();
+});
+
+async function loadGamesFromFirestore(uid) {
+  try {
+    const docRef = db.collection('nba_data').doc(uid);
+    const snap = await docRef.get();
+    if (snap.exists && Array.isArray(snap.data().games)) {
+      games = snap.data().games;
+    } else {
+      games = JSON.parse(JSON.stringify(SEED_DATA));
+      await docRef.set({ games });
+    }
+  } catch (e) {
+    console.error('Error cargando datos de Firestore:', e);
+    games = JSON.parse(JSON.stringify(SEED_DATA));
+  }
+}
 
 const TEAMS = [
   "Atlanta Hawks","Boston Celtics","Brooklyn Nets","Charlotte Hornets",
@@ -1473,9 +1609,7 @@ function getInitials(name) {
 }
 
 const SEED_DATA = [];
-const _stored = localStorage.getItem('nba_games');
-let games = (_stored !== null && _stored !== '[]') ? JSON.parse(_stored) : null;
-if (!games || games.length === 0) { games = JSON.parse(JSON.stringify(SEED_DATA)); localStorage.setItem('nba_games', JSON.stringify(games)); }
+let games = [];
 let consolSort = {key:'ptsdiff', dir:-1};
 let gamesSort = {key:'date', dir:-1};
 let gamesPage = 0;
@@ -1484,8 +1618,12 @@ let currentTeam = null;
 let teamPage = 0;
 let teamFilter = 'all';
 let teamChart = null;
+let apBankrollChart = null;
 
-function save() { localStorage.setItem('nba_games', JSON.stringify(games)); }
+function save() {
+  if (!currentUid) return;
+  db.collection('nba_data').doc(currentUid).set({ games }).catch(e => console.error('Error guardando en Firestore:', e));
+}
 
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -1497,6 +1635,7 @@ function showSection(id) {
   if(id==='equipos') renderTeamGrid();
   if(id==='prediccion') populatePredSelects();
   if(id==='backtest') initBacktest();
+  if(id==='apuestas') renderApuestas();
 }
 
 function toast(msg, color='var(--green)') {
@@ -1509,6 +1648,160 @@ function toast(msg, color='var(--green)') {
 
 function n(id) { return parseFloat(document.getElementById(id).value)||0; }
 function v(id) { return document.getElementById(id).value; }
+
+// ────────────────────────────────────────────────────
+//  CALENDARIO OFICIAL (schedule.json) — evita duplicados y rivales
+//  equivocados dejando elegir el partido de una lista en vez de
+//  escribirlo a mano. Si no existe el archivo, la app sigue en modo
+//  manual normal, sin romper nada.
+// ────────────────────────────────────────────────────
+
+let SCHEDULE = [];
+let currentFixture = null; // { date, local, away } | { manual:true } | null
+
+async function loadSchedule() {
+  try {
+    const res = await fetch('schedule.json');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        SCHEDULE = data;
+        console.log(`[calendario] schedule.json cargado: ${data.length} partidos programados.`);
+      } else {
+        console.warn('[calendario] schedule.json no es un arreglo válido.');
+      }
+    } else {
+      console.warn(`[calendario] schedule.json respondió HTTP ${res.status} — se queda en modo manual.`);
+    }
+  } catch (e) {
+    console.warn('[calendario] No se pudo cargar schedule.json — se queda en modo manual.', e);
+  }
+  renderScheduleUI();
+}
+
+function findGameForFixture(f) {
+  return games.find(g => g.date === f.date &&
+    ((g.local === f.local && g.away === f.away) || (g.local === f.away && g.away === f.local)));
+}
+
+function renderScheduleUI() {
+  const pickerCard = document.getElementById('schedule-picker-card');
+  const toggleBtn  = document.getElementById('toggle-manual-btn');
+  if (!pickerCard || !toggleBtn) return;
+
+  if (!SCHEDULE.length) {
+    pickerCard.style.display = 'none';
+    toggleBtn.style.display = 'none';
+    return;
+  }
+
+  toggleBtn.style.display = currentFixture ? '' : 'none';
+
+  if (currentFixture) {
+    pickerCard.style.display = 'none';
+  } else {
+    pickerCard.style.display = '';
+    populateScheduleDates();
+    renderScheduleDay();
+  }
+}
+
+function populateScheduleDates() {
+  const sel = document.getElementById('sched-date-select');
+  const dates = [...new Set(SCHEDULE.map(f => f.date))].sort();
+  const today = new Date().toISOString().split('T')[0];
+  const defaultDate = dates.find(d => d >= today) || dates[dates.length - 1] || today;
+  sel.innerHTML = dates.map(d => `<option value="${d}" ${d === defaultDate ? 'selected' : ''}>${fmtDate(d)}</option>`).join('');
+}
+
+function renderScheduleDay() {
+  const sel = document.getElementById('sched-date-select');
+  if (!sel) return;
+  const date = sel.value;
+  const dayFixtures = SCHEDULE.filter(f => f.date === date);
+  const grid = document.getElementById('sched-day-games');
+  grid.innerHTML = dayFixtures.map(f => {
+    const existing = findGameForFixture(f);
+    const done = !!existing;
+    const payload = encodeURIComponent(JSON.stringify(f));
+    return `<button class="team-btn" style="${done ? 'opacity:0.6;' : ''}" onclick="openFixtureForm(decodeURIComponent('${payload}'))">
+      <div>
+        <div style="font-size:14px;font-weight:700;">${f.local} <span style="color:var(--outline);font-weight:500;">vs</span> ${f.away}</div>
+        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;color:${done ? 'var(--win)' : 'var(--violet)'};margin-top:3px;">${done ? '✔ Ya registrado — clic para corregir' : '⏳ Pendiente — clic para registrar'}</div>
+      </div>
+    </button>`;
+  }).join('') || `<div class="empty-state" style="padding:40px;">No hay partidos programados para esta fecha en el calendario cargado.</div>`;
+}
+
+function openFixtureForm(fixtureJson) {
+  const f = typeof fixtureJson === 'string' ? JSON.parse(fixtureJson) : fixtureJson;
+  currentFixture = f;
+  document.getElementById('schedule-picker-card').style.display = 'none';
+
+  document.getElementById('f-date').value = f.date;
+  document.getElementById('f-local').value = f.local;
+  document.getElementById('f-away').value = f.away;
+  document.getElementById('f-date').disabled = true;
+  document.getElementById('f-local').disabled = true;
+  document.getElementById('f-away').disabled = true;
+
+  const existing = findGameForFixture(f);
+  clearForm();
+  if (existing) fillFormFromGame(existing);
+
+  const banner = document.getElementById('entry-fixture-banner');
+  banner.style.display = '';
+  banner.innerHTML = `<div style="background:var(--mint);border:1px solid var(--hairline);border-radius:16px;padding:12px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">📅 ${fmtDate(f.date)} — ${f.local} vs ${f.away}${existing ? ' (editando resultado existente)' : ''}</div>
+    <button class="btn btn-secondary" style="height:36px;padding:0 16px;" onclick="cancelFixtureForm()">Cambiar partido</button>
+  </div>`;
+
+  document.getElementById('toggle-manual-btn').style.display = '';
+}
+
+function fillFormFromGame(g) {
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = (val ?? '') === null ? '' : val; };
+  setVal('f-ptsL', g.ptsL);   setVal('f-ptsA', g.ptsA);
+  setVal('f-rebL', g.rebL);   setVal('f-rebA', g.rebA);
+  setVal('f-astL', g.astL);   setVal('f-astA', g.astA);
+  setVal('f-bptsL', g.bptsL); setVal('f-bptsA', g.bptsA);
+  setVal('f-1qL', g.q1L);     setVal('f-1qA', g.q1A);
+  setVal('f-2qL', g.q2L);     setVal('f-2qA', g.q2A);
+  setVal('f-3qL', g.q3L);     setVal('f-3qA', g.q3A);
+  setVal('f-4qL', g.q4L);     setVal('f-4qA', g.q4A);
+  setVal('f-otL', g.otL || 0); setVal('f-otA', g.otA || 0);
+  setVal('f-ouPred', g.ouPred); setVal('f-linea', g.linea);
+  setVal('f-ou', g.ou || '');   setVal('f-apuesta', g.apuesta);
+  setVal('f-cuota', g.cuota);   setVal('f-real', g.real);
+  setVal('f-close', g.close || 'N');
+}
+
+function cancelFixtureForm() {
+  currentFixture = null;
+  document.getElementById('f-date').disabled = false;
+  document.getElementById('f-local').disabled = false;
+  document.getElementById('f-away').disabled = false;
+  document.getElementById('entry-fixture-banner').style.display = 'none';
+  clearForm();
+  renderScheduleUI();
+}
+
+function toggleManualEntry() {
+  // Permite registrar un partido fuera del calendario cargado
+  // (ej. All-Star Game, o una corrección del propio fixture).
+  currentFixture = { manual: true };
+  document.getElementById('schedule-picker-card').style.display = 'none';
+  document.getElementById('f-date').disabled = false;
+  document.getElementById('f-local').disabled = false;
+  document.getElementById('f-away').disabled = false;
+  clearForm();
+  const banner = document.getElementById('entry-fixture-banner');
+  banner.style.display = '';
+  banner.innerHTML = `<div style="background:var(--surface-cont);border:1px solid var(--hairline);border-radius:16px;padding:12px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">✏️ Modo manual — fuera del calendario oficial</div>
+    <button class="btn btn-secondary" style="height:36px;padding:0 16px;" onclick="cancelFixtureForm()">Volver al calendario</button>
+  </div>`;
+}
 
 function saveGame() {
   const local = v('f-local');
@@ -1563,10 +1856,47 @@ function saveGame() {
     else if(game.ou==='U') game.ganada = game.real < game.linea ? 'SI' : 'NO';
   }
 
-  games.push(game);
-  save();
-  toast('Partido guardado correctamente ✓');
+  // Evita duplicados: si ya existe un partido con la misma fecha y los mismos
+  // dos equipos (en cualquier orden), se actualiza ese registro en vez de
+  // crear uno nuevo. Esto protege tanto al modo calendario como al manual.
+  const dupIdx = games.findIndex(g => g.date === date &&
+    ((g.local === local && g.away === away) || (g.local === away && g.away === local)));
+
+  // Un equipo no puede jugar dos partidos el mismo día: si local o away ya
+  // aparecen en OTRO partido con esa misma fecha (rival distinto), se bloquea.
+  const conflict = games.find((g, idx) => {
+    if (idx === dupIdx) return false; // es el mismo partido que estamos editando/actualizando
+    if (g.date !== date) return false;
+    return g.local === local || g.away === local || g.local === away || g.away === away;
+  });
+  if (conflict) {
+    const clashTeam = (conflict.local === local || conflict.away === local) ? local : away;
+    const rival = conflict.local === clashTeam ? conflict.away : conflict.local;
+    toast(`${clashTeam} ya tiene un partido registrado el ${fmtDate(date)} (vs ${rival}). Un equipo no puede jugar dos partidos el mismo día.`, 'var(--red)');
+    return;
+  }
+
+  if (dupIdx !== -1) {
+    game.id = games[dupIdx].id;
+    games[dupIdx] = game;
+    save();
+    toast('Partido actualizado (ya existía este resultado) ✓');
+  } else {
+    games.push(game);
+    save();
+    toast('Partido guardado correctamente ✓');
+  }
+
   clearForm();
+
+  if (currentFixture && !currentFixture.manual) {
+    currentFixture = null;
+    document.getElementById('f-date').disabled = false;
+    document.getElementById('f-local').disabled = false;
+    document.getElementById('f-away').disabled = false;
+    document.getElementById('entry-fixture-banner').style.display = 'none';
+    renderScheduleUI();
+  }
 }
 
 function clearForm() {
@@ -1590,11 +1920,10 @@ function deleteGame(id) {
 
 function clearAllGames() {
   if(confirm('¿Borrar TODOS los partidos? Esta acción no se puede deshacer.')) {
-    localStorage.removeItem('nba_games');
     games = JSON.parse(JSON.stringify(SEED_DATA));
-    localStorage.setItem('nba_games', JSON.stringify(games));
+    save();
     renderGames();
-    toast('Datos restaurados al Excel original','var(--red)');
+    toast('Datos borrados','var(--red)');
   }
 }
 
@@ -2037,6 +2366,129 @@ function showTeamSelector() {
   if(teamChart) { teamChart.destroy(); teamChart=null; }
 }
 
+// ────────────────────────────────────────────────────
+//  SEGUIMIENTO DE APUESTAS
+//  Calculado 100% sobre los campos de apuesta que ya vienen
+//  embebidos en cada partido (apuesta, cuota, ou, linea, real, ganada).
+//  No agrega ninguna colección ni documento nuevo en Firestore.
+// ────────────────────────────────────────────────────
+
+function getBetGames() {
+  return games.filter(g => g.apuesta != null && g.apuesta > 0 && g.cuota != null && g.cuota > 0);
+}
+
+function betPL(g) {
+  if (g.ganada === 'SI') return g.apuesta * (g.cuota - 1);
+  if (g.ganada === 'NO') return -g.apuesta;
+  return null; // pendiente: no se ha ingresado 'real' o 'linea' todavía
+}
+
+function renderApuestas() {
+  const q = (document.getElementById('ap-search').value || '').toLowerCase();
+  const filter = document.getElementById('ap-filter').value;
+  const allBets = getBetGames();
+
+  let bets = allBets.filter(g => !q || g.local.toLowerCase().includes(q) || g.away.toLowerCase().includes(q));
+  bets = bets.filter(g => {
+    if (filter === 'won') return g.ganada === 'SI';
+    if (filter === 'lost') return g.ganada === 'NO';
+    if (filter === 'pending') return g.ganada !== 'SI' && g.ganada !== 'NO';
+    return true;
+  });
+  bets.sort((a,b) => a.date < b.date ? 1 : -1);
+
+  const resolved = allBets.filter(g => g.ganada === 'SI' || g.ganada === 'NO');
+  const pending  = allBets.filter(g => g.ganada !== 'SI' && g.ganada !== 'NO');
+  const won      = resolved.filter(g => g.ganada === 'SI');
+  const totalApostado = resolved.reduce((s,g) => s + g.apuesta, 0);
+  const totalPL        = resolved.reduce((s,g) => s + betPL(g), 0);
+  const roi     = totalApostado ? (totalPL / totalApostado * 100) : 0;
+  const winRate = resolved.length ? (won.length / resolved.length * 100) : 0;
+
+  document.getElementById('ap-metrics').innerHTML = `
+    <div class="bt-metric">
+      <div class="bt-metric-label">P&amp;L Total</div>
+      <div class="bt-metric-value" style="color:${totalPL>=0?'var(--win)':'var(--lose)'};">${totalPL>=0?'+':''}${totalPL.toFixed(2)}</div>
+      <div class="bt-metric-sub">${resolved.length} apuestas resueltas</div>
+    </div>
+    <div class="bt-metric">
+      <div class="bt-metric-label">ROI Real</div>
+      <div class="bt-metric-value" style="color:${roi>=0?'var(--win)':'var(--lose)'};">${roi>=0?'+':''}${roi.toFixed(1)}%</div>
+      <div class="bt-metric-sub">sobre ${totalApostado.toFixed(2)} apostado</div>
+    </div>
+    <div class="bt-metric">
+      <div class="bt-metric-label">Win Rate</div>
+      <div class="bt-metric-value">${winRate.toFixed(1)}%</div>
+      <div class="bt-metric-sub">${won.length}W – ${resolved.length-won.length}L</div>
+    </div>
+    <div class="bt-metric">
+      <div class="bt-metric-label">Pendientes</div>
+      <div class="bt-metric-value">${pending.length}</div>
+      <div class="bt-metric-sub">esperando resultado</div>
+    </div>
+  `;
+
+  // Curva de P&L acumulado, en orden cronológico, solo apuestas resueltas
+  const sortedResolved = [...resolved].sort((a,b) => a.date < b.date ? -1 : 1);
+  let running = 0;
+  const curveLabels = ['Inicio'];
+  const curveData = [0];
+  sortedResolved.forEach(g => {
+    running += betPL(g);
+    curveLabels.push(fmtDate(g.date));
+    curveData.push(+running.toFixed(2));
+  });
+
+  const ctx = document.getElementById('ap-bankroll-chart').getContext('2d');
+  if (apBankrollChart) apBankrollChart.destroy();
+  apBankrollChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: curveLabels, datasets: [{
+      label: 'P&L acumulado',
+      data: curveData,
+      borderColor: 'var(--violet)',
+      backgroundColor: 'rgba(82,0,255,0.08)',
+      fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
+    }]},
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { grid: { color: 'var(--surface-high)' } },
+        x: { ticks: { maxTicksLimit: 10 }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Tabla
+  const tbody = document.getElementById('ap-tbody');
+  const empty = document.getElementById('ap-empty');
+  if (!bets.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = bets.map(g => {
+      const pl = betPL(g);
+      const resultBadge = g.ganada === 'SI' ? '<span class="bt-badge W">✔</span>'
+                        : g.ganada === 'NO' ? '<span class="bt-badge L">✘</span>'
+                        : '<span style="color:var(--outline);font-size:10px;">Pendiente</span>';
+      const plText = pl === null ? '—' : (pl >= 0 ? `<span class="bt-pl-pos">+${pl.toFixed(2)}</span>` : `<span class="bt-pl-neg">${pl.toFixed(2)}</span>`);
+      return `<div class="bt-row ${g.ganada==='SI'?'correct':g.ganada==='NO'?'wrong':''}" style="grid-template-columns:80px 1fr 1fr 60px 70px 60px 70px 90px 80px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">${fmtDate(g.date)}</div>
+        <div class="bt-team">${g.local}</div>
+        <div class="bt-team">${g.away}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.ou||'-'}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.linea??'-'}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.cuota??'-'}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.apuesta??'-'}</div>
+        <div>${resultBadge}</div>
+        <div>${plText}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
 function populateTeamSelects() {
   const opts = TEAMS.map(t => `<option value="${t}">${t}</option>`).join('');
   document.getElementById('f-local').innerHTML = opts;
@@ -2049,8 +2501,11 @@ function initDate() {
   document.getElementById('f-date').value = today;
 }
 
-populateTeamSelects();
-initDate();
+function startApp() {
+  populateTeamSelects();
+  initDate();
+  loadSchedule();
+}
 
 // ────────────────────────────────────────────────────
 //  MOTOR DE PREDICCIÓN
@@ -2059,8 +2514,7 @@ initDate();
 
 // Poblar selects de predicción con los equipos que tienen partidos
 function populatePredSelects() {
-  const teams = [...new Set(games.flatMap(g => [g.local, g.away]))].sort();
-  const opts = teams.map(t => `<option value="${t}">${t}</option>`).join('');
+  const opts = TEAMS.map(t => `<option value="${t}">${t}</option>`).join('');
   const base = '<option value="">— Selecciona equipo —</option>';
   document.getElementById('pred-local').innerHTML = base + opts;
   document.getElementById('pred-away').innerHTML  = base + opts;
@@ -2084,9 +2538,7 @@ function updatePredPreview() {
   setBadge('pred-local-badge', local);
   setBadge('pred-away-badge',  away);
 
-  const canRun = local && away && local !== away &&
-    games.some(g => g.local === local || g.away === local) &&
-    games.some(g => g.local === away  || g.away === away);
+  const canRun = local && away && local !== away;
   document.getElementById('pred-run-btn').disabled = !canRun;
   document.getElementById('pred-result').style.display = 'none';
 }
@@ -2186,19 +2638,25 @@ function computeHomeAdvantage(team) {
 function computeProjectedScore(teamA, teamB) {
   const K_CONFIDENCE = 5;
 
+  const leagueAvgPts = games.length
+    ? (games.reduce((s, g) => s + g.ptsL + g.ptsA, 0) / (games.length * 2))
+    : 112;
+
   function getStats(team) {
     const tg   = games.filter(g => g.local === team || g.away === team);
     const home = tg.filter(g => g.local === team);
     const away = tg.filter(g => g.away  === team);
-    const avg  = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+    // Si el equipo todavía no tiene partidos (inicio de temporada), se usa
+    // el promedio de liga como respaldo en vez de un promedio de arreglo vacío (0).
+    const avg  = (arr, fallback) => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : fallback;
 
     return {
-      offFull: avg(tg.map(g => g.local === team ? g.ptsL : g.ptsA)),
-      defFull: avg(tg.map(g => g.local === team ? g.ptsA : g.ptsL)),
-      offHome: avg(home.map(g => g.ptsL)),
-      defHome: avg(home.map(g => g.ptsA)),
-      offAway: avg(away.map(g => g.ptsA)),
-      defAway: avg(away.map(g => g.ptsL)),
+      offFull: avg(tg.map(g => g.local === team ? g.ptsL : g.ptsA), leagueAvgPts),
+      defFull: avg(tg.map(g => g.local === team ? g.ptsA : g.ptsL), leagueAvgPts),
+      offHome: avg(home.map(g => g.ptsL), leagueAvgPts),
+      defHome: avg(home.map(g => g.ptsA), leagueAvgPts),
+      offAway: avg(away.map(g => g.ptsA), leagueAvgPts),
+      defAway: avg(away.map(g => g.ptsL), leagueAvgPts),
       nHome: home.length,
       nAway: away.length,
     };
@@ -2213,10 +2671,6 @@ function computeProjectedScore(teamA, teamB) {
 
   const A = getStats(teamA); // local
   const B = getStats(teamB); // visitante
-
-  const leagueAvgPts = games.length
-    ? (games.reduce((s, g) => s + g.ptsL + g.ptsA, 0) / (games.length * 2))
-    : 112;
 
   // Splits ajustados con confianza
   const offA_home = blendSplit(A.offHome, A.offFull, A.nHome);
@@ -2384,6 +2838,12 @@ function runPrediction() {
     probA:      probA,
     predTotal:  score.ptsA + score.ptsB,
   };
+  const gpLocal = teamGamesPlayed(local);
+  const gpAway  = teamGamesPlayed(away);
+  currentPredWarmup = {
+    gpLocal, gpAway,
+    ready: gpLocal >= WARMUP_MIN_GAMES && gpAway >= WARMUP_MIN_GAMES,
+  };
 
   document.getElementById('pred-result').style.display = '';
   document.getElementById('pred-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2401,6 +2861,14 @@ function runPrediction() {
 const ODDS_API_KEY = 'fc220930933817e623a7a8886a68b99c';
 const ODDS_CACHE_KEY = 'nba_odds_cache';
 const ODDS_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 horas en ms
+
+// Mínimo de partidos por equipo antes de confiar en las sugerencias de apuesta
+// (mismo valor de calentamiento usado en el backtest walk-forward: warmup=10)
+const WARMUP_MIN_GAMES = 10;
+
+function teamGamesPlayed(team) {
+  return games.filter(g => g.local === team || g.away === team).length;
+}
 
 // Datos de perfiles de riesgo con curvas reales del backtest 2022-23
 const RISK_PROFILES = {
@@ -2434,6 +2902,7 @@ let currentProfile = 'moderado';
 let currentPredLocal = null;
 let currentPredAway  = null;
 let currentPredProbs = null;  // { probL, probA, predTotal }
+let currentPredWarmup = null; // { gpLocal, gpAway, ready }
 let profileChartInst = null;
 let selectedProfileInModal = 'moderado';
 
@@ -2528,6 +2997,21 @@ function applyOddsFromCache(events, local, away) {
 function calcBetSuggestions() {
   if (!currentPredLocal || !currentPredProbs) return;
   const grid = document.getElementById('bet-suggest-grid');
+
+  // ── Calentamiento del modelo: igual que en el backtest (warmup = 10 PJ/equipo) ──
+  if (currentPredWarmup && !currentPredWarmup.ready) {
+    const faltanL = Math.max(0, WARMUP_MIN_GAMES - currentPredWarmup.gpLocal);
+    const faltanA = Math.max(0, WARMUP_MIN_GAMES - currentPredWarmup.gpAway);
+    grid.innerHTML = `
+      <div class="bet-suggest-card warmup" style="grid-column:1/-1;">
+        <div class="bet-suggest-type" style="color:var(--outline);">⏳ Calentamiento del Modelo</div>
+        <div class="bet-suggest-pick">Datos insuficientes todavía — no apostar</div>
+        <div class="bet-suggest-detail">${currentPredLocal.split(' ').pop()}: ${currentPredWarmup.gpLocal}/${WARMUP_MIN_GAMES} PJ${faltanL ? ` (faltan ${faltanL})` : ''} &nbsp;·&nbsp; ${currentPredAway.split(' ').pop()}: ${currentPredWarmup.gpAway}/${WARMUP_MIN_GAMES} PJ${faltanA ? ` (faltan ${faltanA})` : ''}</div>
+        <div class="bet-suggest-reason" style="color:var(--outline);">El modelo necesita un mínimo de ${WARMUP_MIN_GAMES} partidos jugados por equipo (el mismo calentamiento usado en el backtest walk-forward) antes de que el Elo, la forma reciente y los splits de puntos sean confiables. Sigue registrando partidos de la temporada 26/27 para activar las sugerencias.</div>
+      </div>`;
+    return;
+  }
+
   const p    = RISK_PROFILES[currentProfile];
 
   const mlL  = parseFloat(document.getElementById('bet-ml-local').value)  || null;
