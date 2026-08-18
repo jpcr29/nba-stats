@@ -906,7 +906,7 @@
   <div class="team-select-grid" id="sched-day-games" style="margin-top:16px;"></div>
 </div>
 
-<div class="form-card">
+<div class="form-card" id="result-form-card" style="display:none;">
   <div class="page-header" style="margin-bottom:8px;align-items:center;">
     <div class="form-title" style="margin-bottom:0;">Registrar Resultado</div>
     <button class="btn btn-secondary" id="toggle-manual-btn" style="display:none;" onclick="toggleManualEntry()">+ Partido fuera del calendario</button>
@@ -916,7 +916,7 @@
 
     <div class="form-group">
       <label>Fecha</label>
-      <input type="date" id="f-date">
+      <input type="date" id="f-date" onchange="renderBetsCard()">
     </div>
 
     <div class="form-group" style="visibility:hidden;"></div>
@@ -924,12 +924,12 @@
     <div class="teams-row">
       <div class="form-group">
         <label>Equipo Local</label>
-        <select id="f-local"></select>
+        <select id="f-local" onchange="renderBetsCard()"></select>
       </div>
       <div class="vs-badge">VS</div>
       <div class="form-group">
         <label>Equipo Visitante</label>
-        <select id="f-away"></select>
+        <select id="f-away" onchange="renderBetsCard()"></select>
       </div>
     </div>
 
@@ -1016,53 +1016,63 @@
       </div>
     </div>
 
-    <hr class="form-sep">
-    <div class="form-section-title">Apuesta (Opcional)</div>
-
-    <div class="stats-4col">
-      <div class="form-group">
-        <label>O/U Pred</label>
-        <input type="number" id="f-ouPred" placeholder="" step="0.5">
-      </div>
-      <div class="form-group">
-        <label>Línea</label>
-        <input type="number" id="f-linea" placeholder="" step="0.5">
-      </div>
-      <div class="form-group">
-        <label>O/U</label>
-        <select id="f-ou">
-          <option value="">-</option>
-          <option value="O">O (Over)</option>
-          <option value="U">U (Under)</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Apuesta</label>
-        <input type="number" id="f-apuesta" placeholder="" step="0.5">
-      </div>
-      <div class="form-group">
-        <label>Cuota</label>
-        <input type="number" id="f-cuota" placeholder="" step="0.001">
-      </div>
-      <div class="form-group">
-        <label>Real (Total)</label>
-        <input type="number" id="f-real" placeholder="">
-      </div>
-      <div class="form-group">
-        <label>Close</label>
-        <select id="f-close">
-          <option value="N">N</option>
-          <option value="Y">Y</option>
-        </select>
-      </div>
-    </div>
-
     <div class="btn-row">
       <button class="btn btn-primary" onclick="saveGame()">Guardar Partido</button>
       <button class="btn btn-secondary" onclick="clearForm()">Limpiar</button>
     </div>
 
   </div>
+</div>
+
+<div class="form-card" id="bets-card" style="display:none;">
+  <div class="form-title" style="font-size:26px;margin-bottom:4px;">Apuestas de este Partido</div>
+  <div class="form-subtitle" id="bets-card-sub" style="margin-bottom:16px;">Hasta 2 apuestas por partido (una O/U y una ML). Se resuelven solas en cuanto el partido tenga resultado.</div>
+  <div id="bets-list"></div>
+  <div id="bet-add-form" style="display:none;margin-top:20px;padding-top:20px;border-top:1px dashed var(--hairline);">
+    <div class="stats-4col">
+      <div class="form-group">
+        <label>Mercado</label>
+        <select id="fb-mercado" onchange="onFbMercadoChange()">
+          <option value="">-</option>
+          <option value="OU">O/U (Total)</option>
+          <option value="ML">ML (Ganador)</option>
+        </select>
+      </div>
+      <div class="form-group" id="fb-linea-group">
+        <label>Línea</label>
+        <input type="number" id="fb-linea" placeholder="" step="0.5">
+      </div>
+      <div class="form-group" id="fb-ou-group">
+        <label>O/U</label>
+        <select id="fb-ou">
+          <option value="">-</option>
+          <option value="O">O (Over)</option>
+          <option value="U">U (Under)</option>
+        </select>
+      </div>
+      <div class="form-group" id="fb-mlsel-group" style="display:none;">
+        <label>Selección</label>
+        <select id="fb-mlsel">
+          <option value="">-</option>
+          <option value="L">Local</option>
+          <option value="A">Visitante</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Apuesta</label>
+        <input type="number" id="fb-apuesta" placeholder="" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Cuota</label>
+        <input type="number" id="fb-cuota" placeholder="" step="0.001">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveBet()">Guardar Apuesta</button>
+      <button class="btn btn-secondary" onclick="hideBetAddForm()">Cancelar</button>
+    </div>
+  </div>
+  <button class="btn btn-secondary" id="bet-add-btn" style="margin-top:16px;" onclick="showBetAddForm()">+ Agregar Apuesta</button>
 </div>
 </section>
 
@@ -1087,11 +1097,7 @@
           <th>Ast L/V</th>
           <th>Dif</th>
           <th>Res</th>
-          <th>Close</th>
-          <th>O/U</th>
-          <th>Apuesta</th>
-          <th>Real</th>
-          <th>Gan</th>
+          <th>Cerrado</th>
           <th></th>
         </tr>
       </thead>
@@ -1377,8 +1383,8 @@
       </select>
     </div>
     <div class="bt-table-wrap">
-      <div class="bt-table-header" style="grid-template-columns:80px 1fr 1fr 60px 70px 60px 70px 90px 80px;">
-        <div>Fecha</div><div>Local</div><div>Visitante</div><div>O/U</div><div>Línea</div><div>Cuota</div><div>Apuesta</div><div>Resultado</div><div>P&amp;L</div>
+      <div class="bt-table-header" style="grid-template-columns:80px 1fr 1fr 90px 60px 70px 90px 80px;">
+        <div>Fecha</div><div>Local</div><div>Visitante</div><div>Mercado</div><div>Cuota</div><div>Apuesta</div><div>Resultado</div><div>P&amp;L</div>
       </div>
       <div id="ap-tbody"></div>
     </div>
@@ -1414,6 +1420,11 @@
       <div class="chart-title">Pts a favor vs en contra — últimos partidos</div>
       <div style="position:relative;height:200px;"><canvas id="td-chart" role="img" aria-label="Puntos a favor vs en contra por partido"></canvas></div>
     </div>
+    <div class="page-header" style="margin-top:20px;margin-bottom:12px;">
+      <div class="page-title" style="font-size:15px;">Local vs Visitante</div>
+    </div>
+    <div class="stats-grid" id="td-split-stats" style="margin-bottom:12px;"></div>
+    <div class="stats-grid" id="td-situational-stats" style="margin-bottom:24px;"></div>
     <div class="page-header" style="margin-top:20px;margin-bottom:12px;">
       <div class="page-title" style="font-size:15px;">Historial de Partidos</div>
       <div class="filter-tabs" id="td-filter-tabs">
@@ -1466,6 +1477,7 @@
     <button class="profile-confirm-btn" onclick="confirmProfile()">Confirmar Perfil</button>
   </div>
 </div>
+
 </div><!-- /#app-content -->
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -1536,13 +1548,18 @@ async function loadGamesFromFirestore(uid) {
     const snap = await docRef.get();
     if (snap.exists && Array.isArray(snap.data().games)) {
       games = snap.data().games;
+      bets = Array.isArray(snap.data().bets) ? snap.data().bets
+           : Array.isArray(snap.data().pendingBets) ? snap.data().pendingBets // migración desde el esquema anterior
+           : [];
     } else {
       games = JSON.parse(JSON.stringify(SEED_DATA));
-      await docRef.set({ games });
+      bets = [];
+      await docRef.set({ games, bets });
     }
   } catch (e) {
     console.error('Error cargando datos de Firestore:', e);
     games = JSON.parse(JSON.stringify(SEED_DATA));
+    bets = [];
   }
 }
 
@@ -1619,10 +1636,12 @@ let teamPage = 0;
 let teamFilter = 'all';
 let teamChart = null;
 let apBankrollChart = null;
+let bets = [];
+let editingBetId = null; // id de la apuesta que se está editando en el formulario, o null si es nueva
 
 function save() {
   if (!currentUid) return;
-  db.collection('nba_data').doc(currentUid).set({ games }).catch(e => console.error('Error guardando en Firestore:', e));
+  db.collection('nba_data').doc(currentUid).set({ games, bets }).catch(e => console.error('Error guardando en Firestore:', e));
 }
 
 function showSection(id) {
@@ -1684,14 +1703,24 @@ function findGameForFixture(f) {
     ((g.local === f.local && g.away === f.away) || (g.local === f.away && g.away === f.local)));
 }
 
+function betsForFixture(f) {
+  return bets.filter(b => b.date === f.date &&
+    ((b.local === f.local && b.away === f.away) || (b.local === f.away && b.away === f.local)));
+}
+
 function renderScheduleUI() {
   const pickerCard = document.getElementById('schedule-picker-card');
   const toggleBtn  = document.getElementById('toggle-manual-btn');
+  const resultCard = document.getElementById('result-form-card');
+  const betsCard   = document.getElementById('bets-card');
   if (!pickerCard || !toggleBtn) return;
 
   if (!SCHEDULE.length) {
     pickerCard.style.display = 'none';
     toggleBtn.style.display = 'none';
+    resultCard.style.display = '';
+    betsCard.style.display = '';
+    renderBetsCard();
     return;
   }
 
@@ -1699,8 +1728,13 @@ function renderScheduleUI() {
 
   if (currentFixture) {
     pickerCard.style.display = 'none';
+    resultCard.style.display = '';
+    betsCard.style.display = '';
+    renderBetsCard();
   } else {
     pickerCard.style.display = '';
+    resultCard.style.display = 'none';
+    betsCard.style.display = 'none';
     populateScheduleDates();
     renderScheduleDay();
   }
@@ -1723,11 +1757,16 @@ function renderScheduleDay() {
   grid.innerHTML = dayFixtures.map(f => {
     const existing = findGameForFixture(f);
     const done = !!existing;
+    const fixtureBets = betsForFixture(f);
     const payload = encodeURIComponent(JSON.stringify(f));
+    const statusLine = done
+      ? '✔ Ya registrado — clic para corregir'
+      : (fixtureBets.length ? `🎯 ${fixtureBets.length}/2 apuestas registradas — clic para ver` : '⏳ Pendiente — clic para registrar');
+    const statusColor = done ? 'var(--win)' : 'var(--violet)';
     return `<button class="team-btn" style="${done ? 'opacity:0.6;' : ''}" onclick="openFixtureForm(decodeURIComponent('${payload}'))">
       <div>
         <div style="font-size:14px;font-weight:700;">${f.local} <span style="color:var(--outline);font-weight:500;">vs</span> ${f.away}</div>
-        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;color:${done ? 'var(--win)' : 'var(--violet)'};margin-top:3px;">${done ? '✔ Ya registrado — clic para corregir' : '⏳ Pendiente — clic para registrar'}</div>
+        <div style="font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;color:${statusColor};margin-top:3px;">${statusLine}</div>
       </div>
     </button>`;
   }).join('') || `<div class="empty-state" style="padding:40px;">No hay partidos programados para esta fecha en el calendario cargado.</div>`;
@@ -1736,7 +1775,6 @@ function renderScheduleDay() {
 function openFixtureForm(fixtureJson) {
   const f = typeof fixtureJson === 'string' ? JSON.parse(fixtureJson) : fixtureJson;
   currentFixture = f;
-  document.getElementById('schedule-picker-card').style.display = 'none';
 
   document.getElementById('f-date').value = f.date;
   document.getElementById('f-local').value = f.local;
@@ -1756,7 +1794,17 @@ function openFixtureForm(fixtureJson) {
     <button class="btn btn-secondary" style="height:36px;padding:0 16px;" onclick="cancelFixtureForm()">Cambiar partido</button>
   </div>`;
 
-  document.getElementById('toggle-manual-btn').style.display = '';
+  renderScheduleUI();
+}
+
+function mercadoLabel(g) {
+  if (g.mercado === 'ML' || (!g.mercado && g.mlSel)) {
+    return `ML ${g.mlSel === 'L' ? 'Local' : g.mlSel === 'A' ? 'Visit.' : '-'}`;
+  }
+  if (g.mercado === 'OU' || (!g.mercado && g.ou)) {
+    return `${g.ou || '-'} ${g.linea ?? '-'}`;
+  }
+  return '-';
 }
 
 function fillFormFromGame(g) {
@@ -1770,10 +1818,6 @@ function fillFormFromGame(g) {
   setVal('f-3qL', g.q3L);     setVal('f-3qA', g.q3A);
   setVal('f-4qL', g.q4L);     setVal('f-4qA', g.q4A);
   setVal('f-otL', g.otL || 0); setVal('f-otA', g.otA || 0);
-  setVal('f-ouPred', g.ouPred); setVal('f-linea', g.linea);
-  setVal('f-ou', g.ou || '');   setVal('f-apuesta', g.apuesta);
-  setVal('f-cuota', g.cuota);   setVal('f-real', g.real);
-  setVal('f-close', g.close || 'N');
 }
 
 function cancelFixtureForm() {
@@ -1801,14 +1845,177 @@ function toggleManualEntry() {
     <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">✏️ Modo manual — fuera del calendario oficial</div>
     <button class="btn btn-secondary" style="height:36px;padding:0 16px;" onclick="cancelFixtureForm()">Volver al calendario</button>
   </div>`;
+  document.getElementById('bets-card').style.display = '';
+  renderBetsCard();
+}
+
+// ────────────────────────────────────────────────────
+//  APUESTAS POR PARTIDO
+//  Viven en su propia colección (`bets`), separadas de los partidos.
+//  Se pueden registrar apenas eliges fecha + equipos en "Registrar
+//  Resultado" — no hace falta esperar a tener el marcador. El resultado
+//  de cada apuesta (SI/NO/pendiente) se calcula solo, comparando contra
+//  el partido guardado con esa misma fecha y equipos (si existe).
+//  Máximo 2 apuestas por partido: una O/U y una ML.
+// ────────────────────────────────────────────────────
+
+function resolveBetResult(bet) {
+  const game = findGameForFixture(bet);
+  if (!game) return undefined; // el partido todavía no tiene resultado cargado
+  if (bet.mercado === 'OU') {
+    if (bet.linea == null || !bet.ou) return undefined;
+    const total = game.ptsL + game.ptsA;
+    return (bet.ou === 'O' ? total > bet.linea : total < bet.linea) ? 'SI' : 'NO';
+  }
+  if (bet.mercado === 'ML') {
+    if (!bet.mlSel) return undefined;
+    return bet.mlSel === game.winner ? 'SI' : 'NO';
+  }
+  return undefined;
+}
+
+function renderBetsCard() {
+  const betsCard = document.getElementById('bets-card');
+  if (!betsCard) return;
+  const date = v('f-date'), local = v('f-local'), away = v('f-away');
+  const listEl = document.getElementById('bets-list');
+  const addBtn = document.getElementById('bet-add-btn');
+  if (!date || !local || !away || local === away) {
+    listEl.innerHTML = '';
+    addBtn.style.display = 'none';
+    document.getElementById('bet-add-form').style.display = 'none';
+    return;
+  }
+
+  const fixtureBets = betsForFixture({ date, local, away });
+
+  listEl.innerHTML = fixtureBets.length ? fixtureBets.map(b => {
+    const result = resolveBetResult(b);
+    const badge = result === 'SI' ? '<span class="bt-badge W">✔</span>'
+                : result === 'NO' ? '<span class="bt-badge L">✘</span>'
+                : '<span style="color:var(--outline);font-size:10px;font-family:\'JetBrains Mono\',monospace;">Pendiente</span>';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border:1px solid var(--hairline);border-radius:16px;margin-bottom:8px;flex-wrap:wrap;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;">
+        <strong>${mercadoLabel(b)}</strong> &nbsp;·&nbsp; Cuota ${b.cuota} &nbsp;·&nbsp; Apuesta ${b.apuesta}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${badge}
+        <button class="del-btn" title="Editar apuesta" onclick="showBetAddForm('${b.id}')">✎</button>
+        <button class="del-btn" title="Eliminar apuesta" onclick="deleteBet('${b.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('') : `<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--outline);">Todavía no hay apuestas para este partido.</div>`;
+
+  addBtn.style.display = fixtureBets.length < 2 ? '' : 'none';
+}
+
+function onFbMercadoChange() {
+  const mercado = v('fb-mercado');
+  document.getElementById('fb-linea-group').style.display = mercado === 'OU' ? '' : 'none';
+  document.getElementById('fb-ou-group').style.display = mercado === 'OU' ? '' : 'none';
+  document.getElementById('fb-mlsel-group').style.display = mercado === 'ML' ? '' : 'none';
+}
+
+function showBetAddForm(betId) {
+  const date = v('f-date'), local = v('f-local'), away = v('f-away');
+  if (!date || !local || !away || local === away) {
+    toast('Elige fecha y equipos antes de agregar una apuesta.', 'var(--red)');
+    return;
+  }
+  editingBetId = betId || null;
+  const bet = editingBetId ? bets.find(b => b.id === editingBetId) : null;
+
+  document.getElementById('fb-mercado').value = bet ? bet.mercado : '';
+  document.getElementById('fb-linea').value = bet && bet.linea != null ? bet.linea : '';
+  document.getElementById('fb-ou').value = bet ? (bet.ou || '') : '';
+  document.getElementById('fb-mlsel').value = bet ? (bet.mlSel || '') : '';
+  document.getElementById('fb-apuesta').value = bet && bet.apuesta != null ? bet.apuesta : '';
+  document.getElementById('fb-cuota').value = bet && bet.cuota != null ? bet.cuota : '';
+  onFbMercadoChange();
+
+  // No se puede elegir de nuevo un mercado que ya tiene apuesta en este partido
+  const usedMarkets = new Set(betsForFixture({ date, local, away })
+    .filter(b => b.id !== editingBetId)
+    .map(b => b.mercado));
+  document.getElementById('fb-mercado').querySelectorAll('option').forEach(opt => {
+    if (!opt.value) return;
+    opt.disabled = usedMarkets.has(opt.value);
+  });
+
+  document.getElementById('bet-add-form').style.display = '';
+  document.getElementById('bet-add-btn').style.display = 'none';
+}
+
+function hideBetAddForm() {
+  editingBetId = null;
+  document.getElementById('bet-add-form').style.display = 'none';
+  document.getElementById('fb-mercado').value = '';
+  document.getElementById('fb-linea').value = '';
+  document.getElementById('fb-ou').value = '';
+  document.getElementById('fb-mlsel').value = '';
+  document.getElementById('fb-apuesta').value = '';
+  document.getElementById('fb-cuota').value = '';
+  onFbMercadoChange();
+  renderBetsCard();
+}
+
+function saveBet() {
+  const date = v('f-date'), local = v('f-local'), away = v('f-away');
+  if (!date || !local || !away || local === away) {
+    toast('Elige fecha y equipos antes de guardar la apuesta.', 'var(--red)');
+    return;
+  }
+
+  const mercado = v('fb-mercado');
+  const linea   = n('fb-linea') || null;
+  const ou      = v('fb-ou');
+  const mlSel   = v('fb-mlsel');
+  const cuota   = n('fb-cuota') || null;
+  const apuesta = n('fb-apuesta') || null;
+
+  if (!mercado)                  { toast('Elige un mercado (O/U o ML).', 'var(--red)'); return; }
+  if (!cuota || cuota <= 1)      { toast('La cuota debe ser mayor a 1.', 'var(--red)'); return; }
+  if (!apuesta || apuesta <= 0)  { toast('El monto de la apuesta debe ser mayor a 0.', 'var(--red)'); return; }
+  if (mercado === 'OU' && (linea === null || !ou)) { toast('Completa línea y O/U.', 'var(--red)'); return; }
+  if (mercado === 'ML' && !mlSel)                  { toast('Elige el ganador (Local o Visitante).', 'var(--red)'); return; }
+
+  const dup = bets.find(b => b.id !== editingBetId && b.mercado === mercado && b.date === date &&
+    ((b.local === local && b.away === away) || (b.local === away && b.away === local)));
+  if (dup) { toast(`Ya existe una apuesta ${mercado} para este partido — edítala en vez de crear otra.`, 'var(--red)'); return; }
+
+  const bet = {
+    id: editingBetId || (`${date}_${local}_${away}_${mercado}`.replace(/\s+/g, '_') + '_' + Date.now()),
+    date, local, away, mercado, cuota, apuesta,
+    linea: mercado === 'OU' ? linea : null,
+    ou: mercado === 'OU' ? ou : '',
+    mlSel: mercado === 'ML' ? mlSel : '',
+  };
+
+  const idx = bets.findIndex(b => b.id === editingBetId);
+  if (editingBetId && idx !== -1) bets[idx] = bet;
+  else bets.push(bet);
+
+  save();
+  toast('Apuesta guardada ✓');
+  hideBetAddForm();
+}
+
+function deleteBet(id) {
+  bets = bets.filter(b => b.id !== id);
+  save();
+  toast('Apuesta eliminada', 'var(--red)');
+  renderBetsCard();
 }
 
 function saveGame() {
   const local = v('f-local');
   const away  = v('f-away');
   const date  = v('f-date');
-  const ptsL  = n('f-ptsL');
-  const ptsA  = n('f-ptsA');
+
+  if (!local || !away || !date) { toast('Completa fecha y equipos.', 'var(--red)'); return; }
+  if (local === away)            { toast('Local y visitante no pueden ser el mismo equipo.', 'var(--red)'); return; }
+
+  const ptsL  = n('f-ptsL'),  ptsA  = n('f-ptsA');
   const rebL  = n('f-rebL'),  rebA  = n('f-rebA');
   const astL  = n('f-astL'),  astA  = n('f-astA');
   const bptsL = n('f-bptsL'), bptsA = n('f-bptsA');
@@ -1818,9 +2025,6 @@ function saveGame() {
   const q4L   = n('f-4qL'),   q4A   = n('f-4qA');
   const otL   = n('f-otL'),   otA   = n('f-otA'); // opcionales
 
-  // Validaciones obligatorias
-  if (!local || !away || !date) { toast('Completa fecha y equipos.', 'var(--red)'); return; }
-  if (local === away)            { toast('Local y visitante no pueden ser el mismo equipo.', 'var(--red)'); return; }
   if (!ptsL && !ptsA)            { toast('Ingresa los puntos finales de ambos equipos.', 'var(--red)'); return; }
   if (!rebL || !rebA)            { toast('Ingresa los rebotes de ambos equipos.', 'var(--red)'); return; }
   if (!astL || !astA)            { toast('Ingresa las asistencias de ambos equipos.', 'var(--red)'); return; }
@@ -1828,7 +2032,6 @@ function saveGame() {
   if (!q1L || !q2L || !q3L || !q4L) { toast('Ingresa los 4 cuartos del equipo local (OT es opcional).', 'var(--red)'); return; }
   if (!q1A || !q2A || !q3A || !q4A) { toast('Ingresa los 4 cuartos del equipo visitante (OT es opcional).', 'var(--red)'); return; }
 
-  // Validación de sumas de cuartos
   const sumL = q1L + q2L + q3L + q4L + otL;
   const sumA = q1A + q2A + q3A + q4A + otA;
   if (sumL !== ptsL) { toast(`Cuartos local suman ${sumL} ≠ ${ptsL} pts finales.`, 'var(--red)'); return; }
@@ -1840,21 +2043,10 @@ function saveGame() {
     rebL, rebA, astL, astA, bptsL, bptsA,
     q1L, q1A, q2L, q2A, q3L, q3A,
     q4L, q4A, otL, otA,
-    ouPred: n('f-ouPred') || null,
-    linea: n('f-linea') || null,
-    ou: v('f-ou'),
-    apuesta: n('f-apuesta') || null,
-    cuota: n('f-cuota') || null,
-    real: n('f-real') || null,
-    close: v('f-close'),
+    cerrado: Math.abs(ptsL - ptsA) <= 5,
     diff: ptsL - ptsA,
     winner: ptsL > ptsA ? 'L' : 'A'
   };
-
-  if(game.real !== null && game.linea !== null) {
-    if(game.ou==='O') game.ganada = game.real > game.linea ? 'SI' : 'NO';
-    else if(game.ou==='U') game.ganada = game.real < game.linea ? 'SI' : 'NO';
-  }
 
   // Evita duplicados: si ya existe un partido con la misma fecha y los mismos
   // dos equipos (en cualquier orden), se actualiza ese registro en vez de
@@ -1888,6 +2080,9 @@ function saveGame() {
   }
 
   clearForm();
+  // El partido ya tiene resultado — refresca la tarjeta de apuestas para que
+  // las que ya estaban registradas para este partido muestren su resultado.
+  renderBetsCard();
 
   if (currentFixture && !currentFixture.manual) {
     currentFixture = null;
@@ -1901,21 +2096,26 @@ function saveGame() {
 
 function clearForm() {
   ['f-ptsL','f-ptsA','f-rebL','f-rebA','f-astL','f-astA','f-bptsL','f-bptsA',
-   'f-1qL','f-1qA','f-2qL','f-2qA','f-3qL','f-3qA','f-4qL','f-4qA',
-   'f-ouPred','f-linea','f-apuesta','f-cuota','f-real'].forEach(id=>{
+   'f-1qL','f-1qA','f-2qL','f-2qA','f-3qL','f-3qA','f-4qL','f-4qA'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value = '';
   });
   document.getElementById('f-otL').value = '0';
   document.getElementById('f-otA').value = '0';
-  document.getElementById('f-ou').value = '';
 }
 
 function deleteGame(id) {
-  games = games.filter(g => g.id !== id);
+  const g = games.find(x => x.id === id);
+  games = games.filter(x => x.id !== id);
+  if (g) {
+    const before = bets.length;
+    bets = bets.filter(b => !(b.date === g.date &&
+      ((b.local === g.local && b.away === g.away) || (b.local === g.away && b.away === g.local))));
+    if (bets.length !== before) toast('Partido y sus apuestas eliminados', 'var(--red)');
+  }
   save();
   renderGames();
-  toast('Partido eliminado','var(--red)');
+  toast('Partido eliminado', 'var(--red)');
 }
 
 function clearAllGames() {
@@ -1973,7 +2173,6 @@ function renderGames() {
     const wl = g.winner === 'L' ? `<span class="badge badge-w">L</span>` : `<span class="badge badge-l">A</span>`;
     const diff = g.diff;
     const diffClass = diff > 0 ? 'pts-diff pos' : 'pts-diff neg';
-    const gan = g.ganada ? `<span class="badge ${g.ganada==='SI'?'badge-y':'badge-n'}">${g.ganada}</span>` : '';
     return `<tr>
       <td>${fmtDate(g.date)}</td>
       <td class="team-name">${g.local}</td>
@@ -1983,11 +2182,7 @@ function renderGames() {
       <td>${g.astL||'-'} / ${g.astA||'-'}</td>
       <td class="${diffClass}">${diff>0?'+':''}${diff}</td>
       <td>${wl}</td>
-      <td><span class="badge ${g.close==='Y'?'badge-y':'badge-n'}">${g.close||'N'}</span></td>
-      <td>${g.ou||'-'}</td>
-      <td>${g.apuesta||'-'}</td>
-      <td>${g.real||'-'}</td>
-      <td>${gan}</td>
+      <td><span class="badge ${g.cerrado?'badge-y':'badge-n'}">${g.cerrado?'Y':'N'}</span></td>
       <td><button class="del-btn" onclick="deleteGame(${g.id})" title="Eliminar">✕</button></td>
     </tr>`;
   }).join('');
@@ -2193,13 +2388,42 @@ function computeTeamStats(team, subset) {
   return [
     {label:'Pts / Partido',        val: avgPF.toFixed(1)},
     {label:'Pts en Contra / P',    val: avgPA.toFixed(1)},
-    {label:'Diferencia Total',     val: totalDiff},
+    {label:'Diferencia Total',     val: totalDiff, sub: `Promedio: ${(totalDiff/n>=0?'+':'')}${(totalDiff/n).toFixed(1)}`},
     {label:'% Victorias',          val: ((wins/n)*100).toFixed(1)+'%'},
     {label:'Record Local',         val: `${lw}-${localG.length-lw}`, sub: localG.length+' partidos'},
     {label:'Record Visitante',     val: `${aw}-${awayG.length-aw}`,  sub: awayG.length+' partidos'},
     {label:'Rebs / Partido',       val: avgReb.toFixed(1)},
     {label:'Asis / Partido',       val: avgAst.toFixed(1)},
   ];
+}
+
+// Desglose Local/Visitante + situacionales (cerrados, OT) — solo la parte
+// de las métricas "estilo Excel" que NO se repite ya en las tarjetas de
+// arriba (Pts/Partido, Pts en Contra/P, % Victorias, Record Local/Visitante).
+function computeTeamSplitStats(team, subset) {
+  const isWin = g => (g.local===team && g.winner==='L') || (g.away===team && g.winner==='A');
+  const pf = g => g.local===team ? g.ptsL : g.ptsA;
+  const pa = g => g.local===team ? g.ptsA : g.ptsL;
+  const avg = (arr, fn) => arr.length ? arr.reduce((a,g)=>a+fn(g),0)/arr.length : 0;
+  const pct = (num, den) => den ? (num/den*100) : 0;
+
+  const localG = subset.filter(g => g.local===team);
+  const awayG  = subset.filter(g => g.away===team);
+  const localWins = localG.filter(isWin).length;
+  const awayWins  = awayG.filter(isWin).length;
+
+  const cerrados = subset.filter(g => g.cerrado);
+  const cerradosWins = cerrados.filter(isWin).length;
+
+  const otGames = subset.filter(g => (g.otL||0) + (g.otA||0) > 0);
+  const otWins = otGames.filter(isWin).length;
+
+  return {
+    local:    { partidos: localG.length, pctWin: pct(localWins, localG.length), avgFavor: avg(localG,pf), avgContra: avg(localG,pa) },
+    away:     { partidos: awayG.length,  pctWin: pct(awayWins, awayG.length),   avgFavor: avg(awayG,pf),  avgContra: avg(awayG,pa) },
+    cerrados: { partidos: cerrados.length, pctWin: pct(cerradosWins, cerrados.length) },
+    ot:       { partidos: otGames.length,  pctWin: pct(otWins, otGames.length) },
+  };
 }
 
 function setTeamFilter(f) {
@@ -2305,6 +2529,43 @@ function renderTeamDetail() {
       </div>`;
     }).join('');
 
+  // Local vs Visitante + situacionales — tarjetas, mismo lenguaje visual que las de arriba
+  const split = computeTeamSplitStats(team, subset);
+  const fmtPct = v => isFinite(v) && !isNaN(v) ? v.toFixed(1)+'%' : '—';
+  const fmtAvg = v => isFinite(v) && !isNaN(v) ? v.toFixed(1) : '—';
+
+  function splitCard(title, d, bg, border, labelColor, valueColor, subColor) {
+    const row = (name, val) => `<div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <span style="font-family:'Hanken Grotesk',sans-serif;font-size:12px;color:${subColor};">${name}</span>
+        <span style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:16px;color:${valueColor};">${val}</span>
+      </div>`;
+    return `<div class="stat-card" style="background:${bg};border-color:${border};">
+      <div class="stat-card-label" style="color:${labelColor};">${title}</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px;">
+        ${row('Partidos', d.partidos)}
+        ${row('% Victoria', fmtPct(d.pctWin))}
+        ${row('Pts a Favor', fmtAvg(d.avgFavor))}
+        ${row('Pts en Contra', fmtAvg(d.avgContra))}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('td-split-stats').innerHTML =
+    splitCard('🏠 Local', split.local, p, p, pt, pt, pt+'99') +
+    splitCard('✈️ Visitante', split.away, s2, s2, st, st, st+'99');
+
+  document.getElementById('td-situational-stats').innerHTML =
+    `<div class="stat-card" style="background:${p}1a;border-color:${p};">
+      <div class="stat-card-label" style="color:${p};">Partidos Cerrados (≤5 pts)</div>
+      <div class="stat-card-value" style="color:#131313;">${split.cerrados.partidos}</div>
+      <div class="stat-card-sub" style="color:#66666699;">${fmtPct(split.cerrados.pctWin)} victorias</div>
+    </div>` +
+    `<div class="stat-card" style="background:${s2}1a;border-color:${s2};">
+      <div class="stat-card-label" style="color:${s2};">Partidos con OT</div>
+      <div class="stat-card-value" style="color:#131313;">${split.ot.partidos}</div>
+      <div class="stat-card-sub" style="color:#66666699;">${fmtPct(split.ot.pctWin)} victorias</div>
+    </div>`;
+
   // History table — always show all games, paginated, newest first
   const hist = [...allGames].reverse();
   const totalPages = Math.ceil(hist.length / 5);
@@ -2368,13 +2629,13 @@ function showTeamSelector() {
 
 // ────────────────────────────────────────────────────
 //  SEGUIMIENTO DE APUESTAS
-//  Calculado 100% sobre los campos de apuesta que ya vienen
-//  embebidos en cada partido (apuesta, cuota, ou, linea, real, ganada).
-//  No agrega ninguna colección ni documento nuevo en Firestore.
+//  Lee directo de la colección `bets` (independiente de los partidos).
+//  El resultado de cada apuesta se resuelve solo comparando contra el
+//  partido correspondiente, si ya tiene marcador cargado.
 // ────────────────────────────────────────────────────
 
 function getBetGames() {
-  return games.filter(g => g.apuesta != null && g.apuesta > 0 && g.cuota != null && g.cuota > 0);
+  return bets.map(b => ({ ...b, ganada: resolveBetResult(b) }));
 }
 
 function betPL(g) {
@@ -2388,14 +2649,14 @@ function renderApuestas() {
   const filter = document.getElementById('ap-filter').value;
   const allBets = getBetGames();
 
-  let bets = allBets.filter(g => !q || g.local.toLowerCase().includes(q) || g.away.toLowerCase().includes(q));
-  bets = bets.filter(g => {
+  let filteredBets = allBets.filter(g => !q || g.local.toLowerCase().includes(q) || g.away.toLowerCase().includes(q));
+  filteredBets = filteredBets.filter(g => {
     if (filter === 'won') return g.ganada === 'SI';
     if (filter === 'lost') return g.ganada === 'NO';
     if (filter === 'pending') return g.ganada !== 'SI' && g.ganada !== 'NO';
     return true;
   });
-  bets.sort((a,b) => a.date < b.date ? 1 : -1);
+  filteredBets.sort((a,b) => a.date < b.date ? 1 : -1);
 
   const resolved = allBets.filter(g => g.ganada === 'SI' || g.ganada === 'NO');
   const pending  = allBets.filter(g => g.ganada !== 'SI' && g.ganada !== 'NO');
@@ -2463,23 +2724,22 @@ function renderApuestas() {
   // Tabla
   const tbody = document.getElementById('ap-tbody');
   const empty = document.getElementById('ap-empty');
-  if (!bets.length) {
+  if (!filteredBets.length) {
     tbody.innerHTML = '';
     empty.style.display = '';
   } else {
     empty.style.display = 'none';
-    tbody.innerHTML = bets.map(g => {
+    tbody.innerHTML = filteredBets.map(g => {
       const pl = betPL(g);
       const resultBadge = g.ganada === 'SI' ? '<span class="bt-badge W">✔</span>'
                         : g.ganada === 'NO' ? '<span class="bt-badge L">✘</span>'
                         : '<span style="color:var(--outline);font-size:10px;">Pendiente</span>';
       const plText = pl === null ? '—' : (pl >= 0 ? `<span class="bt-pl-pos">+${pl.toFixed(2)}</span>` : `<span class="bt-pl-neg">${pl.toFixed(2)}</span>`);
-      return `<div class="bt-row ${g.ganada==='SI'?'correct':g.ganada==='NO'?'wrong':''}" style="grid-template-columns:80px 1fr 1fr 60px 70px 60px 70px 90px 80px;">
+      return `<div class="bt-row ${g.ganada==='SI'?'correct':g.ganada==='NO'?'wrong':''}" style="grid-template-columns:80px 1fr 1fr 90px 60px 70px 90px 80px;">
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">${fmtDate(g.date)}</div>
         <div class="bt-team">${g.local}</div>
         <div class="bt-team">${g.away}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.ou||'-'}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.linea??'-'}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${mercadoLabel(g)}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.cuota??'-'}</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.apuesta??'-'}</div>
         <div>${resultBadge}</div>
