@@ -1259,6 +1259,7 @@
             <div class="bet-section-header">
               <div style="display:flex;flex-direction:column;gap:4px;">
                 <div class="bet-section-title">Sugerencias de Apuesta</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);line-height:1.5;max-width:540px;">Lectura de valor del modelo frente al mercado. En 4 temporadas (2021-22 a 2024-25) el modelo <b>no mostró ventaja sostenida</b> sobre las líneas de cierre: tómalo como análisis del partido, no como consejo de apostar.</div>
                 <div class="bet-api-status" id="bet-api-status">
                   <span class="bet-api-dot manual" id="bet-api-dot"></span>
                   <span id="bet-api-status-text">Cuotas manuales</span>
@@ -1311,6 +1312,12 @@
                   <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);">decimal</span>
                 </div>
               </div>
+            </div>
+            <!-- Bankroll editable para traducir unidades a pesos -->
+            <div style="display:flex;align-items:center;gap:8px;margin:2px 0 6px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">
+              <span>Bankroll:</span>
+              <input class="bet-odds-input" type="number" id="bet-bank" value="200000" step="1000" oninput="calcBetSuggestions()" style="width:130px;">
+              <span>pesos · 1u = 1% del bank (tope sugerido ~2.5u)</span>
             </div>
             <!-- Sugerencias calculadas -->
             <div class="bet-suggest-grid" id="bet-suggest-grid"></div>
@@ -1463,12 +1470,16 @@
   <div class="profile-modal">
     <div>
       <div class="profile-modal-title">Perfil de Riesgo</div>
-      <div class="profile-modal-sub">Los tres perfiles apuestan en los mismos partidos. La diferencia es el tamaño de cada apuesta.<br>Datos reales de la temporada NBA 2022–23 (106 apuestas ML · 84 apuestas O/U).</div>
+      <div class="profile-modal-sub">Los tres perfiles apuestan en los mismos partidos. Lo único que cambia es el <b>tamaño</b> de cada apuesta (fracción de Kelly), no el valor esperado.<br>Validación en 4 temporadas (2021-22 a 2024-25, ~1.400 apuestas ML): el modelo <b>no batió a las líneas de cierre</b>. Elige el tamaño según cuánta varianza toleras, no por un retorno prometido.</div>
     </div>
     <div class="profile-cards" id="profile-cards"></div>
     <div class="profile-chart-wrap">
-      <div class="bet-section-title" style="margin-bottom:12px;">Curva de Bankroll ML — Temporada 2022–23</div>
-      <canvas id="profile-chart" height="80"></canvas>
+      <div class="bet-section-title" style="margin-bottom:12px;">Resultado real del backtest multi-temporada</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--outline);line-height:1.7;">
+        Moneyline: <b style="color:var(--lose);">−5.5% ROI</b> · 65.4% aciertos (equilibrio 65.9%) · 1.444 apuestas<br>
+        Over/Under: <b style="color:var(--lose);">−1.4% ROI</b> · 51.6% aciertos (equilibrio 52.4%) · 1.394 apuestas<br>
+        El mercado acertó más que el modelo las 4 temporadas. Aumentar el tamaño de la apuesta solo amplifica estas pérdidas esperadas.
+      </div>
     </div>
     <div class="profile-note">
       ⚠ Estos resultados son históricos de una temporada específica. El rendimiento futuro puede variar.<br>
@@ -3334,7 +3345,12 @@ function calcBetSuggestions() {
   const { probL, probA, predTotal } = currentPredProbs;
   const cards = [];
 
-  // ── Sugerencia ML ──
+  // Bank editable + tamaño en unidades (1u = 1% del bank). El perfil solo escala el tamaño.
+  const bank = parseFloat(document.getElementById('bet-bank') ? document.getElementById('bet-bank').value : '') || 0;
+  const unitMult = ({ conservador:0.75, moderado:1, agresivo:1.25 })[currentProfile] || 1;
+  const sizeText = (u) => { const uu = u * unitMult; const pesos = bank ? Math.round(bank * uu / 100) : null; return `${uu.toFixed(2)}u${pesos ? ` · ≈ $${pesos.toLocaleString('es-CO')}` : ''}`; };
+
+  // ── Sugerencia ML (lectura de valor + tamaño prudente por discrepancia) ──
   if (mlL && mlA) {
     const probHomeImplied = 1 / mlL;
     const probAwayImplied = 1 / mlA;
@@ -3347,62 +3363,45 @@ function calcBetSuggestions() {
     const mktProb    = modelLocal ? mktProbL : mktProbA;
     const pickDec    = modelLocal ? mlL : mlA;
     const pickName   = modelLocal ? currentPredLocal : currentPredAway;
-    const edge       = pickProb - mktProb;
+    const edgePP     = (pickProb - mktProb) * 100;
+    const valueLine  = `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%  ·  ${edgePP >= 0 ? '+' : ''}${edgePP.toFixed(0)}pp  ·  ${pickDec.toFixed(2)}`;
 
-    const inExcl  = edge >= 0.05 && edge < 0.09;
-    const overCap = edge > 0.15;
-    const noEdge  = edge <= 0;
-
-    if (noEdge) {
+    if (edgePP <= 0) {
       cards.push({ type:'Moneyline', cls:'no-edge', pick: pickName.split(' ').pop(),
-        detail: `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%`,
-        size: '—', reason: 'Sin edge sobre el mercado', sizeColor:'var(--outline)' });
-    } else if (inExcl) {
-      cards.push({ type:'Moneyline', cls:'excluded', pick: pickName.split(' ').pop(),
-        detail: `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%  ·  +${(edge*100).toFixed(0)}pp`,
-        size: '⚠ Excluido', reason: 'Zona 5–9pp — accuracy histórico 52% (azar)', sizeColor:'#e67e22' });
-    } else if (overCap) {
-      cards.push({ type:'Moneyline', cls:'excluded', pick: pickName.split(' ').pop(),
-        detail: `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%  ·  +${(edge*100).toFixed(0)}pp`,
-        size: '⚠ Excluido', reason: 'Edge >15pp — modelo diverge demasiado del mercado', sizeColor:'#e67e22' });
-    } else {
-      const ev    = pickProb * pickDec - 1;
-      const scale = 0.5 + (edge / 0.15) * 0.5;
-      const f     = Math.min((ev / (pickDec - 1)) * p.mlFrac * scale, p.mlCap);
-      const units = (f * 100).toFixed(2);
+        detail: valueLine, size:'—', reason:'El mercado le da igual o más probabilidad que el modelo — sin discrepancia a favor', sizeColor:'var(--outline)' });
+    } else if (edgePP < 3) {
       cards.push({ type:'Moneyline', cls:'apostable', pick: pickName.split(' ').pop(),
-        detail: `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%  ·  Edge +${(edge*100).toFixed(0)}pp  ·  ${pickDec.toFixed(2)}`,
-        size: `${units}% del bankroll`, reason: `Kelly adaptativo · cap ${(p.mlCap*100).toFixed(0)}%`, sizeColor:'var(--win)' });
+        detail: valueLine, size: sizeText(0.75), reason:'Discrepancia chica · tamaño prudente si decides jugarlo', sizeColor:'var(--win)' });
+    } else if (edgePP < 7) {
+      cards.push({ type:'Moneyline', cls:'apostable', pick: pickName.split(' ').pop(),
+        detail: valueLine, size: sizeText(1.5), reason:'Discrepancia media · tamaño prudente si decides jugarlo', sizeColor:'var(--win)' });
+    } else {
+      cards.push({ type:'Moneyline', cls:'excluded', pick: pickName.split(' ').pop(),
+        detail: valueLine, size: sizeText(2.5), reason:'⚠ Brecha muy grande — suele indicar info que le falta al modelo, no una ganga. Míralo con cuidado', sizeColor:'#e67e22' });
     }
   } else {
     cards.push({ type:'Moneyline', cls:'no-edge', pick:'—',
       detail:'Ingresa las cuotas ML', size:'—', reason:'Cuotas requeridas', sizeColor:'var(--outline)' });
   }
 
-  // ── Sugerencia O/U ──
+  // ── Sugerencia O/U (Over o Under según el total del modelo vs la línea) ──
   if (ouLn && predTotal) {
-    const adjDiff = (predTotal - ouLn) + 3;  // bias +3
-    if (adjDiff >= 3) {
-      const absDiff = Math.abs(adjDiff);
-      const scale   = 0.5 + Math.min(absDiff / 15.0, 1.0) * 0.5;
-      const estAcc  = 0.50 + Math.min(absDiff / 15.0, 1.0) * 0.10;
-      const ev      = estAcc * ouOd - 1;
-      if (ev > 0) {
-        const f     = Math.min((ev / (ouOd - 1)) * p.ouFrac * scale, p.ouCap);
-        const units = (f * 100).toFixed(2);
-        cards.push({ type:'Over/Under', cls:'apostable', pick:`Over ${ouLn}`,
-          detail: `Modelo ${predTotal}pts  ·  Línea ${ouLn}  ·  Diff ajust. ${adjDiff > 0 ? '+' : ''}${adjDiff.toFixed(1)}pts`,
-          size: `${units}% del bankroll`, reason: `Kelly adaptativo · solo Over · bias +3pts`, sizeColor:'var(--win)' });
-      } else {
-        cards.push({ type:'Over/Under', cls:'no-edge', pick:`Over ${ouLn}`,
-          detail:`Modelo ${predTotal}pts · Línea ${ouLn}`, size:'—', reason:'EV negativo con estas cuotas', sizeColor:'var(--outline)' });
-      }
+    const diff  = predTotal - ouLn;
+    const absd  = Math.abs(diff);
+    const pick  = diff >= 0 ? `Over ${ouLn}` : `Under ${ouLn}`;
+    const vLine = `Modelo ${predTotal}pts  ·  Línea ${ouLn}  ·  ${diff >= 0 ? '+' : ''}${diff.toFixed(0)}pts`;
+    if (absd < 3) {
+      cards.push({ type:'Over/Under', cls:'no-edge', pick,
+        detail: vLine, size:'—', reason:'El total del modelo casi coincide con la línea — sin discrepancia clara', sizeColor:'var(--outline)' });
+    } else if (absd < 7) {
+      cards.push({ type:'Over/Under', cls:'apostable', pick,
+        detail: vLine, size: sizeText(0.75), reason:'Discrepancia chica · tamaño prudente si decides jugarlo', sizeColor:'var(--win)' });
+    } else if (absd < 11) {
+      cards.push({ type:'Over/Under', cls:'apostable', pick,
+        detail: vLine, size: sizeText(1.5), reason:'Discrepancia media · tamaño prudente si decides jugarlo', sizeColor:'var(--win)' });
     } else {
-      const rawDiff = predTotal - ouLn;
-      cards.push({ type:'Over/Under', cls:'no-edge',
-        pick: rawDiff > 0 ? `Over ${ouLn}` : `Under ${ouLn}`,
-        detail:`Modelo ${predTotal}pts · Línea ${ouLn} · Diff ajust. ${adjDiff.toFixed(1)}pts`,
-        size:'—', reason:'Diferencia insuficiente (<3pts con bias)', sizeColor:'var(--outline)' });
+      cards.push({ type:'Over/Under', cls:'excluded', pick,
+        detail: vLine, size: sizeText(2.5), reason:'⚠ Diferencia muy grande — suele indicar info que le falta al modelo, no una ganga. Míralo con cuidado', sizeColor:'#e67e22' });
     }
   } else {
     cards.push({ type:'Over/Under', cls:'no-edge', pick:'—',
@@ -3442,16 +3441,17 @@ function confirmProfile() {
 function renderProfileCards() {
   const container = document.getElementById('profile-cards');
   const colors    = { conservador:'var(--win)', moderado:'var(--violet)', agresivo:'var(--lose)' };
+  const styleLabel = { conservador:'Apuestas pequeñas', moderado:'Apuestas medianas', agresivo:'Apuestas grandes' };
   container.innerHTML = Object.entries(RISK_PROFILES).map(([key, p]) => `
     <div class="profile-card ${key === selectedProfileInModal ? 'selected' : ''}" onclick="selectProfile('${key}')">
       <div class="profile-card-name" style="color:${colors[key]};">${{conservador:'Conservador',moderado:'Moderado',agresivo:'Agresivo'}[key]}</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--outline);margin-top:-4px;">ML frac ${(p.mlFrac*100).toFixed(0)}% · cap ${(p.mlCap*100).toFixed(0)}%</div>
-      <div class="profile-card-roi" style="color:${colors[key]};">${p.ml.roi > 0 ? '+' : ''}${p.ml.roi}%</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--outline);">ROI ML · temporada 2022–23</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--outline);margin-top:-4px;">${styleLabel[key]}</div>
+      <div class="profile-card-roi" style="color:${colors[key]};font-size:20px;">~${(100 * p.mlFrac * 0.5).toFixed(1)}u</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--outline);">apuesta ML típica (bankroll 100u)</div>
       <div class="profile-card-stats">
-        <span>ML: ${p.ml.winPct}% win · DD máx ${p.ml.maxDD}% · racha ${p.ml.maxLose}</span>
-        <span>O/U: ${p.ou.roi > 0 ? '+' : ''}${p.ou.roi}% ROI · DD máx ${p.ou.maxDD}%</span>
-        <span>Apuesta ML avg: ~${(100 * p.mlFrac * 0.5).toFixed(1)}u (100u bankroll)</span>
+        <span>Fracción Kelly ${(p.mlFrac*100).toFixed(0)}% · tope ${(p.mlCap*100).toFixed(0)}% del bankroll</span>
+        <span>O/U: fracción ${(p.ouFrac*100).toFixed(0)}% · tope ${(p.ouCap*100).toFixed(0)}%</span>
+        <span style="color:var(--lose);">Mismo valor esperado (negativo) — solo cambia la varianza</span>
       </div>
     </div>`).join('');
 }
@@ -3463,7 +3463,9 @@ function selectProfile(key) {
 }
 
 function renderProfileChart() {
-  const ctx    = document.getElementById('profile-chart').getContext('2d');
+  const cv = document.getElementById('profile-chart');
+  if (!cv) return; // curva de bankroll retirada: era de una sola temporada y engañaba
+  const ctx    = cv.getContext('2d');
   const colors = { conservador:'#00b894', moderado:'#6c5ce7', agresivo:'#e17055' };
   const labels_arr = RISK_PROFILES.moderado.ml.history.map((_, i) =>
     i % 5 === 0 ? String(i * 4) : '');
