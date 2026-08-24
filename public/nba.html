@@ -1857,7 +1857,11 @@ function goToPrediction(local, away) {
 
 function goToPredictionFromFixture(fixtureJson) {
   const f = typeof fixtureJson === 'string' ? JSON.parse(fixtureJson) : fixtureJson;
-  if (f && f.local && f.away) goToPrediction(f.local, f.away);
+  if (f && f.local && f.away) {
+    predContextDate = f.date || null;
+    predContextTeams = [f.local, f.away];
+    goToPrediction(f.local, f.away);
+  }
 }
 
 function mercadoLabel(g) {
@@ -3018,6 +3022,47 @@ function computeProjectedScore(teamA, teamB) {
 }
 
 // ─── MOTOR PRINCIPAL ───
+// ─── COMPONENTE 5: DESCANSO / BACK-TO-BACK ───
+// Un equipo que jugó el día anterior (back-to-back) rinde peor. Medido en 2024-25:
+// el equipo en B2B pierde ~7-8pp de probabilidad, equivalente a ~25 puntos de Elo.
+const B2B_ELO_PENALTY = 25;
+let predContextDate = null;   // fecha del partido a predecir (del botón del calendario)
+let predContextTeams = null;  // equipos para los que aplica predContextDate
+
+function lastPlayedDate(team, beforeISO) {
+  let best = null;
+  games.forEach(g => {
+    if (g.local !== team && g.away !== team) return;
+    if (beforeISO && g.date >= beforeISO) return;
+    if (!best || g.date > best) best = g.date;
+  });
+  return best;
+}
+
+function restInfo(team, refISO) {
+  if (!refISO) return { gap: null, b2b: false };
+  const last = lastPlayedDate(team, refISO);
+  if (!last) return { gap: null, b2b: false };
+  const gap = Math.round((new Date(refISO) - new Date(last)) / 86400000);
+  return { gap, b2b: gap === 1 };
+}
+
+// Fecha de referencia: la del botón del calendario si aplica a estos equipos,
+// si no el próximo cruce de ambos en el calendario oficial (>= hoy), si no null.
+function resolvePredDate(local, away) {
+  if (predContextDate && predContextTeams &&
+      ((predContextTeams[0] === local && predContextTeams[1] === away) ||
+       (predContextTeams[0] === away && predContextTeams[1] === local))) {
+    return predContextDate;
+  }
+  const today = new Date().toISOString().split('T')[0];
+  const fut = SCHEDULE
+    .filter(f => f.date >= today &&
+      ((f.local === local && f.away === away) || (f.local === away && f.away === local)))
+    .sort((a, b) => a.date < b.date ? -1 : 1);
+  return fut.length ? fut[0].date : null;
+}
+
 function runPrediction() {
   const local = document.getElementById('pred-local').value;
   const away  = document.getElementById('pred-away').value;
@@ -3039,9 +3084,16 @@ function runPrediction() {
   const adjEloL = eloL + formL.modifier;
   const adjEloA = eloA + formA.modifier;
 
-  // Diferencia total incluyendo ventaja de local (cada 25 pts de Elo ≈ 1% prob)
+  // Descanso / back-to-back: penaliza al equipo que jugó el día anterior.
+  const refDate = resolvePredDate(local, away);
+  const restL = restInfo(local, refDate);
+  const restA = restInfo(away, refDate);
+  const b2bPenL = restL.b2b ? B2B_ELO_PENALTY : 0;
+  const b2bPenA = restA.b2b ? B2B_ELO_PENALTY : 0;
+
+  // Diferencia total: Elo ajustado + ventaja de local − penalización por B2B.
   const localEloBonus = 50; // ventaja de campo en términos de Elo
-  const eloDiff = (adjEloL + localEloBonus) - adjEloA;
+  const eloDiff = ((adjEloL - b2bPenL) + localEloBonus) - (adjEloA - b2bPenA);
   const probL = 1 / (1 + Math.pow(10, -eloDiff / 400));
   const probA = 1 - probL;
 
@@ -3120,6 +3172,18 @@ function runPrediction() {
       color: score.defA <= score.defB ? colorL : colorA, // menor es mejor en defensa
       label: `Δ${Math.abs(score.defA - score.defB).toFixed(1)} pts/p`,
       favor: score.defA <= score.defB ? local.split(' ').pop() : away.split(' ').pop(),
+    },
+    {
+      name: 'Descanso / Back-to-back',
+      desc: refDate
+        ? `${local.split(' ').pop()}: ${restL.gap != null ? restL.gap + 'd desc.' + (restL.b2b ? ' ⚠B2B' : '') : 's/d'} · ${away.split(' ').pop()}: ${restA.gap != null ? restA.gap + 'd desc.' + (restA.b2b ? ' ⚠B2B' : '') : 's/d'}`
+        : 'Sin fecha de referencia — no se pudo calcular el descanso',
+      bar: Math.abs(b2bPenL - b2bPenA) / B2B_ELO_PENALTY,
+      color: (b2bPenA > b2bPenL) ? colorL : (b2bPenL > b2bPenA ? colorA : 'var(--outline)'),
+      label: (b2bPenL || b2bPenA)
+        ? `${b2bPenL ? '-' + b2bPenL + ' ' + local.split(' ').pop() : ''}${(b2bPenL && b2bPenA) ? ' · ' : ''}${b2bPenA ? '-' + b2bPenA + ' ' + away.split(' ').pop() : ''} Elo`
+        : 'Sin penalización',
+      favor: (b2bPenA > b2bPenL) ? local.split(' ').pop() : (b2bPenL > b2bPenA ? away.split(' ').pop() : '—'),
     },
   ];
 
