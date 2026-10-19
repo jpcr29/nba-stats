@@ -3253,8 +3253,10 @@ const ODDS_CACHE_KEY = 'nba_odds_cache';
 const ODDS_CACHE_TTL = 2 * 60 * 60 * 1000; // 2 horas en ms
 
 // Mínimo de partidos por equipo antes de confiar en las sugerencias de apuesta
-// (mismo valor de calentamiento usado en el backtest walk-forward: warmup=10)
-const WARMUP_MIN_GAMES = 10;
+// Calentamiento en vivo: partidos mínimos por equipo antes de dar predicciones.
+// Bajado a 5 (el backtest usó 10): con 5 PJ el acierto casi no cae (~64.7% vs 64.9%)
+// y las sugerencias se activan ~1 semana antes al arrancar la temporada.
+const WARMUP_MIN_GAMES = 5;
 
 function teamGamesPlayed(team) {
   return games.filter(g => g.local === team || g.away === team).length;
@@ -3397,7 +3399,7 @@ function calcBetSuggestions() {
         <div class="bet-suggest-type" style="color:var(--outline);">⏳ Calentamiento del Modelo</div>
         <div class="bet-suggest-pick">Datos insuficientes todavía — no apostar</div>
         <div class="bet-suggest-detail">${currentPredLocal.split(' ').pop()}: ${currentPredWarmup.gpLocal}/${WARMUP_MIN_GAMES} PJ${faltanL ? ` (faltan ${faltanL})` : ''} &nbsp;·&nbsp; ${currentPredAway.split(' ').pop()}: ${currentPredWarmup.gpAway}/${WARMUP_MIN_GAMES} PJ${faltanA ? ` (faltan ${faltanA})` : ''}</div>
-        <div class="bet-suggest-reason" style="color:var(--outline);">El modelo necesita un mínimo de ${WARMUP_MIN_GAMES} partidos jugados por equipo (el mismo calentamiento usado en el backtest walk-forward) antes de que el Elo, la forma reciente y los splits de puntos sean confiables. Sigue registrando partidos de la temporada 26/27 para activar las sugerencias.</div>
+        <div class="bet-suggest-reason" style="color:var(--outline);">El modelo necesita un mínimo de ${WARMUP_MIN_GAMES} partidos jugados por equipo antes de que el Elo, la forma reciente y los splits de puntos sean confiables. Sigue registrando partidos de la temporada 26/27 para activar las sugerencias.</div>
       </div>`;
     return;
   }
