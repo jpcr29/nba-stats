@@ -849,6 +849,92 @@
   .pg-btn.pg-active { background: var(--hairline); color: var(--canvas); border-color: var(--hairline); }
   .pg-ellipsis { color: var(--hairline); font-size: 12px; padding: 0 6px; height: 36px; display: inline-flex; align-items: center; }
 
+  /* ─── CURIOSIDADES ─── */
+  .cur-meta{display:flex;gap:8px;flex-wrap:wrap;}
+  .cur-meta span{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;border:1px solid var(--hairline);border-radius:9999px;padding:6px 14px;}
+  .cur-lede{font-size:16px;color:var(--secondary-tx);max-width:720px;margin:-16px 0 24px;}
+  .cur-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px;}
+  .cur-tab{background:var(--canvas);border:1px solid var(--hairline);color:var(--hairline);border-radius:9999px;padding:0 18px;height:40px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all 0.15s;}
+  .cur-tab:hover:not(:disabled){background:var(--mint);}
+  .cur-tab.active{background:var(--hairline);color:var(--canvas);}
+  .cur-tab:disabled{border-color:var(--outline-var);color:var(--outline);cursor:not-allowed;}
+  .cur-soon{font-size:9px;letter-spacing:1px;background:var(--surface-cont);color:var(--outline);border-radius:9999px;padding:3px 7px;}
+  .cur-warmup{border:1px dashed var(--hairline);border-radius:1.5rem;padding:16px 22px;margin-bottom:28px;font-size:14px;background:var(--surface-low);}
+  .cur-block{margin-bottom:40px;}
+  .cur-block-head{margin-bottom:16px;}
+  .cur-block-title{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:900;letter-spacing:-0.5px;line-height:1.1;color:var(--hairline);}
+  .cur-block-note{font-size:13px;color:var(--secondary-tx);margin-top:6px;max-width:760px;}
+  .cur-kings{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .cur-king{border:1px solid var(--hairline);border-radius:2rem;padding:22px 24px;cursor:pointer;transition:transform 0.15s;display:flex;flex-direction:column;gap:6px;}
+  .cur-king:hover{transform:translateY(-2px);}
+  .cur-king:nth-child(1){background:var(--tile-yellow);}
+  .cur-king:nth-child(2){background:var(--tile-pink);}
+  .cur-king:nth-child(3){background:var(--tile-blue);}
+  .cur-king:nth-child(4){background:var(--mint);}
+  .cur-king.empty{background:var(--surface-low);cursor:default;border-style:dashed;}
+  .cur-king.empty:hover{transform:none;}
+  .cur-king-q{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;}
+  .cur-king-val{font-family:'Space Grotesk',sans-serif;font-size:56px;font-weight:900;letter-spacing:-2px;line-height:1;margin-top:6px;}
+  .cur-king-team{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;line-height:1.2;}
+  .cur-king-hook{font-size:13px;line-height:1.4;}
+  .cur-king-runners{border-top:1px dashed var(--hairline);margin-top:8px;padding-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;display:flex;flex-direction:column;gap:2px;}
+  .cur-king-runners div{display:flex;justify-content:space-between;}
+  .cur-dot{display:inline-block;width:10px;height:10px;border-radius:9999px;border:1px solid var(--hairline);flex-shrink:0;}
+  .cur-team{background:none;border:none;padding:0;cursor:pointer;font:inherit;color:inherit;display:inline-flex;align-items:center;gap:8px;text-align:left;}
+  .cur-team:hover{color:var(--violet);text-decoration:underline;}
+  #cur-qtable thead th.cur-sorted{color:var(--violet);}
+  #cur-qtable td{font-family:'JetBrains Mono',monospace;font-size:13px;}
+  #cur-qtable td.team-name{font-family:'Space Grotesk',sans-serif;font-size:14px;}
+  tr.cur-thin td{opacity:0.45;}
+  .cur-chip{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;border:1px solid var(--outline-var);border-radius:9999px;padding:3px 10px;color:var(--secondary-tx);}
+  .cur-chip.pos{border-color:var(--violet);color:var(--violet);}
+  .cur-chip.neg{border-color:#c25e00;color:#c25e00;}
+  .cur-duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .cur-card{border:1px solid var(--hairline);border-radius:2rem;padding:24px;}
+  .cur-card-kicker{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.5px;}
+  .cur-card-desc{font-size:13px;color:var(--secondary-tx);margin-bottom:14px;}
+  .cur-row{display:grid;grid-template-columns:28px 1fr 108px;gap:12px;align-items:center;padding:10px 0;border-top:1px dashed var(--outline-var);}
+  .cur-rank{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--outline);}
+  .cur-row-main{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .cur-row-main .cur-team{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;}
+  .cur-row-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);}
+  .cur-bar{height:6px;border-radius:9999px;background:var(--surface-cont);overflow:hidden;}
+  .cur-bar span{display:block;height:100%;border-radius:9999px;}
+  .cur-bar .start{background:#e67e22;}
+  .cur-bar .close{background:var(--violet);}
+  .cur-bar .up{background:var(--mint-deep);}
+  .cur-bar .down{background:var(--lose);}
+  .cur-row-val{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.5px;text-align:right;white-space:nowrap;}
+  .cur-none{font-size:13px;color:var(--outline);padding:14px 0;border-top:1px dashed var(--outline-var);}
+  .cur-demo{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:24px;}
+  .cur-demo.on{display:block;background:var(--tile-yellow);border:1px solid var(--hairline);border-radius:2rem;padding:20px 24px;}
+  .cur-demo-btn{background:var(--canvas);border:1px solid var(--hairline);color:var(--hairline);border-radius:9999px;padding:0 18px;height:40px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;}
+  .cur-demo-btn:hover{background:var(--hairline);color:var(--canvas);}
+  .cur-demo-hint{font-size:13px;color:var(--secondary-tx);}
+  .cur-demo-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .cur-demo-title{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.5px;}
+  .cur-demo-text{font-size:13px;margin:6px 0 14px;}
+  .cur-demo-ctrl{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .cur-demo-ctrl label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;}
+  .cur-demo-ctrl input{width:auto;height:40px;}
+  .cur-demo-presets{display:flex;gap:6px;flex-wrap:wrap;}
+  .cur-demo-presets .filter-tab{background:var(--canvas);}
+  .cur-demo-presets .filter-tab.active{background:var(--hairline);color:var(--canvas);}
+  .cur-demo-count{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
+  .cur-meta-demo{background:var(--tile-yellow);}
+  .cur-team.static{cursor:default;}
+  .cur-team.static:hover{color:inherit;text-decoration:none;}
+  .cur-hero{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .cur-hero-card{border:1px solid var(--hairline);border-radius:2rem;padding:24px 28px;display:flex;flex-direction:column;gap:6px;}
+  .cur-hero--good{background:var(--mint);}
+  .cur-hero--bad{background:var(--tile-pink);}
+  .cur-hero--empty{background:var(--surface-low);border-style:dashed;}
+  #cur-clutch-table td, #cur-banca-table td{font-family:'JetBrains Mono',monospace;font-size:13px;}
+  #cur-clutch-table td.team-name, #cur-banca-table td.team-name{font-family:'Space Grotesk',sans-serif;font-size:14px;}
+  #cur-clutch-table thead th.cur-sorted, #cur-banca-table thead th.cur-sorted{color:var(--violet);}
+  @media (max-width:1100px){ .cur-kings{grid-template-columns:1fr 1fr;} }
+  @media (max-width:768px){ .cur-kings,.cur-duo,.cur-hero{grid-template-columns:1fr;} .cur-king-val{font-size:44px;} }
+
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: var(--surface); }
   ::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 9999px; }
@@ -887,7 +973,8 @@
       <button onclick="showSection('prediccion')" id="nav-s-prediccion">🎯 Predicción</button>
       <button onclick="showSection('backtest')" id="nav-s-backtest" style="display:none;">📊 Backtest</button>
       <button onclick="showSection('apuestas')" id="nav-s-apuestas">📈 Apuestas</button>
-    <button onclick="showSection('equipos')">Por Equipo</button>
+    <button onclick="showSection('equipos')" id="nav-s-equipos">Por Equipo</button>
+    <button onclick="showSection('curiosidades')" id="nav-s-curiosidades">🔍 Curiosidades</button>
   </nav>
 </header>
 
@@ -1461,6 +1548,18 @@
   </div>
 </section>
 
+<!-- ═══ CURIOSIDADES ═══ -->
+<section id="s-curiosidades" class="section">
+  <div class="page-header">
+    <div class="page-title">Curiosidades</div>
+    <div class="cur-meta" id="cur-meta"></div>
+  </div>
+  <div class="cur-lede">Lo que tus partidos dicen y las tablas no muestran. Cada partido que registras afina estos hallazgos.</div>
+  <div class="cur-demo" id="cur-demo"></div>
+  <div class="cur-tabs" id="cur-tabs"></div>
+  <div id="cur-panel"></div>
+</section>
+
 </main>
 
 <div class="toast" id="toast"></div>
@@ -1666,6 +1765,7 @@ function showSection(id) {
   if(id==='prediccion') populatePredSelects();
   if(id==='backtest') initBacktest();
   if(id==='apuestas') renderApuestas();
+  if(id==='curiosidades') renderCuriosidades();
 }
 
 function toast(msg, color='var(--green)') {
@@ -4024,6 +4124,673 @@ function btGoMlPage(p) {
 function btGoOuPage(p) {
   btOuPage = p;
   _renderOuPage(btData.summary.roiOU?.betList || []);
+}
+
+// ────────────────────────────────────────────────────
+//  CURIOSIDADES
+//  Fase 1 — computeCuriosidades() recorre la base UNA sola vez y deja los
+//  agregados por equipo (cuartos, descanso, clutch, banca, rachas). Todos
+//  los paneles leen de ahí; ninguno vuelve a recorrer `games`.
+//  Fase 2 — panel Cuartos (Rayos X): rey de cada cuarto, tabla completa,
+//  arrancadores vs cerradores y remontada/colapso.
+// ────────────────────────────────────────────────────
+
+const CURIO_MIN_GP   = 5; // partidos con cuartos para entrar a un ranking de cuartos
+const CURIO_MIN_HALF = 3; // veces perdiendo/ganando al descanso para remontada/colapso
+const CURIO_QNAMES   = ['1er cuarto', '2º cuarto', '3er cuarto', '4º cuarto'];
+const CURIO_PANELS   = [
+  { id: 'cuartos',   label: 'Cuartos',   ready: true  },
+  { id: 'clutch',    label: 'Clutch',    ready: true  },
+  { id: 'banca',     label: 'Banca',     ready: true  },
+  { id: 'rachas',    label: 'Rachas',    ready: false },
+  { id: 'sorpresas', label: 'Sorpresas', ready: false },
+];
+
+let curioData  = null;
+let curioPanel = 'cuartos';
+let curioQSort = { key: 'q4', dir: -1 };
+
+function curioHasQuarters(g) {
+  const keys = ['q1L','q2L','q3L','q4L','q1A','q2A','q3A','q4A'];
+  return keys.every(k => Number.isFinite(g[k])) && keys.some(k => g[k] > 0);
+}
+
+function computeCuriosidades(src = games) {
+  const teams = {};
+  const blank = t => ({
+    team: t, gp: 0, w: 0, l: 0,
+    // cuartos
+    qGp: 0, qFor: [0,0,0,0], qAg: [0,0,0,0],
+    trailHalf: 0, trailHalfWins: 0, leadHalf: 0, leadHalfLosses: 0,
+    // clutch
+    closeGp: 0, closeW: 0,
+    // banca (solo partidos con puntos de banca registrados)
+    bGp: 0, ptsFor: 0, bpts: 0, gpW: 0, bptsW: 0, gpL: 0, bptsL: 0,
+    // rachas: secuencia cronológica de resultados
+    seq: []
+  });
+
+  const ordered = [...src].sort((a, b) =>
+    a.date === b.date ? (a.id || 0) - (b.id || 0) : (a.date > b.date ? 1 : -1));
+
+  let qGames = 0;
+  ordered.forEach(g => {
+    const hasQ = curioHasQuarters(g);
+    if (hasQ) qGames++;
+    [[g.local, 'L', 'A', g.away], [g.away, 'A', 'L', g.local]].forEach(([t, me, op, opp]) => {
+      if (!t) return;
+      const s = teams[t] || (teams[t] = blank(t));
+      const pf = g['pts' + me] || 0, pa = g['pts' + op] || 0;
+      const won = g.winner ? g.winner === me : pf > pa;
+      s.gp++; if (won) s.w++; else s.l++;
+
+      const bp = g['bpts' + me];
+      if (Number.isFinite(bp) && bp > 0) {
+        s.bGp++; s.ptsFor += pf; s.bpts += bp;
+        if (won) { s.gpW++; s.bptsW += bp; } else { s.gpL++; s.bptsL += bp; }
+      }
+
+      const close = typeof g.cerrado === 'boolean' ? g.cerrado : Math.abs(pf - pa) <= 5;
+      if (close) { s.closeGp++; if (won) s.closeW++; }
+
+      s.seq.push({ date: g.date, won, opp, total: (g.ptsL || 0) + (g.ptsA || 0) });
+
+      if (hasQ) {
+        s.qGp++;
+        for (let i = 0; i < 4; i++) {
+          s.qFor[i] += g[`q${i+1}${me}`];
+          s.qAg[i]  += g[`q${i+1}${op}`];
+        }
+        const hMe = g['q1' + me] + g['q2' + me];
+        const hOp = g['q1' + op] + g['q2' + op];
+        if (hMe < hOp)      { s.trailHalf++; if (won)  s.trailHalfWins++; }
+        else if (hMe > hOp) { s.leadHalf++;  if (!won) s.leadHalfLosses++; }
+      }
+    });
+  });
+
+  const list = Object.values(teams).map(s => {
+    const qDiff = s.qGp ? s.qFor.map((f, i) => (f - s.qAg[i]) / s.qGp) : [null, null, null, null];
+    const h1Diff = s.qGp ? qDiff[0] + qDiff[1] : null;
+    const h2Diff = s.qGp ? qDiff[2] + qDiff[3] : null;
+
+    let streakLen = 0, streakWon = null;
+    for (let i = s.seq.length - 1; i >= 0; i--) {
+      if (streakWon === null) { streakWon = s.seq[i].won; streakLen = 1; }
+      else if (s.seq[i].won === streakWon) streakLen++;
+      else break;
+    }
+
+    return {
+      ...s,
+      qForAvg: s.qGp ? s.qFor.map(v => v / s.qGp) : [null, null, null, null],
+      qAgAvg:  s.qGp ? s.qAg.map(v => v / s.qGp)  : [null, null, null, null],
+      qDiff, h1Diff, h2Diff,
+      q4Diff: qDiff[3],
+      // + = cerrador (4º cuarto mejor que la media por cuarto de la 1ª mitad), − = arrancador
+      closingIdx: s.qGp ? qDiff[3] - h1Diff / 2 : null,
+      comebackPct: s.trailHalf ? s.trailHalfWins / s.trailHalf : null,
+      collapsePct: s.leadHalf ? s.leadHalfLosses / s.leadHalf : null,
+      pct: s.gp ? s.w / s.gp : null,
+      closePct: s.closeGp ? s.closeW / s.closeGp : null,
+      closeShare: s.gp ? s.closeGp / s.gp : null,
+      clutchEdge: s.closeGp && s.gp ? s.closeW / s.closeGp - s.w / s.gp : null,
+      benchShare: s.ptsFor ? s.bpts / s.ptsFor : null,
+      benchPerG: s.bGp ? s.bpts / s.bGp : null,
+      benchInWins: s.gpW ? s.bptsW / s.gpW : null,
+      benchInLosses: s.gpL ? s.bptsL / s.gpL : null,
+      benchSwing: s.gpW && s.gpL ? s.bptsW / s.gpW - s.bptsL / s.gpL : null,
+      streak: { len: streakLen, won: streakWon },
+    };
+  });
+
+  return {
+    teams: list,
+    byTeam: Object.fromEntries(list.map(t => [t.team, t])),
+    totalGames: src.length,
+    qGames,
+  };
+}
+
+// ── helpers de presentación ──
+function curioShort(t) { return t.split(' ').pop(); }
+function curioJs(t) { return String(t).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+function curioSigned(v, d = 1) {
+  if (v == null || !isFinite(v)) return '—';
+  const r = Number(v.toFixed(d));
+  if (r === 0) return (0).toFixed(d);
+  return (r > 0 ? '+' : '') + r.toFixed(d);
+}
+function curioPct(v) { return v == null || !isFinite(v) ? '—' : Math.round(v * 100) + '%'; }
+function curioHeat(v, scale = 5) {
+  if (v == null || !isFinite(v) || v === 0) return '';
+  const a = Math.min(Math.abs(v) / scale, 1);
+  return v > 0
+    ? `background:color-mix(in srgb, var(--mint) ${Math.round(a * 45)}%, transparent);`
+    : `background:color-mix(in srgb, var(--lose) ${Math.round(a * 22)}%, transparent);`;
+}
+function curioDot(t) { return `<span class="cur-dot" style="background:${TEAM_COLORS[t] || '#888'};"></span>`; }
+function curioTeamBtn(t, label) {
+  // En demo los equipos no enlazan a Por Equipo: ahí se ven tus datos reales, no los de prueba
+  if (curioDemo) return `<span class="cur-team static">${curioDot(t)}${label || t}</span>`;
+  return `<button type="button" class="cur-team" onclick="goToTeam('${curioJs(t)}')" title="Ver ${t} en Por Equipo">${curioDot(t)}${label || t}</button>`;
+}
+function curioBlock(title, note, body) {
+  return `<div class="cur-block">
+    <div class="cur-block-head">
+      <div class="cur-block-title">${title}</div>
+      ${note ? `<div class="cur-block-note">${note}</div>` : ''}
+    </div>
+    ${body}
+  </div>`;
+}
+
+// Abre un equipo en "Por Equipo" desde cualquier sección
+function goToTeam(team) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('s-equipos').classList.add('active');
+  const nb = document.getElementById('nav-s-equipos');
+  if (nb) nb.classList.add('active');
+  renderTeamGrid();
+  openTeamDetail(team);
+}
+
+// ── sección ──
+function renderCuriosidades() {
+  curioData = computeCuriosidades(curioSource());
+  const d = curioData;
+  document.getElementById('cur-meta').innerHTML =
+    (curioDemo ? `<span class="cur-meta-demo">🧪 Demo · hasta ${fmtDate(curioCutoff)}</span>` : '') +
+    `<span>${d.totalGames} partidos</span><span>${d.qGames} con cuartos</span><span>${d.teams.length} equipos</span>`;
+  renderCurioDemoBar();
+  document.getElementById('cur-tabs').innerHTML = CURIO_PANELS.map(p => p.ready
+    ? `<button type="button" class="cur-tab${p.id === curioPanel ? ' active' : ''}" onclick="setCurioPanel('${p.id}')">${p.label}</button>`
+    : `<button type="button" class="cur-tab" disabled title="Llega en una próxima fase">${p.label}<span class="cur-soon">pronto</span></button>`
+  ).join('');
+  renderCurioPanel();
+}
+
+// ── Fase 3: Clutch y Banca interpretados ──
+const CURIO_MIN_CLOSE = 3; // partidos cerrados (≤5 pts) para entrar a los rankings de clutch
+const CURIO_MIN_SPLIT = 2; // victorias Y derrotas con banca registrada para "banca decisiva"
+let curioSorts = { clutch: { key: 'closePct', dir: -1 }, banca: { key: 'share', dir: -1 } };
+
+function renderCurioPanel() {
+  if (curioPanel === 'clutch') renderCurioClutch();
+  else if (curioPanel === 'banca') renderCurioBanca();
+  else renderCurioCuartos();
+}
+
+function curioPct1(v) { return v == null || !isFinite(v) ? '—' : (v * 100).toFixed(1) + '%'; }
+function curioPP(v) {
+  if (v == null || !isFinite(v)) return '—';
+  const r = Math.round(v * 100);
+  return (r > 0 ? '+' : '') + r + ' pp';
+}
+function curioRec(w, l) { return `${w}-${l}`; }
+
+function curioHeroCard(kind, kicker, value, team, hook, extra) {
+  return `<div class="cur-hero-card cur-hero--${kind}">
+    <div class="cur-king-q">${kicker}</div>
+    <div class="cur-king-val">${value}</div>
+    ${team ? `<div class="cur-king-team">${curioDot(team)}${team}</div>` : ''}
+    <div class="cur-king-hook">${hook}</div>
+    ${extra || ''}
+  </div>`;
+}
+
+// Tabla ordenable genérica para los paneles nuevos (estado en curioSorts[name])
+function curioSortTable(name, cols, rows, isThin, thinTitle) {
+  const st = curioSorts[name];
+  const col = cols.find(c => c.key === st.key) || cols[0];
+  const data = [...rows].sort((a, b) => {
+    const av = col.get(a), bv = col.get(b);
+    if (typeof av === 'string') return st.dir * av.localeCompare(bv);
+    return st.dir * ((av ?? -1e9) - (bv ?? -1e9));
+  });
+  const head = cols.map(c => {
+    const on = c.key === st.key;
+    return `<th onclick="sortCurioT('${name}','${c.key}')" class="${on ? 'cur-sorted' : ''}"${c.title ? ` title="${c.title}"` : ''}>${c.label}${on ? (st.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+  }).join('');
+  const body = data.map(t => {
+    const thin = isThin(t);
+    return `<tr class="${thin ? 'cur-thin' : ''}"${thin ? ` title="${thinTitle}"` : ''}>${cols.map(c => c.cell(t)).join('')}</tr>`;
+  }).join('');
+  return `<div class="table-wrap" id="cur-${name}-table"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function sortCurioT(name, key) {
+  const st = curioSorts[name];
+  if (st.key === key) st.dir *= -1;
+  else curioSorts[name] = { key, dir: key === 'team' ? 1 : -1 };
+  renderCurioPanel();
+}
+
+function curioCellNum(v, fmt, signed, scale) {
+  const cls = !signed || v == null ? 'stat-num' : v > 0 ? 'stat-pos' : v < 0 ? 'stat-neg' : 'stat-num';
+  return `<td class="${cls}" style="${signed ? curioHeat(v, scale) : ''}">${fmt(v)}</td>`;
+}
+
+function curioEmpty(icon, msg) {
+  return `<div class="empty-state"><div class="empty-icon">${icon}</div>${msg}</div>`;
+}
+
+// ─ Clutch ─
+function renderCurioClutch() {
+  const el = document.getElementById('cur-panel');
+  const withClose = curioData.teams.filter(t => t.closeGp > 0);
+  if (!withClose.length) {
+    el.innerHTML = curioEmpty('⏱️', 'Todavía no hay partidos cerrados (decididos por 5 pts o menos).<br>En cuanto haya, aquí verás quién los gana y quién los deja escapar.');
+    return;
+  }
+  const elig = withClose.filter(t => t.closeGp >= CURIO_MIN_CLOSE);
+  let html = elig.length ? '' :
+    `<div class="cur-warmup">Ningún equipo tiene aún ${CURIO_MIN_CLOSE} partidos cerrados, así que no se corona rey del clutch todavía. La tabla de abajo ya muestra lo que hay.</div>`;
+
+  // Héroes: rey del clutch y frágil
+  const byBest  = [...elig].sort((a, b) => b.closePct - a.closePct || b.closeW - a.closeW || b.closeGp - a.closeGp);
+  const byWorst = [...elig].sort((a, b) => a.closePct - b.closePct || (b.closeGp - b.closeW) - (a.closeGp - a.closeW));
+  const k = byBest[0], f = byWorst[0];
+  const lvl = t => Math.abs(t.clutchEdge) < 0.05
+    ? ` Va en línea con su nivel: gana el ${curioPct(t.pct)} de todos sus partidos.`
+    : ` Su nivel general es ${curioPct(t.pct)}: ${curioPP(t.clutchEdge)} en el cierre.`;
+  const runners = (arr, fmt) => {
+    const r = arr.slice(1, 3).map((t, j) => `<div><span>${j + 2}. ${curioShort(t.team)}</span><span>${fmt(t)}</span></div>`).join('');
+    return r ? `<div class="cur-king-runners">${r}</div>` : '';
+  };
+  const recFmt = t => `${curioPct(t.closePct)} · ${curioRec(t.closeW, t.closeGp - t.closeW)}`;
+  html += curioBlock('Rey del clutch y el más frágil',
+    `% de victorias en partidos decididos por 5 pts o menos. Mín. ${CURIO_MIN_CLOSE} partidos cerrados.`,
+    `<div class="cur-hero">${
+      k ? curioHeroCard('good', '👑 Rey del clutch', curioPct(k.closePct), k.team,
+            `${curioShort(k.team)} gana ${k.closeW} de sus ${k.closeGp} partidos cerrados.${lvl(k)}`, runners(byBest, recFmt))
+        : curioHeroCard('empty', '👑 Rey del clutch', '—', null, `Hace falta que algún equipo llegue a ${CURIO_MIN_CLOSE} partidos cerrados.`)
+    }${
+      f && elig.length > 1 ? curioHeroCard('bad', '🫠 Frágil en los cerrados', curioPct(f.closePct), f.team,
+            `${curioShort(f.team)} pierde ${f.closeGp - f.closeW} de sus ${f.closeGp} partidos cerrados.${lvl(f)}`, runners(byWorst, recFmt))
+        : curioHeroCard('empty', '🫠 Frágil en los cerrados', '—', null, `Hace falta que al menos dos equipos lleguen a ${CURIO_MIN_CLOSE} partidos cerrados.`)
+    }</div>`);
+
+  // Cierre vs nivel: quién rinde en los cerrados por encima / por debajo de lo que gana en general
+  const over  = elig.filter(t => t.clutchEdge >= 0.05).sort((a, b) => b.clutchEdge - a.clutchEdge).slice(0, 5);
+  const under = elig.filter(t => t.clutchEdge <= -0.05).sort((a, b) => a.clutchEdge - b.clutchEdge).slice(0, 5);
+  const sub = t => `Cerrados ${curioRec(t.closeW, t.closeGp - t.closeW)} (${curioPct(t.closePct)}) · general ${curioPct(t.pct)}`;
+  const none = elig.length ? 'Nadie se separa de su nivel por ahora.' : `Hace falta que algún equipo llegue a ${CURIO_MIN_CLOSE} partidos cerrados.`;
+  html += curioBlock('Cierre vs nivel',
+    'Compara cuánto gana cada equipo en los partidos cerrados con cuánto gana en general. Separa al equipo que sabe cerrar del que simplemente es bueno (o malo).',
+    `<div class="cur-duo">
+      <div class="cur-card">
+        <div class="cur-card-kicker">🧊 Sangre fría</div>
+        <div class="cur-card-desc">Ganan los cerrados más de lo que su nivel sugiere.</div>
+        ${curioRows(over, { empty: none, sub, val: t => curioPP(t.clutchEdge), bar: t => t.clutchEdge, barClass: 'close' })}
+      </div>
+      <div class="cur-card">
+        <div class="cur-card-kicker">😬 Se les escapan</div>
+        <div class="cur-card-desc">En los cerrados rinden por debajo de su nivel.</div>
+        ${curioRows(under, { empty: none, sub, val: t => curioPP(t.clutchEdge), bar: t => -t.clutchEdge, barClass: 'down' })}
+      </div>
+    </div>`);
+
+  const cols = [
+    { key: 'team',      label: 'Equipo',    get: t => t.team, cell: t => `<td class="team-name">${curioTeamBtn(t.team)}</td>` },
+    { key: 'closeGp',   label: 'Cerrados',  get: t => t.closeGp, cell: t => `<td class="stat-num">${t.closeGp}</td>` },
+    { key: 'rec',       label: 'Récord',    get: t => t.closeW, cell: t => `<td class="stat-num">${curioRec(t.closeW, t.closeGp - t.closeW)}</td>` },
+    { key: 'closePct',  label: '% cerrados', get: t => t.closePct, cell: t => curioCellNum(t.closePct, curioPct) },
+    { key: 'pct',       label: '% general', get: t => t.pct, cell: t => curioCellNum(t.pct, curioPct) },
+    { key: 'edge',      label: 'Cierre vs nivel', get: t => t.clutchEdge, title: '% en cerrados menos % general, en puntos porcentuales',
+      cell: t => curioCellNum(t.clutchEdge, curioPP, true, 0.3) },
+    { key: 'share',     label: 'Al límite', get: t => t.closeShare, title: 'Qué parte de sus partidos se decide por 5 pts o menos',
+      cell: t => curioCellNum(t.closeShare, curioPct) },
+  ];
+  html += curioBlock('Tabla completa del clutch',
+    `Toca una columna para ordenar. Los equipos con menos de ${CURIO_MIN_CLOSE} partidos cerrados aparecen atenuados. "Al límite" es qué parte de sus partidos se decide por 5 pts o menos.`,
+    curioSortTable('clutch', cols, withClose, t => t.closeGp < CURIO_MIN_CLOSE, `Muestra corta (menos de ${CURIO_MIN_CLOSE} cerrados): fuera de los rankings`));
+  el.innerHTML = html;
+}
+
+// ─ Banca ─
+function renderCurioBanca() {
+  const el = document.getElementById('cur-panel');
+  const withB = curioData.teams.filter(t => t.bGp > 0);
+  if (!withB.length) {
+    el.innerHTML = curioEmpty('🪑', 'Todavía no hay partidos con puntos de banca registrados.<br>Registra algunos y aquí verás qué equipos viven de su banquillo.');
+    return;
+  }
+  const elig = withB.filter(t => t.bGp >= CURIO_MIN_GP);
+  const eligSplit = elig.filter(t => t.gpW >= CURIO_MIN_SPLIT && t.gpL >= CURIO_MIN_SPLIT);
+  let html = elig.length ? '' :
+    `<div class="cur-warmup">Ningún equipo llega aún a ${CURIO_MIN_GP} partidos con banca registrada, así que los rankings esperan. La tabla de abajo ya muestra lo que hay.</div>`;
+
+  const dep = [...elig].sort((a, b) => b.benchShare - a.benchShare);
+  const dec = [...eligSplit].sort((a, b) => b.benchSwing - a.benchSwing);
+  const d0 = dep[0], s0 = dec[0];
+  const runners = (arr, fmt) => {
+    const r = arr.slice(1, 3).map((t, j) => `<div><span>${j + 2}. ${curioShort(t.team)}</span><span>${fmt(t)}</span></div>`).join('');
+    return r ? `<div class="cur-king-runners">${r}</div>` : '';
+  };
+  html += curioBlock('Los que viven del banquillo',
+    `Dependencia: qué parte de los puntos del equipo anota la banca (mín. ${CURIO_MIN_GP} partidos). Decisiva: cuántos puntos más mete la banca cuando el equipo gana que cuando pierde (mín. ${CURIO_MIN_SPLIT} victorias y ${CURIO_MIN_SPLIT} derrotas).`,
+    `<div class="cur-hero">${
+      d0 ? curioHeroCard('good', '🪑 Banca más dependiente', curioPct1(d0.benchShare), d0.team,
+             `${curioShort(d0.team)} saca ${d0.benchPerG.toFixed(1)} pts por partido del banquillo.`, runners(dep, t => curioPct1(t.benchShare)))
+         : curioHeroCard('empty', '🪑 Banca más dependiente', '—', null, `Hace falta que algún equipo llegue a ${CURIO_MIN_GP} partidos.`)
+    }${
+      s0 ? curioHeroCard('bad', '🎯 Banca más decisiva', curioSigned(s0.benchSwing), s0.team,
+             `Cuando ${curioShort(s0.team)} gana, su banca mete ${s0.benchInWins.toFixed(1)} pts; cuando pierde, ${s0.benchInLosses.toFixed(1)}.`, runners(dec, t => curioSigned(t.benchSwing)))
+         : curioHeroCard('empty', '🎯 Banca más decisiva', '—', null, `Hace falta que algún equipo tenga ${CURIO_MIN_SPLIT} victorias y ${CURIO_MIN_SPLIT} derrotas.`)
+    }</div>`);
+
+  const top = dep.slice(0, 5);
+  const bottom = [...elig].sort((a, b) => a.benchShare - b.benchShare).slice(0, 5);
+  const noneE = `Hace falta que algún equipo llegue a ${CURIO_MIN_GP} partidos.`;
+  html += curioBlock('Banquillo vs titulares',
+    'Los extremos de la liga: dónde la segunda unidad es parte del plan y dónde los titulares cargan con todo.',
+    `<div class="cur-duo">
+      <div class="cur-card">
+        <div class="cur-card-kicker">🔄 Rotación larga</div>
+        <div class="cur-card-desc">Mayor % de sus puntos desde la banca.</div>
+        ${curioRows(top, { empty: noneE, sub: t => `${t.benchPerG.toFixed(1)} pts de banca por partido`, val: t => curioPct1(t.benchShare), bar: t => t.benchShare, barClass: 'close' })}
+      </div>
+      <div class="cur-card">
+        <div class="cur-card-kicker">💪 Titulares a cargo</div>
+        <div class="cur-card-desc">Mayor % de sus puntos desde el quinteto inicial.</div>
+        ${curioRows(bottom, { empty: noneE, sub: t => `Banca: ${t.benchPerG.toFixed(1)} pts (${curioPct1(t.benchShare)})`, val: t => curioPct1(1 - t.benchShare), bar: t => 1 - t.benchShare, barClass: 'start' })}
+      </div>
+    </div>`);
+
+  const swingPos = dec.filter(t => t.benchSwing > 0).slice(0, 5);
+  const swingNeg = [...eligSplit].filter(t => t.benchSwing < 0).sort((a, b) => a.benchSwing - b.benchSwing).slice(0, 5);
+  const noneS = eligSplit.length ? 'Ningún equipo encaja en este perfil por ahora.' : `Hace falta que algún equipo tenga ${CURIO_MIN_SPLIT} victorias y ${CURIO_MIN_SPLIT} derrotas.`;
+  const subS = t => `Victorias ${t.benchInWins.toFixed(1)} · derrotas ${t.benchInLosses.toFixed(1)} pts de banca`;
+  html += curioBlock('¿La banca decide?',
+    'Puntos de banca en victorias frente a derrotas. Una diferencia negativa suele ser señal de minutos de la basura: la banca anota cuando el partido ya está perdido.',
+    `<div class="cur-duo">
+      <div class="cur-card">
+        <div class="cur-card-kicker">🎯 Banca que decide</div>
+        <div class="cur-card-desc">Cuando su banca aparece, el equipo gana.</div>
+        ${curioRows(swingPos, { empty: noneS, sub: subS, val: t => curioSigned(t.benchSwing), bar: t => t.benchSwing, barClass: 'up' })}
+      </div>
+      <div class="cur-card">
+        <div class="cur-card-kicker">🗑️ Banca de la basura</div>
+        <div class="cur-card-desc">Su banca anota más en las derrotas.</div>
+        ${curioRows(swingNeg, { empty: noneS, sub: subS, val: t => curioSigned(t.benchSwing), bar: t => -t.benchSwing, barClass: 'down' })}
+      </div>
+    </div>`);
+
+  const f1 = v => v == null || !isFinite(v) ? '—' : v.toFixed(1);
+  const cols = [
+    { key: 'team',  label: 'Equipo',      get: t => t.team, cell: t => `<td class="team-name">${curioTeamBtn(t.team)}</td>` },
+    { key: 'bGp',   label: 'PJ',          get: t => t.bGp, cell: t => `<td class="stat-num">${t.bGp}</td>` },
+    { key: 'perG',  label: 'BPts/G',      get: t => t.benchPerG, cell: t => curioCellNum(t.benchPerG, f1) },
+    { key: 'share', label: '% de puntos', get: t => t.benchShare, cell: t => curioCellNum(t.benchShare, curioPct1) },
+    { key: 'inW',   label: 'En victorias', get: t => t.benchInWins, cell: t => curioCellNum(t.benchInWins, f1) },
+    { key: 'inL',   label: 'En derrotas', get: t => t.benchInLosses, cell: t => curioCellNum(t.benchInLosses, f1) },
+    { key: 'swing', label: 'Diferencia',  get: t => t.benchSwing, title: 'Pts de banca en victorias menos en derrotas',
+      cell: t => curioCellNum(t.benchSwing, v => curioSigned(v), true, 10) },
+  ];
+  html += curioBlock('Tabla completa de la banca',
+    `Toca una columna para ordenar. Los equipos con menos de ${CURIO_MIN_GP} partidos aparecen atenuados.`,
+    curioSortTable('banca', cols, withB, t => t.bGp < CURIO_MIN_GP, `Muestra corta (menos de ${CURIO_MIN_GP} partidos): fuera de los rankings`));
+  el.innerHTML = html;
+}
+
+// ── Modo demo: temporada 2024-25 desde games.json, SOLO en memoria ──
+// Nunca se asigna a `games` ni pasa por save(): así no puede llegar a Firestore.
+let curioDemo = false;
+let curioDemoGames = null;
+let curioCutoff = null;
+
+function curioAddDays(iso, days) {
+  const dt = new Date(iso + 'T12:00:00Z');
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+function curioSource() {
+  if (!curioDemo) return games;
+  if (!curioDemoGames) return [];
+  return curioDemoGames.filter(g => g.date <= curioCutoff);
+}
+
+async function toggleCurioDemo() {
+  if (curioDemo) { curioDemo = false; renderCuriosidades(); return; }
+  if (!curioDemoGames) {
+    try {
+      const res = await fetch('games.json');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('games.json no es un arreglo');
+      curioDemoGames = data.filter(g => g && g.date && g.local && g.away)
+        .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+      if (!curioDemoGames.length) throw new Error('games.json vacío');
+    } catch (e) {
+      console.error('[curiosidades] No se pudo cargar el modo demo:', e);
+      curioDemoGames = null;
+      toast('No se pudo cargar games.json para el modo demo', 'var(--lose)');
+      return;
+    }
+    // Arranca en la 3ª semana: la situación que vas a vivir al inicio de temporada
+    curioCutoff = curioAddDays(curioDemoGames[0].date, 20);
+  }
+  curioDemo = true;
+  renderCuriosidades();
+}
+
+function setCurioCutoff(d) {
+  if (!d || !curioDemoGames) return;
+  const first = curioDemoGames[0].date, last = curioDemoGames[curioDemoGames.length - 1].date;
+  curioCutoff = d < first ? first : d > last ? last : d;
+  renderCuriosidades();
+}
+
+function renderCurioDemoBar() {
+  const el = document.getElementById('cur-demo');
+  if (!el) return;
+  if (!curioDemo) {
+    el.className = 'cur-demo';
+    el.innerHTML = `<button type="button" class="cur-demo-btn" onclick="toggleCurioDemo()">🧪 Modo demo · temporada 2024-25</button>
+      <span class="cur-demo-hint">Para probar con partidos reales de la temporada pasada. Vive solo en memoria: no se guarda ni toca tus partidos.</span>`;
+    return;
+  }
+  const all = curioDemoGames, first = all[0].date, last = all[all.length - 1].date;
+  const presets = [
+    ['1 semana',  curioAddDays(first, 6)],
+    ['3 semanas', curioAddDays(first, 20)],
+    ['6 semanas', curioAddDays(first, 41)],
+    ['Mitad',     all[Math.floor(all.length / 2)].date],
+    ['Completa',  last],
+  ];
+  el.className = 'cur-demo on';
+  el.innerHTML = `<div class="cur-demo-top">
+      <div class="cur-demo-title">🧪 Modo demo · temporada 2024-25</div>
+      <button type="button" class="cur-demo-btn" onclick="toggleCurioDemo()">Volver a mis datos</button>
+    </div>
+    <div class="cur-demo-text">Partidos reales de 2024-25 desde games.json, cargados solo en memoria. Nada de esto se guarda en tu base ni aparece en otras secciones.</div>
+    <div class="cur-demo-ctrl">
+      <label for="cur-cutoff">Simular hasta</label>
+      <input type="date" id="cur-cutoff" min="${first}" max="${last}" value="${curioCutoff}" onchange="setCurioCutoff(this.value)">
+      <div class="cur-demo-presets">${presets.map(([l, d]) =>
+        `<button type="button" class="filter-tab${curioCutoff === d ? ' active' : ''}" onclick="setCurioCutoff('${d}')">${l}</button>`).join('')}</div>
+      <span class="cur-demo-count">${curioSource().length} de ${all.length} partidos</span>
+    </div>`;
+}
+
+function setCurioPanel(id) {
+  curioPanel = id;
+  renderCuriosidades();
+}
+
+// ── Fase 2: Rayos X de cuartos ──
+function renderCurioCuartos() {
+  const el = document.getElementById('cur-panel');
+  const withQ = curioData.teams.filter(t => t.qGp > 0);
+  if (!withQ.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div>Todavía no hay partidos con marcadores por cuarto.<br>Registra algunos y aquí aparecerá el Rayos X.</div>`;
+    return;
+  }
+  const elig = withQ.filter(t => t.qGp >= CURIO_MIN_GP);
+  const warm = elig.length ? '' :
+    `<div class="cur-warmup">Ningún equipo llega aún a ${CURIO_MIN_GP} partidos con cuartos, así que todavía no se coronan reyes. La tabla completa ya muestra todo lo registrado y los rankings se llenan solos a medida que entran partidos.</div>`;
+  el.innerHTML = warm
+    + curioKingsHTML(elig)
+    + curioQTableHTML(withQ)
+    + curioDuoHTML(elig)
+    + curioHalvesHTML(withQ);
+}
+
+function curioKingsHTML(elig) {
+  const cards = [0, 1, 2, 3].map(i => {
+    const ranked = [...elig].sort((a, b) => b.qDiff[i] - a.qDiff[i]);
+    const k = ranked[0];
+    if (!k) {
+      return `<div class="cur-king empty">
+        <div class="cur-king-q">${CURIO_QNAMES[i]}</div>
+        <div class="cur-king-val">—</div>
+        <div class="cur-king-hook">Sin rey todavía: hace falta que algún equipo llegue a ${CURIO_MIN_GP} partidos.</div>
+      </div>`;
+    }
+    const v = k.qDiff[i];
+    const hook = v > 0
+      ? `${curioShort(k.team)} gana el ${CURIO_QNAMES[i]} por ${v.toFixed(1)} pts de media.`
+      : `Nadie domina el ${CURIO_QNAMES[i]}: el mejor apenas lo empata.`;
+    const runners = ranked.slice(1, 3).map((t, j) =>
+      `<div><span>${j + 2}. ${curioShort(t.team)}</span><span>${curioSigned(t.qDiff[i])}</span></div>`).join('');
+    return `<div class="cur-king" onclick="sortCurioQ('q${i + 1}', -1, true)" title="Ver el ranking completo del ${CURIO_QNAMES[i]}">
+      <div class="cur-king-q">👑 ${CURIO_QNAMES[i]}</div>
+      <div class="cur-king-val">${curioSigned(v)}</div>
+      <div class="cur-king-team">${curioDot(k.team)}${k.team}</div>
+      <div class="cur-king-hook">${hook}</div>
+      ${runners ? `<div class="cur-king-runners">${runners}</div>` : ''}
+    </div>`;
+  });
+  return curioBlock('Rey de cada cuarto',
+    `Diferencial medio en ese cuarto (a favor − en contra). Mín. ${CURIO_MIN_GP} partidos con cuartos. Toca una tarjeta para ver el ranking completo.`,
+    `<div class="cur-kings">${cards.join('')}</div>`);
+}
+
+const CURIO_QCOLS = [
+  { key: 'team', label: 'Equipo',   get: t => t.team },
+  { key: 'qGp',  label: 'PJ',       get: t => t.qGp },
+  { key: 'q1',   label: '1Q',       get: t => t.qDiff[0] },
+  { key: 'q2',   label: '2Q',       get: t => t.qDiff[1] },
+  { key: 'q3',   label: '3Q',       get: t => t.qDiff[2] },
+  { key: 'q4',   label: '4Q',       get: t => t.qDiff[3] },
+  { key: 'h1',   label: '1ª mitad', get: t => t.h1Diff, scale: 8 },
+  { key: 'h2',   label: '2ª mitad', get: t => t.h2Diff, scale: 8 },
+  { key: 'idx',  label: 'Perfil',   get: t => t.closingIdx,
+    title: 'Diferencial del 4º cuarto menos la media por cuarto de la 1ª mitad. + cerrador · − arrancador' },
+];
+
+function curioQTableHTML(rows) {
+  const col = CURIO_QCOLS.find(c => c.key === curioQSort.key) || CURIO_QCOLS[5];
+  const data = [...rows].sort((a, b) => {
+    const av = col.get(a), bv = col.get(b);
+    if (typeof av === 'string') return curioQSort.dir * av.localeCompare(bv);
+    return curioQSort.dir * ((av ?? -1e9) - (bv ?? -1e9));
+  });
+
+  const head = CURIO_QCOLS.map(c => {
+    const on = c.key === curioQSort.key;
+    return `<th onclick="sortCurioQ('${c.key}')" class="${on ? 'cur-sorted' : ''}"${c.title ? ` title="${c.title}"` : ''}>${c.label}${on ? (curioQSort.dir < 0 ? ' ↓' : ' ↑') : ''}</th>`;
+  }).join('');
+
+  const body = data.map(t => {
+    const thin = t.qGp < CURIO_MIN_GP;
+    const cells = CURIO_QCOLS.map(c => {
+      if (c.key === 'team') return `<td class="team-name">${curioTeamBtn(t.team)}</td>`;
+      if (c.key === 'qGp')  return `<td class="stat-num">${t.qGp}</td>`;
+      const v = c.get(t);
+      if (c.key === 'idx') {
+        const kind = v > 0.25 ? 'pos' : v < -0.25 ? 'neg' : '';
+        const lbl  = v > 0.25 ? 'Cerrador' : v < -0.25 ? 'Arrancador' : 'Parejo';
+        return `<td><span class="cur-chip ${kind}">${lbl} ${curioSigned(v)}</span></td>`;
+      }
+      const cls = v > 0 ? 'stat-pos' : v < 0 ? 'stat-neg' : 'stat-num';
+      return `<td class="${cls}" style="${curioHeat(v, c.scale || 5)}">${curioSigned(v)}</td>`;
+    }).join('');
+    return `<tr class="${thin ? 'cur-thin' : ''}"${thin ? ` title="Muestra corta (menos de ${CURIO_MIN_GP} partidos): fuera de los rankings"` : ''}>${cells}</tr>`;
+  }).join('');
+
+  return curioBlock('Rayos X completo',
+    `Diferencial medio por cuarto de cada equipo. Toca una columna para ordenar. Los equipos con menos de ${CURIO_MIN_GP} partidos aparecen atenuados.`,
+    `<div class="table-wrap" id="cur-qtable"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`);
+}
+
+function sortCurioQ(key, dir, scroll) {
+  if (dir !== undefined) curioQSort = { key, dir };
+  else if (curioQSort.key === key) curioQSort.dir *= -1;
+  else curioQSort = { key, dir: key === 'team' ? 1 : -1 };
+  renderCurioCuartos();
+  if (scroll) {
+    const t = document.getElementById('cur-qtable');
+    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function curioRows(arr, opts) {
+  if (!arr.length) return `<div class="cur-none">${opts.empty}</div>`;
+  const max = Math.max(1e-9, ...arr.map(opts.bar));
+  return arr.map((t, i) => `<div class="cur-row">
+      <div class="cur-rank">${i + 1}</div>
+      <div class="cur-row-main">
+        ${curioTeamBtn(t.team)}
+        <div class="cur-row-sub">${opts.sub(t)}</div>
+        <div class="cur-bar"><span class="${opts.barClass}" style="width:${Math.round(opts.bar(t) / max * 100)}%;"></span></div>
+      </div>
+      <div class="cur-row-val">${opts.val(t)}</div>
+    </div>`).join('');
+}
+
+function curioDuoHTML(elig) {
+  const starters = elig.filter(t => t.closingIdx < -0.25).sort((a, b) => a.closingIdx - b.closingIdx).slice(0, 5);
+  const closers  = elig.filter(t => t.closingIdx >  0.25).sort((a, b) => b.closingIdx - a.closingIdx).slice(0, 5);
+  const emptyMsg = elig.length ? 'Nadie encaja con claridad en este perfil por ahora.'
+                               : `Hace falta que algún equipo llegue a ${CURIO_MIN_GP} partidos.`;
+  const sub = t => `1ª mitad ${curioSigned(t.h1Diff)} · 4º cuarto ${curioSigned(t.q4Diff)}`;
+  const val = t => curioSigned(Math.abs(t.closingIdx));
+  const bar = t => Math.abs(t.closingIdx);
+  return curioBlock('Arrancadores vs cerradores',
+    'Compara la ventaja media por cuarto de la 1ª mitad con la del 4º cuarto. La cifra es cuántos puntos por cuarto cambia el equipo entre un tramo y el otro.',
+    `<div class="cur-duo">
+      <div class="cur-card cur-card--start">
+        <div class="cur-card-kicker">⚡ Arrancadores</div>
+        <div class="cur-card-desc">Salen fuerte y se apagan en el cierre.</div>
+        ${curioRows(starters, { empty: emptyMsg, sub, val, bar, barClass: 'start' })}
+      </div>
+      <div class="cur-card cur-card--close">
+        <div class="cur-card-kicker">🧊 Cerradores</div>
+        <div class="cur-card-desc">Su 4º cuarto es mejor que su arranque.</div>
+        ${curioRows(closers, { empty: emptyMsg, sub, val, bar, barClass: 'close' })}
+      </div>
+    </div>`);
+}
+
+function curioHalvesHTML(withQ) {
+  const comeback = withQ.filter(t => t.trailHalf >= CURIO_MIN_HALF && t.trailHalfWins > 0)
+    .sort((a, b) => b.comebackPct - a.comebackPct || b.trailHalfWins - a.trailHalfWins).slice(0, 8);
+  const collapse = withQ.filter(t => t.leadHalf >= CURIO_MIN_HALF && t.leadHalfLosses > 0)
+    .sort((a, b) => b.collapsePct - a.collapsePct || b.leadHalfLosses - a.leadHalfLosses).slice(0, 8);
+  return curioBlock('Remontada y colapso',
+    `Qué pasa después del descanso. Solo cuentan equipos que han estado al menos ${CURIO_MIN_HALF} veces abajo (o arriba) al medio tiempo.`,
+    `<div class="cur-duo">
+      <div class="cur-card cur-card--up">
+        <div class="cur-card-kicker">🔥 Reyes de la remontada</div>
+        <div class="cur-card-desc">% de partidos ganados yendo perdiendo al descanso.</div>
+        ${curioRows(comeback, {
+          empty: 'Ningún equipo ha remontado todavía con muestra suficiente.',
+          sub: t => `Ganó ${t.trailHalfWins} de ${t.trailHalf} yendo abajo`,
+          val: t => curioPct(t.comebackPct), bar: t => t.comebackPct, barClass: 'up' })}
+      </div>
+      <div class="cur-card cur-card--down">
+        <div class="cur-card-kicker">🥶 Reyes del colapso</div>
+        <div class="cur-card-desc">% de partidos perdidos yendo ganando al descanso.</div>
+        ${curioRows(collapse, {
+          empty: 'Ningún equipo ha dejado escapar una ventaja todavía con muestra suficiente.',
+          sub: t => `Perdió ${t.leadHalfLosses} de ${t.leadHalf} yendo arriba`,
+          val: t => curioPct(t.collapsePct), bar: t => t.collapsePct, barClass: 'down' })}
+      </div>
+    </div>`);
 }
 
 </script>
