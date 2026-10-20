@@ -924,6 +924,8 @@
   .cur-meta-demo{background:var(--tile-yellow);}
   .cur-team.static{cursor:default;}
   .cur-team.static:hover{color:inherit;text-decoration:none;}
+  .cur-table-base{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .cur-table-base span{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-right:6px;}
   .cur-hero{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .cur-hero-card{border:1px solid var(--hairline);border-radius:2rem;padding:24px 28px;display:flex;flex-direction:column;gap:6px;}
   .cur-hero--good{background:var(--mint);}
@@ -4166,6 +4168,8 @@ function computeCuriosidades(src = games) {
     closeGp: 0, closeW: 0,
     // banca (solo partidos con puntos de banca registrados)
     bGp: 0, ptsFor: 0, bpts: 0, gpW: 0, bptsW: 0, gpL: 0, bptsL: 0,
+    // banca solo en partidos parejos al iniciar el 4º cuarto
+    gpWp: 0, bptsWp: 0, gpLp: 0, bptsLp: 0,
     // rachas: secuencia cronológica de resultados
     seq: []
   });
@@ -4188,6 +4192,13 @@ function computeCuriosidades(src = games) {
       if (Number.isFinite(bp) && bp > 0) {
         s.bGp++; s.ptsFor += pf; s.bpts += bp;
         if (won) { s.gpW++; s.bptsW += bp; } else { s.gpL++; s.bptsL += bp; }
+        // "Parejo al 4º": el último cuarto todavía se estaba definiendo (no hubo paliza que sentara a los titulares)
+        if (hasQ) {
+          const m3 = [1, 2, 3].reduce((acc, i) => acc + g[`q${i}${me}`] - g[`q${i}${op}`], 0);
+          if (Math.abs(m3) <= CURIO_PAREJO_Q4) {
+            if (won) { s.gpWp++; s.bptsWp += bp; } else { s.gpLp++; s.bptsLp += bp; }
+          }
+        }
       }
 
       const close = typeof g.cerrado === 'boolean' ? g.cerrado : Math.abs(pf - pa) <= 5;
@@ -4240,6 +4251,9 @@ function computeCuriosidades(src = games) {
       benchInWins: s.gpW ? s.bptsW / s.gpW : null,
       benchInLosses: s.gpL ? s.bptsL / s.gpL : null,
       benchSwing: s.gpW && s.gpL ? s.bptsW / s.gpW - s.bptsL / s.gpL : null,
+      benchInWinsP: s.gpWp ? s.bptsWp / s.gpWp : null,
+      benchInLossesP: s.gpLp ? s.bptsLp / s.gpLp : null,
+      benchSwingP: s.gpWp && s.gpLp ? s.bptsWp / s.gpWp - s.bptsLp / s.gpLp : null,
       streak: { len: streakLen, won: streakWon },
     };
   });
@@ -4314,7 +4328,9 @@ function renderCuriosidades() {
 // ── Fase 3: Clutch y Banca interpretados ──
 const CURIO_MIN_CLOSE = 3; // partidos cerrados (≤5 pts) para entrar a los rankings de clutch
 const CURIO_MIN_SPLIT = 2; // victorias Y derrotas con banca registrada para "banca decisiva"
+const CURIO_PAREJO_Q4 = 12; // dif. máxima tras el 3er cuarto para considerar que el 4º todavía se estaba definiendo
 let curioSorts = { clutch: { key: 'closePct', dir: -1 }, banca: { key: 'share', dir: -1 } };
+let curioBancaBase = 'todos'; // tabla de banca: 'todos' | 'parejos'
 
 function renderCurioPanel() {
   if (curioPanel === 'clutch') renderCurioClutch();
@@ -4347,7 +4363,9 @@ function curioSortTable(name, cols, rows, isThin, thinTitle) {
   const data = [...rows].sort((a, b) => {
     const av = col.get(a), bv = col.get(b);
     if (typeof av === 'string') return st.dir * av.localeCompare(bv);
-    return st.dir * ((av ?? -1e9) - (bv ?? -1e9));
+    // sin dato ("—") siempre al final, ordenes como ordenes
+    if (av == null || bv == null) return (av == null) - (bv == null);
+    return st.dir * (av - bv);
   });
   const head = cols.map(c => {
     const on = c.key === st.key;
@@ -4364,6 +4382,11 @@ function sortCurioT(name, key) {
   const st = curioSorts[name];
   if (st.key === key) st.dir *= -1;
   else curioSorts[name] = { key, dir: key === 'team' ? 1 : -1 };
+  renderCurioPanel();
+}
+
+function setCurioBancaBase(base) {
+  curioBancaBase = base;
   renderCurioPanel();
 }
 
@@ -4459,26 +4482,27 @@ function renderCurioBanca() {
   }
   const elig = withB.filter(t => t.bGp >= CURIO_MIN_GP);
   const eligSplit = elig.filter(t => t.gpW >= CURIO_MIN_SPLIT && t.gpL >= CURIO_MIN_SPLIT);
+  const eligSplitP = elig.filter(t => t.gpWp >= CURIO_MIN_SPLIT && t.gpLp >= CURIO_MIN_SPLIT);
   let html = elig.length ? '' :
     `<div class="cur-warmup">Ningún equipo llega aún a ${CURIO_MIN_GP} partidos con banca registrada, así que los rankings esperan. La tabla de abajo ya muestra lo que hay.</div>`;
 
   const dep = [...elig].sort((a, b) => b.benchShare - a.benchShare);
-  const dec = [...eligSplit].sort((a, b) => b.benchSwing - a.benchSwing);
+  const dec = [...eligSplitP].sort((a, b) => b.benchSwingP - a.benchSwingP);
   const d0 = dep[0], s0 = dec[0];
   const runners = (arr, fmt) => {
     const r = arr.slice(1, 3).map((t, j) => `<div><span>${j + 2}. ${curioShort(t.team)}</span><span>${fmt(t)}</span></div>`).join('');
     return r ? `<div class="cur-king-runners">${r}</div>` : '';
   };
   html += curioBlock('Los que viven del banquillo',
-    `Dependencia: qué parte de los puntos del equipo anota la banca (mín. ${CURIO_MIN_GP} partidos). Decisiva: cuántos puntos más mete la banca cuando el equipo gana que cuando pierde (mín. ${CURIO_MIN_SPLIT} victorias y ${CURIO_MIN_SPLIT} derrotas).`,
+    `Dependencia: qué parte de los puntos del equipo anota la banca (mín. ${CURIO_MIN_GP} partidos). Decisiva: cuántos puntos más mete la banca cuando el equipo gana que cuando pierde, solo en partidos que llegaron parejos al 4º cuarto (±${CURIO_PAREJO_Q4} pts tras el 3º), para que las palizas no la inflen (mín. ${CURIO_MIN_SPLIT} victorias y ${CURIO_MIN_SPLIT} derrotas de ese tipo).`,
     `<div class="cur-hero">${
       d0 ? curioHeroCard('good', '🪑 Banca más dependiente', curioPct1(d0.benchShare), d0.team,
              `${curioShort(d0.team)} saca ${d0.benchPerG.toFixed(1)} pts por partido del banquillo.`, runners(dep, t => curioPct1(t.benchShare)))
          : curioHeroCard('empty', '🪑 Banca más dependiente', '—', null, `Hace falta que algún equipo llegue a ${CURIO_MIN_GP} partidos.`)
     }${
-      s0 ? curioHeroCard('bad', '🎯 Banca más decisiva', curioSigned(s0.benchSwing), s0.team,
-             `Cuando ${curioShort(s0.team)} gana, su banca mete ${s0.benchInWins.toFixed(1)} pts; cuando pierde, ${s0.benchInLosses.toFixed(1)}.`, runners(dec, t => curioSigned(t.benchSwing)))
-         : curioHeroCard('empty', '🎯 Banca más decisiva', '—', null, `Hace falta que algún equipo tenga ${CURIO_MIN_SPLIT} victorias y ${CURIO_MIN_SPLIT} derrotas.`)
+      s0 ? curioHeroCard('bad', '🎯 Banca más decisiva', curioSigned(s0.benchSwingP), s0.team,
+             `En partidos parejos al 4º cuarto, cuando ${curioShort(s0.team)} gana su banca mete ${s0.benchInWinsP.toFixed(1)} pts; cuando pierde, ${s0.benchInLossesP.toFixed(1)}.`, runners(dec, t => curioSigned(t.benchSwingP)))
+         : curioHeroCard('empty', '🎯 Banca más decisiva', '—', null, `Hace falta que algún equipo tenga ${CURIO_MIN_SPLIT} victorias y ${CURIO_MIN_SPLIT} derrotas en partidos parejos al 4º cuarto.`)
     }</div>`);
 
   const top = dep.slice(0, 5);
@@ -4499,39 +4523,50 @@ function renderCurioBanca() {
       </div>
     </div>`);
 
-  const swingPos = dec.filter(t => t.benchSwing > 0).slice(0, 5);
+  const swingPos = dec.filter(t => t.benchSwingP > 0).slice(0, 5);
   const swingNeg = [...eligSplit].filter(t => t.benchSwing < 0).sort((a, b) => a.benchSwing - b.benchSwing).slice(0, 5);
+  const noneP = eligSplitP.length ? 'Ningún equipo encaja en este perfil por ahora.' : `Hace falta que algún equipo tenga ${CURIO_MIN_SPLIT} victorias y ${CURIO_MIN_SPLIT} derrotas en partidos parejos al 4º cuarto.`;
   const noneS = eligSplit.length ? 'Ningún equipo encaja en este perfil por ahora.' : `Hace falta que algún equipo tenga ${CURIO_MIN_SPLIT} victorias y ${CURIO_MIN_SPLIT} derrotas.`;
-  const subS = t => `Victorias ${t.benchInWins.toFixed(1)} · derrotas ${t.benchInLosses.toFixed(1)} pts de banca`;
+  const subP = t => `Parejos al 4º: victorias ${t.benchInWinsP.toFixed(1)} · derrotas ${t.benchInLossesP.toFixed(1)} pts de banca`;
+  const subS = t => `Todos: victorias ${t.benchInWins.toFixed(1)} · derrotas ${t.benchInLosses.toFixed(1)} pts de banca`;
   html += curioBlock('¿La banca decide?',
-    'Puntos de banca en victorias frente a derrotas. Una diferencia negativa suele ser señal de minutos de la basura: la banca anota cuando el partido ya está perdido.',
+    `Puntos de banca en victorias frente a derrotas, con dos lecturas distintas. "Banca que decide" usa solo los partidos que llegaron parejos al 4º cuarto (±${CURIO_PAREJO_Q4} pts), donde la banca todavía podía inclinar el resultado. "Banca de la basura" usa todos los partidos, porque justo busca el efecto de las palizas: la banca anota cuando el partido ya está perdido.`,
     `<div class="cur-duo">
       <div class="cur-card">
         <div class="cur-card-kicker">🎯 Banca que decide</div>
-        <div class="cur-card-desc">Cuando su banca aparece, el equipo gana.</div>
-        ${curioRows(swingPos, { empty: noneS, sub: subS, val: t => curioSigned(t.benchSwing), bar: t => t.benchSwing, barClass: 'up' })}
+        <div class="cur-card-desc">Partidos parejos al 4º cuarto: cuando su banca aparece, el equipo gana.</div>
+        ${curioRows(swingPos, { empty: noneP, sub: subP, val: t => curioSigned(t.benchSwingP), bar: t => t.benchSwingP, barClass: 'up' })}
       </div>
       <div class="cur-card">
         <div class="cur-card-kicker">🗑️ Banca de la basura</div>
-        <div class="cur-card-desc">Su banca anota más en las derrotas.</div>
+        <div class="cur-card-desc">Todos los partidos: su banca anota más en las derrotas, casi siempre en las abultadas.</div>
         ${curioRows(swingNeg, { empty: noneS, sub: subS, val: t => curioSigned(t.benchSwing), bar: t => -t.benchSwing, barClass: 'down' })}
       </div>
     </div>`);
 
   const f1 = v => v == null || !isFinite(v) ? '—' : v.toFixed(1);
+  const P = curioBancaBase === 'parejos';
+  const inW = t => P ? t.benchInWinsP : t.benchInWins;
+  const inL = t => P ? t.benchInLossesP : t.benchInLosses;
+  const sw  = t => P ? t.benchSwingP : t.benchSwing;
   const cols = [
     { key: 'team',  label: 'Equipo',      get: t => t.team, cell: t => `<td class="team-name">${curioTeamBtn(t.team)}</td>` },
     { key: 'bGp',   label: 'PJ',          get: t => t.bGp, cell: t => `<td class="stat-num">${t.bGp}</td>` },
     { key: 'perG',  label: 'BPts/G',      get: t => t.benchPerG, cell: t => curioCellNum(t.benchPerG, f1) },
     { key: 'share', label: '% de puntos', get: t => t.benchShare, cell: t => curioCellNum(t.benchShare, curioPct1) },
-    { key: 'inW',   label: 'En victorias', get: t => t.benchInWins, cell: t => curioCellNum(t.benchInWins, f1) },
-    { key: 'inL',   label: 'En derrotas', get: t => t.benchInLosses, cell: t => curioCellNum(t.benchInLosses, f1) },
-    { key: 'swing', label: 'Diferencia',  get: t => t.benchSwing, title: 'Pts de banca en victorias menos en derrotas',
-      cell: t => curioCellNum(t.benchSwing, v => curioSigned(v), true, 10) },
+    { key: 'inW',   label: P ? 'En victorias*' : 'En victorias', get: inW, cell: t => curioCellNum(inW(t), f1) },
+    { key: 'inL',   label: P ? 'En derrotas*' : 'En derrotas', get: inL, cell: t => curioCellNum(inL(t), f1) },
+    { key: 'swing', label: P ? 'Diferencia*' : 'Diferencia', get: sw,
+      title: P ? 'Pts de banca en victorias menos en derrotas, solo partidos parejos al 4º cuarto' : 'Pts de banca en victorias menos en derrotas',
+      cell: t => curioCellNum(sw(t), v => curioSigned(v), true, 10) },
   ];
+  const sel = `<div class="cur-table-base"><span>Victorias y derrotas:</span>${
+    [['todos', 'Todos los partidos'], ['parejos', 'Solo parejos al 4º cuarto']].map(([k, l]) =>
+      `<button type="button" class="filter-tab${curioBancaBase === k ? ' active' : ''}" onclick="setCurioBancaBase('${k}')">${l}</button>`).join('')
+  }</div>`;
   html += curioBlock('Tabla completa de la banca',
-    `Toca una columna para ordenar. Los equipos con menos de ${CURIO_MIN_GP} partidos aparecen atenuados.`,
-    curioSortTable('banca', cols, withB, t => t.bGp < CURIO_MIN_GP, `Muestra corta (menos de ${CURIO_MIN_GP} partidos): fuera de los rankings`));
+    `Toca una columna para ordenar. Los equipos con menos de ${CURIO_MIN_GP} partidos aparecen atenuados. El selector cambia las columnas de victorias, derrotas y diferencia: "Solo parejos al 4º cuarto" (marcadas con *) deja fuera los partidos con más de ${CURIO_PAREJO_Q4} pts de diferencia tras el 3er cuarto.`,
+    sel + curioSortTable('banca', cols, withB, t => t.bGp < CURIO_MIN_GP, `Muestra corta (menos de ${CURIO_MIN_GP} partidos): fuera de los rankings`));
   el.innerHTML = html;
 }
 
