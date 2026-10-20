@@ -918,8 +918,10 @@
   .cur-demo-ctrl label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;}
   .cur-demo-ctrl input{width:auto;height:40px;}
   .cur-demo-presets{display:flex;gap:6px;flex-wrap:wrap;}
-  .cur-demo-presets .filter-tab{background:var(--canvas);}
-  .cur-demo-presets .filter-tab.active{background:var(--hairline);color:var(--canvas);}
+  /* clase propia (no .filter-tab): Por Equipo marca sus filtros por posición entre todos los .filter-tab */
+  .cur-preset{background:var(--canvas);border:1px solid var(--hairline);border-radius:9999px;color:var(--hairline);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:0 16px;height:36px;cursor:pointer;transition:all 0.15s;text-transform:uppercase;letter-spacing:1.5px;}
+  .cur-preset:hover{background:var(--mint);}
+  .cur-preset.active{background:var(--hairline);color:var(--canvas);border-color:var(--hairline);}
   .cur-demo-count{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;}
   .cur-meta-demo{background:var(--tile-yellow);}
   .cur-team.static{cursor:default;}
@@ -939,7 +941,10 @@
   .cur-tip.below::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:var(--hairline);}
   .cur-ou-o{color:var(--violet);font-weight:700;}
   .cur-ou-u{color:var(--secondary-tx);font-weight:700;}
-  #cur-rachas-table td{font-family:'JetBrains Mono',monospace;font-size:13px;}
+  #cur-rachas-table td, #cur-sorpresas-table td{font-family:'JetBrains Mono',monospace;font-size:13px;}
+  #cur-sorpresas-table td.team-name{font-family:'Space Grotesk',sans-serif;font-size:14px;}
+  #cur-sorpresas-table thead th.cur-sorted{color:var(--violet);}
+  .cur-card--wide .cur-row{grid-template-columns:28px 1fr 108px;}
   #cur-rachas-table td.team-name{font-family:'Space Grotesk',sans-serif;font-size:14px;}
   #cur-rachas-table thead th.cur-sorted{color:var(--violet);}
   .cur-table-base{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
@@ -965,6 +970,29 @@
   .cur-feed-more{margin-top:14px;}
   .cur-feed-note{font-size:13px;color:var(--secondary-tx);margin-top:14px;}
   .cur-explore-head{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;border-top:1px solid var(--hairline);margin:40px 0 16px;padding-top:24px;}
+  .firma-sub{font-size:13px;color:var(--secondary-tx);margin:-12px 0 8px;}
+  .firma-row{display:grid;grid-template-columns:96px 1fr 64px;align-items:center;gap:14px;padding:10px 0;border-top:1px dashed var(--outline-var);}
+  .firma-q{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+  .firma-track{position:relative;height:30px;}
+  .firma-line{position:absolute;left:0;right:0;top:50%;height:1px;background:var(--surface-hi2);}
+  .firma-avg{position:absolute;top:3px;bottom:3px;border-left:2px dashed var(--outline);}
+  .firma-link{position:absolute;top:50%;height:4px;margin-top:-2px;border-radius:2px;opacity:0.55;}
+  .firma-link.pos{background:var(--mint-deep);}
+  .firma-link.neg{background:var(--lose);}
+  .firma-dot{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2px solid var(--hairline);cursor:help;}
+  .firma-dot.contra{background:var(--canvas);}
+  .firma-dot:focus{outline:2px solid var(--violet);outline-offset:2px;}
+  .firma-val{text-align:right;font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:900;}
+  .firma-axis{display:grid;grid-template-columns:96px 1fr 64px;gap:14px;margin-top:2px;}
+  .firma-ticks{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);}
+  .firma-legend{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:11px;}
+  .firma-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .firma-legend .firma-dot{position:static;margin:0;width:12px;height:12px;cursor:default;}
+  .firma-avg-key{display:inline-block;width:0;height:14px;border-left:2px dashed var(--outline);}
+  .firma-n{color:var(--outline);}
+  .firma-read{margin-top:12px;font-size:14px;line-height:1.5;}
+  .firma-empty{font-size:13px;color:var(--outline);padding:12px 0;}
+  @media (max-width:768px){ .firma-row,.firma-axis{grid-template-columns:72px 1fr 52px;gap:10px;} }
   .cur-hero{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .cur-hero-card{border:1px solid var(--hairline);border-radius:2rem;padding:24px 28px;display:flex;flex-direction:column;gap:6px;}
   .cur-hero--good{background:var(--mint);}
@@ -1532,6 +1560,7 @@
 
 <!-- ═══ EQUIPOS ═══ -->
 <section id="s-equipos" class="section">
+  <div class="cur-demo" id="eq-demo"></div>
   <div id="team-selector">
     <div class="page-header"><div class="page-title">Estadísticas por Equipo</div></div>
     <div class="team-select-grid" id="team-grid"></div>
@@ -1550,10 +1579,20 @@
         <div class="team-record-big" id="td-record"></div>
       </div>
     </div>
+    <div class="filter-tabs" id="td-filter-tabs" style="margin:-12px 0 20px;">
+      <button class="filter-tab active" onclick="setTeamFilter('all')">Todos</button>
+      <button class="filter-tab" onclick="setTeamFilter('10')">Últimos 10</button>
+      <button class="filter-tab" onclick="setTeamFilter('5')">Últimos 5</button>
+    </div>
     <div class="stats-grid" id="td-stats"></div>
     <div class="chart-wrap">
       <div class="chart-title">Pts a favor vs en contra — últimos partidos</div>
       <div style="position:relative;height:200px;"><canvas id="td-chart" role="img" aria-label="Puntos a favor vs en contra por partido"></canvas></div>
+    </div>
+    <div class="chart-wrap" id="td-firma-wrap">
+      <div class="chart-title">Firma de cuartos · <span id="td-firma-label"></span></div>
+      <div class="firma-sub">Cuánto anota y cuánto le anotan en cada cuarto, frente a la media de la liga.</div>
+      <div id="td-firma"></div>
     </div>
     <div class="page-header" style="margin-top:20px;margin-bottom:12px;">
       <div class="page-title" style="font-size:15px;">Local vs Visitante</div>
@@ -1562,11 +1601,6 @@
     <div class="stats-grid" id="td-situational-stats" style="margin-bottom:24px;"></div>
     <div class="page-header" style="margin-top:20px;margin-bottom:12px;">
       <div class="page-title" style="font-size:15px;">Historial de Partidos</div>
-      <div class="filter-tabs" id="td-filter-tabs">
-        <button class="filter-tab active" onclick="setTeamFilter('all')">Todos</button>
-        <button class="filter-tab" onclick="setTeamFilter('10')">Últimos 10</button>
-        <button class="filter-tab" onclick="setTeamFilter('5')">Últimos 5</button>
-      </div>
     </div>
     <div class="table-wrap">
       <table>
@@ -2553,7 +2587,9 @@ function renderConsolidado() {
 }
 
 function renderTeamGrid() {
-  const teamsWithGames = [...new Set(games.flatMap(g => [g.local, g.away]))].sort();
+  renderCurioDemoBar('eq-demo');
+  const src = curioSource(); // tus partidos, o los del demo si está activo (nunca se guardan)
+  const teamsWithGames = [...new Set(src.flatMap(g => [g.local, g.away]))].sort();
   const grid = document.getElementById('team-grid');
   const empty = document.getElementById('teams-empty');
 
@@ -2565,7 +2601,7 @@ function renderTeamGrid() {
   empty.style.display = 'none';
 
   grid.innerHTML = teamsWithGames.map(t => {
-    const tg = games.filter(g => g.local===t || g.away===t);
+    const tg = src.filter(g => g.local===t || g.away===t);
     const wins = tg.filter(g => (g.local===t && g.winner==='L') || (g.away===t && g.winner==='A')).length;
     const color = TEAM_COLORS[t] || '#3d89f5';
     const tc = TEAM_TEXT_COLORS[t] || { card:'#f5f5f5', cardText:'#131313', avatar: color, avatarText:'#ffffff' };
@@ -2636,6 +2672,82 @@ function computeTeamSplitStats(team, subset) {
   };
 }
 
+// ─── FIRMA DE CUARTOS ───
+// Promedio a favor y en contra de cada cuarto del equipo frente a la media de la liga.
+// Sigue el filtro Todos / Últimos 10 / Últimos 5 (usa el mismo subset que las tarjetas).
+function renderTeamFirma(team, subset, label) {
+  const el = document.getElementById('td-firma');
+  if (!el) return;
+  document.getElementById('td-firma-label').textContent = label;
+  const withQ = subset.filter(curioHasQuarters);
+  if (!withQ.length) { el.innerHTML = `<div class="firma-empty">Sin partidos con marcador por cuarto en este tramo.</div>`; return; }
+
+  const f = [0, 0, 0, 0], a = [0, 0, 0, 0];
+  withQ.forEach(g => {
+    const me = g.local === team ? 'L' : 'A', op = me === 'L' ? 'A' : 'L';
+    for (let i = 0; i < 4; i++) { f[i] += g[`q${i + 1}${me}`]; a[i] += g[`q${i + 1}${op}`]; }
+  });
+  const n = withQ.length;
+  for (let i = 0; i < 4; i++) { f[i] /= n; a[i] /= n; }
+  // Media de la liga por equipo y cuarto, con todos los partidos de la fuente actual
+  const lg = [0, 0, 0, 0]; let ln = 0;
+  curioSource().forEach(g => {
+    if (!curioHasQuarters(g)) return;
+    ln += 2;
+    for (let i = 0; i < 4; i++) lg[i] += g[`q${i + 1}L`] + g[`q${i + 1}A`];
+  });
+  for (let i = 0; i < 4; i++) lg[i] /= ln;
+  const d = f.map((v, i) => v - a[i]);
+
+  // Escala común a los cuatro cuartos (no parte de cero: lo que importa son las diferencias)
+  const all = [...f, ...a, ...lg];
+  const lo = Math.floor(Math.min(...all) - 1), hi = Math.ceil(Math.max(...all) + 1);
+  const x = v => ((v - lo) / (hi - lo) * 100).toFixed(2) + '%';
+  const color = TEAM_COLORS[team] || '#3d89f5';
+  const sh = curioShort(team);
+
+  const rows = [0, 1, 2, 3].map(i => {
+    const left = Math.min(f[i], a[i]), right = Math.max(f[i], a[i]);
+    return `<div class="firma-row">
+      <div class="firma-q">${CURIO_QNAMES[i]}</div>
+      <div class="firma-track">
+        <div class="firma-line"></div>
+        <div class="firma-avg" style="left:${x(lg[i])}"></div>
+        <div class="firma-link ${d[i] >= 0 ? 'pos' : 'neg'}" style="left:${x(left)};width:calc(${x(right)} - ${x(left)})"></div>
+        <span class="firma-dot contra" style="left:${x(a[i])}" tabindex="0" data-tip="${curioEsc(`En contra: ${a[i].toFixed(1)} pts · liga ${lg[i].toFixed(1)}`)}"></span>
+        <span class="firma-dot favor" style="left:${x(f[i])};background:${color}" tabindex="0" data-tip="${curioEsc(`A favor: ${f[i].toFixed(1)} pts · liga ${lg[i].toFixed(1)}`)}"></span>
+      </div>
+      <div class="firma-val ${d[i] >= 0 ? 'stat-pos' : 'stat-neg'}">${curioSigned(d[i])}</div>
+    </div>`;
+  }).join('');
+
+  // Lectura automática: mejor cuarto, de dónde sale la ventaja, y perfil arrancador/cerrador
+  const best = d.indexOf(Math.max(...d)), worst = d.indexOf(Math.min(...d));
+  const atk = f[best] - lg[best], def = lg[best] - a[best];
+  const why = atk >= def
+    ? `del ataque: anota ${f[best].toFixed(1)}, ${curioSigned(atk)} frente a la media`
+    : `de la defensa: le anotan ${a[best].toFixed(1)}, ${(-def).toFixed(1)} frente a la media`;
+  const idx = d[3] - (d[0] + d[1]) / 2;
+  const allNeg = d[best] <= 0;
+  const perfil = idx > 0.25 ? (allNeg ? 'En el cierre pierde por menos que en el arranque.' : 'Perfil cerrador: su 4º cuarto es mejor que su arranque.')
+    : idx < -0.25 ? (allNeg ? 'En el arranque pierde por menos que en el cierre.' : 'Perfil arrancador: sale más fuerte de lo que cierra.')
+    : 'Perfil parejo entre el arranque y el cierre.';
+  const weak = d[worst] > 0 ? `El que menos gana es el ${CURIO_QNAMES[worst]}` : `Su cuarto más flojo es el ${CURIO_QNAMES[worst]}`;
+  const read = !allNeg
+    ? `${sh} es más fuerte en el ${CURIO_QNAMES[best]} (${curioSigned(d[best])}) y la ventaja viene ${why}. ${weak} (${curioSigned(d[worst])}). ${perfil}`
+    : `${sh} pierde los cuatro cuartos; donde menos sufre es el ${CURIO_QNAMES[best]} (${curioSigned(d[best])}). ${perfil}`;
+
+  el.innerHTML = `${rows}
+    <div class="firma-axis"><span></span><div class="firma-ticks"><span>${lo}</span><span>${Math.round((lo + hi) / 2)}</span><span>${hi}</span></div><span></span></div>
+    <div class="firma-legend">
+      <span><i class="firma-dot favor" style="background:${color}"></i>A favor</span>
+      <span><i class="firma-dot contra"></i>En contra</span>
+      <span><i class="firma-avg-key"></i>Media de la liga</span>
+      <span class="firma-n">${n} partido${n === 1 ? '' : 's'} con cuartos</span>
+    </div>
+    <div class="firma-read">${read}</div>`;
+}
+
 function setTeamFilter(f) {
   teamFilter = f;
   teamPage = 0;
@@ -2646,6 +2758,8 @@ function setTeamFilter(f) {
 }
 
 function openTeamDetail(team) {
+  // Sin partidos de este equipo en la fuente actual (p. ej. al salir del demo): volver a la grilla
+  if (!curioSource().some(g => g.local === team || g.away === team)) { showTeamSelector(); return; }
   currentTeam = team;
   teamPage = 0;
   teamFilter = 'all';
@@ -2653,7 +2767,7 @@ function openTeamDetail(team) {
   document.getElementById('team-detail').style.display = '';
   document.querySelectorAll('.filter-tab').forEach((b,i)=>b.classList.toggle('active',i===0));
 
-  const allGames = games.filter(g => g.local===team || g.away===team)
+  const allGames = curioSource().filter(g => g.local===team || g.away===team)
     .sort((a,b) => a.date > b.date ? 1 : -1);
 
   const color = TEAM_COLORS[team] || '#3d89f5';
@@ -2702,7 +2816,7 @@ function openTeamDetail(team) {
 
 function renderTeamDetail() {
   const team = currentTeam;
-  const allGames = games.filter(g => g.local===team || g.away===team)
+  const allGames = curioSource().filter(g => g.local===team || g.away===team)
     .sort((a,b) => a.date > b.date ? 1 : -1);
 
   // Subset for stats
@@ -2738,6 +2852,8 @@ function renderTeamDetail() {
         ${s.sub ? `<div class="stat-card-sub" style="color:${cs.sub};">${s.sub}</div>` : ''}
       </div>`;
     }).join('');
+
+  renderTeamFirma(team, subset, label);
 
   // Local vs Visitante + situacionales — tarjetas, mismo lenguaje visual que las de arriba
   const split = computeTeamSplitStats(team, subset);
@@ -2826,7 +2942,7 @@ function renderTeamDetail() {
 
 function goTeamPage(p) {
   const team = currentTeam;
-  const total = games.filter(g=>g.local===team||g.away===team).length;
+  const total = curioSource().filter(g=>g.local===team||g.away===team).length;
   teamPage = Math.max(0, Math.min(p, Math.ceil(total/5)-1));
   renderTeamDetail();
 }
@@ -3016,13 +3132,13 @@ function updatePredPreview() {
 // ─── COMPONENTE 1: ELO RATING ───
 // Recalcula el Elo procesando todos los partidos en orden cronológico.
 // K=20, se ajusta por margen de victoria con un factor logarítmico.
-function computeElo() {
+function computeElo(list = games) {
   const K = 20;
   const BASE = 1500;
   const elo = {};
   TEAMS.forEach(t => { elo[t] = BASE; });
 
-  const sorted = [...games].sort((a, b) => a.date < b.date ? -1 : 1);
+  const sorted = [...list].sort((a, b) => a.date < b.date ? -1 : 1);
 
   sorted.forEach(g => {
     if (!(g.local in elo)) elo[g.local] = BASE;
@@ -3050,8 +3166,8 @@ function computeElo() {
 // ─── COMPONENTE 2: WEIGHTED RECENT FORM ───
 // Devuelve un modificador de Elo basado en los últimos N partidos.
 // Los más recientes pesan más (decaimiento exponencial con lambda).
-function computeRecentForm(team, n = 10) {
-  const teamGames = games
+function computeRecentForm(team, n = 10, list = games) {
+  const teamGames = list
     .filter(g => g.local === team || g.away === team)
     .sort((a, b) => a.date < b.date ? -1 : 1)
     .slice(-n);
@@ -3175,9 +3291,9 @@ const B2B_ELO_PENALTY = 25;
 let predContextDate = null;   // fecha del partido a predecir (del botón del calendario)
 let predContextTeams = null;  // equipos para los que aplica predContextDate
 
-function lastPlayedDate(team, beforeISO) {
+function lastPlayedDate(team, beforeISO, list = games) {
   let best = null;
-  games.forEach(g => {
+  list.forEach(g => {
     if (g.local !== team && g.away !== team) return;
     if (beforeISO && g.date >= beforeISO) return;
     if (!best || g.date > best) best = g.date;
@@ -3185,9 +3301,9 @@ function lastPlayedDate(team, beforeISO) {
   return best;
 }
 
-function restInfo(team, refISO) {
+function restInfo(team, refISO, list = games) {
   if (!refISO) return { gap: null, b2b: false };
-  const last = lastPlayedDate(team, refISO);
+  const last = lastPlayedDate(team, refISO, list);
   if (!last) return { gap: null, b2b: false };
   const gap = Math.round((new Date(refISO) - new Date(last)) / 86400000);
   return { gap, b2b: gap === 1 };
@@ -3209,31 +3325,26 @@ function resolvePredDate(local, away) {
   return fut.length ? fut[0].date : null;
 }
 
-function runPrediction() {
-  const local = document.getElementById('pred-local').value;
-  const away  = document.getElementById('pred-away').value;
-  if (!local || !away || local === away) return;
-
+// Probabilidad de victoria del modelo, separada de la pantalla para poder reutilizarla
+// (Predicción la usa con todos los partidos; Curiosidades → Sorpresas, con los partidos
+// anteriores a cada fecha). `elo` permite pasar un Elo ya calculado para esa lista.
+function predictWinProb(local, away, refDate, list = games, elo = null) {
   // 1. Elo base
-  const elo = computeElo();
+  if (!elo) elo = computeElo(list);
   const eloL = elo[local] || 1500;
   const eloA = elo[away]  || 1500;
 
   // 2. Forma reciente (modificador sobre Elo)
-  const formL = computeRecentForm(local);
-  const formA = computeRecentForm(away);
-
-  // 3. Factor local
-  const home = computeHomeAdvantage(local);
+  const formL = computeRecentForm(local, 10, list);
+  const formA = computeRecentForm(away, 10, list);
 
   // Elo ajustado con forma reciente
   const adjEloL = eloL + formL.modifier;
   const adjEloA = eloA + formA.modifier;
 
   // Descanso / back-to-back: penaliza al equipo que jugó el día anterior.
-  const refDate = resolvePredDate(local, away);
-  const restL = restInfo(local, refDate);
-  const restA = restInfo(away, refDate);
+  const restL = restInfo(local, refDate, list);
+  const restA = restInfo(away, refDate, list);
   const b2bPenL = restL.b2b ? B2B_ELO_PENALTY : 0;
   const b2bPenA = restA.b2b ? B2B_ELO_PENALTY : 0;
 
@@ -3242,6 +3353,22 @@ function runPrediction() {
   const eloDiff = ((adjEloL - b2bPenL) + localEloBonus) - (adjEloA - b2bPenA);
   const probL = 1 / (1 + Math.pow(10, -eloDiff / 400));
   const probA = 1 - probL;
+
+  return { probL, probA, eloL, eloA, formL, formA, adjEloL, adjEloA, restL, restA, b2bPenL, b2bPenA };
+}
+
+function runPrediction() {
+  const local = document.getElementById('pred-local').value;
+  const away  = document.getElementById('pred-away').value;
+  if (!local || !away || local === away) return;
+
+  // 1-2. Elo, forma reciente y descanso → probabilidad (ver predictWinProb)
+  const refDate = resolvePredDate(local, away);
+  const { probL, probA, eloL, eloA, formL, formA, adjEloL, adjEloA, restL, restA, b2bPenL, b2bPenA } =
+    predictWinProb(local, away, refDate);
+
+  // 3. Factor local
+  const home = computeHomeAdvantage(local);
 
   // 4. Marcador proyectado (Four-Factor con splits casa/fuera, sin home bonus ni forma reciente)
   const score = computeProjectedScore(local, away);
@@ -4186,7 +4313,7 @@ const CURIO_PANELS   = [
   { id: 'clutch',    label: 'Clutch',    ready: true  },
   { id: 'banca',     label: 'Banca',     ready: true  },
   { id: 'rachas',    label: 'Rachas',    ready: true  },
-  { id: 'sorpresas', label: 'Sorpresas', ready: false },
+  { id: 'sorpresas', label: 'Sorpresas', ready: true  },
 ];
 
 let curioData  = null;
@@ -4327,8 +4454,6 @@ function curioHeat(v, scale = 5) {
 }
 function curioDot(t) { return `<span class="cur-dot" style="background:${TEAM_COLORS[t] || '#888'};"></span>`; }
 function curioTeamBtn(t, label) {
-  // En demo los equipos no enlazan a Por Equipo: ahí se ven tus datos reales, no los de prueba
-  if (curioDemo) return `<span class="cur-team static">${curioDot(t)}${label || t}</span>`;
   return `<button type="button" class="cur-team" onclick="goToTeam('${curioJs(t)}')" title="Ver ${t} en Por Equipo">${curioDot(t)}${label || t}</button>`;
 }
 function curioBlock(title, note, body) {
@@ -4372,13 +4497,14 @@ function renderCuriosidades() {
 const CURIO_MIN_CLOSE = 3; // partidos cerrados (≤5 pts) para entrar a los rankings de clutch
 const CURIO_MIN_SPLIT = 2; // victorias Y derrotas con banca registrada para "banca decisiva"
 const CURIO_PAREJO_Q4 = 12; // dif. máxima tras el 3er cuarto para considerar que el 4º todavía se estaba definiendo
-let curioSorts = { clutch: { key: 'closePct', dir: -1 }, banca: { key: 'share', dir: -1 }, rachas: { key: 'streak', dir: -1 } };
+let curioSorts = { clutch: { key: 'closePct', dir: -1 }, banca: { key: 'share', dir: -1 }, rachas: { key: 'streak', dir: -1 }, sorpresas: { key: 'vsExp', dir: -1 } };
 let curioBancaBase = 'todos'; // tabla de banca: 'todos' | 'parejos'
 
 function renderCurioPanel() {
   if (curioPanel === 'clutch') renderCurioClutch();
   else if (curioPanel === 'banca') renderCurioBanca();
   else if (curioPanel === 'rachas') renderCurioRachas();
+  else if (curioPanel === 'sorpresas') renderCurioSorpresas();
   else renderCurioCuartos();
 }
 
@@ -4830,7 +4956,7 @@ const CURIO_JTYPES = {
   quarter:  { label: 'Cuarto explosivo', icon: '💥', tone: 'cuartos', panel: 'cuartos' },
   bench:    { label: 'Banca',            icon: '🪑', tone: 'banca',   panel: 'banca' },
   ot:       { label: 'Prórroga',         icon: '⏱️', tone: 'clutch',  panel: 'clutch' },
-  upset:    { label: 'Sorpresa',         icon: '😮', tone: 'clutch' },
+  upset:    { label: 'Sorpresa',         icon: '😮', tone: 'clutch',  panel: 'sorpresas' },
   cut:      { label: 'Racha cortada',    icon: '✂️', tone: 'rachas',  panel: 'rachas' },
   drought:  { label: 'Fin de la sequía', icon: '🌅', tone: 'rachas',  panel: 'rachas' },
   streakW:  { label: 'Racha',            icon: '🔥', tone: 'rachas',  panel: 'rachas' },
@@ -4878,6 +5004,9 @@ function curioJornadaItems(src, after) {
   const bonus = r => !enough ? 0 : r === 1 ? 2 : r <= CURIO_J.rankTop ? 1 : 0;
 
   const leagueBest = { W: Math.max(0, ...before.teams.map(t => t.bestW)), L: Math.max(0, ...before.teams.map(t => t.bestL)) };
+  // Probabilidad del ganador en cada sorpresa de la temporada, para ubicar las de la jornada
+  const preds = curioModelPreds();
+  const upsetPs = curioEvaluated(src).map(e => e.pW);
   const out = [];
   const add = (type, value, dot, teamLabel, hook, score, teams) => out.push({ type, value, dot, teamLabel, hook, score, teams: teams || [dot] });
 
@@ -4931,8 +5060,15 @@ function curioJornadaItems(src, after) {
         if ((enough && r <= CURIO_J.rankTop) || bp >= 65)
           add('bench', String(bp), t, t, `La banca de ${sh(t)} metió ${bp} pts ${ante(home, o)}, el ${Math.round(bp / pf * 100)}% de sus puntos.${rankTxt(r, 'la banca con más puntos')}`, 1.5 + bonus(r));
       }
-      // Sorpresa por récord
-      if (won && bt && bo && bt.gp >= CURIO_J.upsetMinGp && bo.gp >= CURIO_J.upsetMinGp && bo.pct - bt.pct >= CURIO_J.upsetGap)
+      // Sorpresa: según el modelo (si el partido ya sale del calentamiento); si no, por récord
+      const pL = preds.get(curioGameKey(g));
+      if (won && pL != null) {
+        const pW = me === 'L' ? pL : 1 - pL;
+        if (pW <= CURIO_UPSET) {
+          const r = 1 + upsetPs.filter(x => x < pW).length;
+          add('upset', curioPct(pW), t, t, `${sh(t)} vence ${pf}-${pa} a ${sh(o)} (${home ? 'en casa' : 'de visita'}): el modelo le daba un ${curioPct(pW)}.${rankTxt(r, 'la mayor sorpresa')}`, (0.5 - pW) * 10 + bonus(r), [t, o]);
+        }
+      } else if (won && bt && bo && bt.gp >= CURIO_J.upsetMinGp && bo.gp >= CURIO_J.upsetMinGp && bo.pct - bt.pct >= CURIO_J.upsetGap)
         add('upset', `${bt.w}-${bt.l}`, t, t, `${sh(t)} (${bt.w}-${bt.l}) le gana ${pf}-${pa} a ${sh(o)} (${bo.w}-${bo.l}).`, (bo.pct - bt.pct) * 6, [t, o]);
 
       // Rachas: cortadas, sequías que terminan, hitos
@@ -5031,6 +5167,153 @@ function goCurioPanel(p) {
   if (tabs && tabs.scrollIntoView) tabs.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// ── Fase 6: Sorpresas vs modelo ──
+// Para cada partido se recalcula lo que decía el modelo de Predicción (predictWinProb)
+// usando SOLO los partidos anteriores a esa fecha: es lo que habría dicho ese día, sin
+// conocer el resultado. Solo cuentan partidos en que ambos equipos llevaban
+// WARMUP_MIN_GAMES partidos (el mismo calentamiento que usan las sugerencias de apuesta).
+const CURIO_UPSET = 0.35; // el ganador tenía 35% o menos según el modelo → sorpresa
+let curioPredCache = { key: null, map: null };
+
+function curioGameKey(g) { return g.id != null ? 'i' + g.id : `${g.date}|${g.local}|${g.away}`; }
+
+// Predicciones walk-forward de toda la lista (se guardan en caché hasta que cambien los datos).
+// La fecha de corte del demo no las cambia: cada partido solo depende de los anteriores.
+function curioModelPreds() {
+  const list = curioDemo ? (curioDemoGames || []) : games;
+  let h = list.length;
+  for (const g of list) h = (h * 31 + ((g.id || 0) % 100003) + (g.ptsL || 0) * 7 + (g.ptsA || 0) + (g.date ? g.date.charCodeAt(9) : 0)) % 1000000007;
+  const key = (curioDemo ? 'demo:' : 'real:') + h;
+  if (curioPredCache.key === key) return curioPredCache.map;
+
+  const sorted = [...list].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.id || 0) - (b.id || 0));
+  const map = new Map(), gp = {};
+  let i = 0;
+  while (i < sorted.length) {
+    const D = sorted[i].date;
+    let j = i;
+    while (j < sorted.length && sorted[j].date === D) j++;
+    const prev = sorted.slice(0, i);
+    const elo = computeElo(prev);
+    for (let k = i; k < j; k++) {
+      const g = sorted[k];
+      if ((gp[g.local] || 0) >= WARMUP_MIN_GAMES && (gp[g.away] || 0) >= WARMUP_MIN_GAMES)
+        map.set(curioGameKey(g), predictWinProb(g.local, g.away, D, prev, elo).probL);
+    }
+    for (let k = i; k < j; k++) { gp[sorted[k].local] = (gp[sorted[k].local] || 0) + 1; gp[sorted[k].away] = (gp[sorted[k].away] || 0) + 1; }
+    i = j;
+  }
+  curioPredCache = { key, map };
+  return map;
+}
+
+// Partidos evaluados de una lista, con el punto de vista del ganador
+function curioEvaluated(src) {
+  const preds = curioModelPreds();
+  const out = [];
+  src.forEach(g => {
+    const pL = preds.get(curioGameKey(g));
+    if (pL == null) return;
+    const wSide = g.winner || (g.ptsL > g.ptsA ? 'L' : 'A');
+    const W = wSide === 'L' ? g.local : g.away, Lt = wSide === 'L' ? g.away : g.local;
+    out.push({ g, pL, wSide, W, Lt, pW: wSide === 'L' ? pL : 1 - pL,
+      wp: g['pts' + wSide], lp: g['pts' + (wSide === 'L' ? 'A' : 'L')], hit: (pL >= 0.5) === (wSide === 'L') });
+  });
+  return out;
+}
+
+function renderCurioSorpresas() {
+  const el = document.getElementById('cur-panel');
+  const src = curioSource();
+  const ev = curioEvaluated(src);
+  if (!ev.length) {
+    el.innerHTML = curioEmpty('😮', `Todavía no hay partidos que el modelo pueda evaluar.<br>Cuentan desde que ambos equipos llevan ${WARMUP_MIN_GAMES} partidos jugados: antes de eso el modelo casi no sabe nada de ellos.`);
+    return;
+  }
+  const pct = (a, b) => b ? a / b : null;
+  const sh = curioShort;
+  const acc = pct(ev.filter(e => e.hit).length, ev.length);
+  const last = ev.slice(-50), accLast = pct(last.filter(e => e.hit).length, last.length);
+  const strong = ev.filter(e => Math.max(e.pL, 1 - e.pL) >= 0.7), accStrong = pct(strong.filter(e => e.hit).length, strong.length);
+  const ups = [...ev].sort((a, b) => a.pW - b.pW);
+  const u0 = ups[0];
+  const gameLine = e => `${fmtDate(e.g.date)} · ${sh(e.g.local)} ${e.g.ptsL}-${e.g.ptsA} ${sh(e.g.away)}`;
+  const runners = ups.slice(1, 3).map((e, j) => `<div><span>${j + 2}. ${sh(e.W)}</span><span>${curioPct(e.pW)}</span></div>`).join('');
+
+  let html = curioBlock('El modelo frente a la realidad',
+    `Lo que habría dicho la pantalla de Predicción antes de cada partido, calculado solo con los partidos anteriores a esa fecha. Cuentan los partidos en que ambos equipos llevaban ${WARMUP_MIN_GAMES} o más jugados (${ev.length} de ${src.length}).`,
+    `<div class="cur-hero">${
+      curioHeroCard('good', '🌡️ Termómetro del modelo', curioPct(acc), null,
+        `Acertó al ganador en ${ev.filter(e => e.hit).length} de ${ev.length} partidos. Referencia: ~65% en el backtest de 4 temporadas.`,
+        `<div class="cur-king-runners">
+          <div><span>Últimos ${last.length} partidos</span><span>${curioPct(accLast)}</span></div>
+          ${strong.length ? `<div><span>Cuando da 70% o más (${strong.length})</span><span>${curioPct(accStrong)}</span></div>` : ''}
+        </div>`)
+    }${
+      curioHeroCard('bad', '😮 Mayor sorpresa de la temporada', curioPct(u0.pW), u0.W,
+        `${sh(u0.W)} le ganó ${u0.wp}-${u0.lp} a ${sh(u0.Lt)} el ${fmtDate(u0.g.date)}: el modelo le daba un ${curioPct(u0.pW)}.`,
+        runners ? `<div class="cur-king-runners">${runners}</div>` : '')
+    }</div>`);
+
+  // Lista de sorpresas de la temporada
+  const top = ups.filter(e => e.pW <= CURIO_UPSET).slice(0, 10).map(e => ({ ...e, team: e.W }));
+  html += curioBlock('Las mayores sorpresas',
+    `Victorias del equipo al que el modelo le daba ${Math.round(CURIO_UPSET * 100)}% o menos, de la más improbable a la menos.`,
+    `<div class="cur-card cur-card--wide">${curioRows(top, {
+      empty: 'Todavía no hay victorias tan improbables esta temporada.',
+      sub: e => `${gameLine(e)} · ganó ${e.g.local === e.W ? 'en casa' : 'de visita'}`,
+      val: e => curioPct(e.pW), bar: e => 1 - e.pW, barClass: 'down' })}</div>`);
+
+  // Por equipo
+  const per = {};
+  const T = t => per[t] || (per[t] = { team: t, n: 0, hit: 0, expW: 0, w: 0, dogG: 0, dogW: 0, favG: 0, favL: 0 });
+  ev.forEach(e => {
+    [[e.g.local, e.pL], [e.g.away, 1 - e.pL]].forEach(([t, p]) => {
+      const s = T(t), won = t === e.W;
+      s.n++; s.hit += e.hit ? 1 : 0; s.expW += p; s.w += won ? 1 : 0;
+      if (p < 0.5) { s.dogG++; if (won) s.dogW++; } else { s.favG++; if (!won) s.favL++; }
+    });
+  });
+  const rows = Object.values(per).map(s => ({ ...s, vsExp: s.w - s.expW, acc: pct(s.hit, s.n) }));
+  const elig = rows.filter(s => s.n >= CURIO_MIN_GP);
+  const dogs = elig.filter(s => s.dogW > 0).sort((a, b) => b.dogW - a.dogW || b.dogW / b.dogG - a.dogW / a.dogG).slice(0, 5);
+  const flops = elig.filter(s => s.favL > 0).sort((a, b) => b.favL - a.favL || b.favL / b.favG - a.favL / a.favG).slice(0, 5);
+  const none = elig.length ? 'Nadie encaja en este perfil por ahora.' : `Hace falta que algún equipo tenga ${CURIO_MIN_GP} partidos evaluados.`;
+  html += curioBlock('Rompe-pronósticos y decepciones',
+    `Quién gana cuando el modelo no lo esperaba y quién pierde cuando sí. Mín. ${CURIO_MIN_GP} partidos evaluados.`,
+    `<div class="cur-duo">
+      <div class="cur-card">
+        <div class="cur-card-kicker">🦊 Rompe-pronósticos</div>
+        <div class="cur-card-desc">Más victorias sin ser el favorito del modelo.</div>
+        ${curioRows(dogs, { empty: none, sub: s => `Ganó ${s.dogW} de ${s.dogG} sin ser favorito`, val: s => String(s.dogW), bar: s => s.dogW, barClass: 'up' })}
+      </div>
+      <div class="cur-card">
+        <div class="cur-card-kicker">📉 Decepciones</div>
+        <div class="cur-card-desc">Más derrotas siendo el favorito del modelo.</div>
+        ${curioRows(flops, { empty: none, sub: s => `Perdió ${s.favL} de ${s.favG} siendo favorito`, val: s => String(s.favL), bar: s => s.favL, barClass: 'down' })}
+      </div>
+    </div>`);
+
+  const f1 = v => v == null || !isFinite(v) ? '—' : v.toFixed(1);
+  const cols = [
+    { key: 'team',  label: 'Equipo', get: s => s.team, cell: s => `<td class="team-name">${curioTeamBtn(s.team)}</td>` },
+    { key: 'n',     label: 'Evaluados', get: s => s.n, cell: s => `<td class="stat-num">${s.n}</td>` },
+    { key: 'dog',   label: 'Sin ser favorito', get: s => s.dogW, title: 'Victorias-derrotas cuando el modelo daba favorito al rival',
+      cell: s => `<td class="stat-num">${curioRec(s.dogW, s.dogG - s.dogW)}</td>` },
+    { key: 'fav',   label: 'Siendo favorito', get: s => s.favG - s.favL, title: 'Victorias-derrotas cuando el modelo lo daba favorito',
+      cell: s => `<td class="stat-num">${curioRec(s.favG - s.favL, s.favL)}</td>` },
+    { key: 'expW',  label: 'Victorias esperadas', get: s => s.expW, title: 'Suma de sus probabilidades de victoria según el modelo', cell: s => curioCellNum(s.expW, f1) },
+    { key: 'w',     label: 'Reales', get: s => s.w, cell: s => `<td class="stat-num">${s.w}</td>` },
+    { key: 'vsExp', label: 'Vs modelo', get: s => s.vsExp, title: 'Victorias reales menos esperadas: + rinde por encima de lo que el modelo esperaba',
+      cell: s => curioCellNum(s.vsExp, v => curioSigned(v), true, 4) },
+    { key: 'acc',   label: 'Acierto en sus partidos', get: s => s.acc, cell: s => curioCellNum(s.acc, curioPct) },
+  ];
+  html += curioBlock('Tabla completa',
+    `Toca una columna para ordenar. "Vs modelo" compara las victorias reales con las que el modelo esperaba (la suma de sus probabilidades): + rinde por encima de lo previsto. Los equipos con menos de ${CURIO_MIN_GP} partidos evaluados aparecen atenuados.`,
+    curioSortTable('sorpresas', cols, rows, s => s.n < CURIO_MIN_GP, `Muestra corta (menos de ${CURIO_MIN_GP} partidos evaluados)`));
+  el.innerHTML = html;
+}
+
 // ── Modo demo: temporada 2024-25 desde games.json, SOLO en memoria ──
 // Nunca se asigna a `games` ni pasa por save(): así no puede llegar a Firestore.
 let curioDemo = false;
@@ -5050,14 +5333,18 @@ function curioSource() {
 }
 
 async function toggleCurioDemo() {
-  if (curioDemo) { curioDemo = false; renderCuriosidades(); return; }
+  if (curioDemo) { curioDemo = false; curioDemoRefresh(); return; }
   if (!curioDemoGames) {
     try {
       const res = await fetch('games.json');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error('games.json no es un arreglo');
+      // diff y cerrado los calcula la app al guardar un partido; games.json no los trae
       curioDemoGames = data.filter(g => g && g.date && g.local && g.away)
+        .map(g => ({ ...g,
+          diff: Number.isFinite(g.diff) ? g.diff : g.ptsL - g.ptsA,
+          cerrado: typeof g.cerrado === 'boolean' ? g.cerrado : Math.abs(g.ptsL - g.ptsA) <= 5 }))
         .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
       if (!curioDemoGames.length) throw new Error('games.json vacío');
     } catch (e) {
@@ -5070,23 +5357,36 @@ async function toggleCurioDemo() {
     curioCutoff = curioAddDays(curioDemoGames[0].date, 20);
   }
   curioDemo = true;
-  renderCuriosidades();
+  curioDemoRefresh();
+}
+
+// El demo es uno solo para Curiosidades y Por Equipo: refresca la que esté a la vista
+// (la otra se vuelve a dibujar al abrirla).
+function curioDemoRefresh() {
+  const eq = document.getElementById('s-equipos');
+  if (eq && eq.classList.contains('active')) {
+    renderTeamGrid();
+    const det = document.getElementById('team-detail');
+    if (currentTeam && det && det.style.display !== 'none') openTeamDetail(currentTeam);
+  } else {
+    renderCuriosidades();
+  }
 }
 
 function setCurioCutoff(d) {
   if (!d || !curioDemoGames) return;
   const first = curioDemoGames[0].date, last = curioDemoGames[curioDemoGames.length - 1].date;
   curioCutoff = d < first ? first : d > last ? last : d;
-  renderCuriosidades();
+  curioDemoRefresh();
 }
 
-function renderCurioDemoBar() {
-  const el = document.getElementById('cur-demo');
+function renderCurioDemoBar(elId = 'cur-demo') {
+  const el = document.getElementById(elId);
   if (!el) return;
   if (!curioDemo) {
     el.className = 'cur-demo';
     el.innerHTML = `<button type="button" class="cur-demo-btn" onclick="toggleCurioDemo()">🧪 Modo demo · temporada 2024-25</button>
-      <span class="cur-demo-hint">Para probar con partidos reales de la temporada pasada. Vive solo en memoria: no se guarda ni toca tus partidos.</span>`;
+      <span class="cur-demo-hint">Para probar Curiosidades y Por Equipo con partidos reales de la temporada pasada. Vive solo en memoria: no se guarda ni toca tus partidos.</span>`;
     return;
   }
   const all = curioDemoGames, first = all[0].date, last = all[all.length - 1].date;
@@ -5102,12 +5402,12 @@ function renderCurioDemoBar() {
       <div class="cur-demo-title">🧪 Modo demo · temporada 2024-25</div>
       <button type="button" class="cur-demo-btn" onclick="toggleCurioDemo()">Volver a mis datos</button>
     </div>
-    <div class="cur-demo-text">Partidos reales de 2024-25 desde games.json, cargados solo en memoria. Nada de esto se guarda en tu base ni aparece en otras secciones.</div>
+    <div class="cur-demo-text">Partidos reales de 2024-25 desde games.json, cargados solo en memoria. Se ven en Curiosidades y en Por Equipo; nada se guarda en tu base ni aparece en Partidos, Consolidado o Predicción.</div>
     <div class="cur-demo-ctrl">
-      <label for="cur-cutoff">Simular hasta</label>
-      <input type="date" id="cur-cutoff" min="${first}" max="${last}" value="${curioCutoff}" onchange="setCurioCutoff(this.value)">
+      <label for="${elId}-cutoff">Simular hasta</label>
+      <input type="date" id="${elId}-cutoff" min="${first}" max="${last}" value="${curioCutoff}" onchange="setCurioCutoff(this.value)">
       <div class="cur-demo-presets">${presets.map(([l, d]) =>
-        `<button type="button" class="filter-tab${curioCutoff === d ? ' active' : ''}" onclick="setCurioCutoff('${d}')">${l}</button>`).join('')}</div>
+        `<button type="button" class="cur-preset${curioCutoff === d ? ' active' : ''}" onclick="setCurioCutoff('${d}')">${l}</button>`).join('')}</div>
       <span class="cur-demo-count">${curioSource().length} de ${all.length} partidos</span>
     </div>`;
 }
