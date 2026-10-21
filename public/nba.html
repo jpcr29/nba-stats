@@ -1008,6 +1008,8 @@
   .soc-thumb{width:90px;height:160px;border-radius:10px;border:1px solid var(--hairline);flex-shrink:0;}
   .soc-thumb.px{image-rendering:pixelated;}
   .soc-style{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .soc-sep{width:1px;height:24px;background:var(--outline-var);margin:0 6px;}
+  .soc-lbl{margin-top:0;text-transform:uppercase;letter-spacing:1px;}
   .soc-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
   .soc-actions .btn:disabled{opacity:0.4;cursor:not-allowed;}
   .soc-status{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);}
@@ -4460,7 +4462,7 @@ function computeCuriosidades(src = games) {
 }
 
 // ── helpers de presentación ──
-function curioShort(t) { return t.split(' ').pop(); }
+function curioShort(t) { return t === CURIO_NIGHT ? CURIO_NIGHT : t.split(' ').pop(); }
 function curioJs(t) { return String(t).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
 function curioSigned(v, d = 1) {
   if (v == null || !isFinite(v)) return '—';
@@ -4973,7 +4975,11 @@ const CURIO_J = {
   firstMinSide: 4,   // ...y al menos estos de local (o de visitante)
   upsetGap: 0.30,    // diferencia de % de victorias para "sorpresa por récord"
   upsetMinGp: 5,
+  nightMin: 3,      // datos de la noche: mínimo de palizas / remontadas / prórrogas en el día
+  nightTop: 3,      // …y que sea récord o top 3 de la temporada
+  nightMinDays: 14, // …con al menos 14 días jugados para comparar
 };
+const CURIO_NIGHT = 'La noche'; // "equipo" de los datos de la noche (no son de un equipo)
 const CURIO_FEED_SHOW = 6; // tarjetas visibles antes de "Ver más"
 const CURIO_JTYPES = {
   comeback: { label: 'Remontada',        icon: '🔄', tone: 'cuartos', panel: 'cuartos' },
@@ -4989,6 +4995,15 @@ const CURIO_JTYPES = {
   total:    { label: 'Marcador',         icon: '📈', tone: 'plain' },
   mark:     { label: 'Marca del año',    icon: '📌', tone: 'plain' },
   first:    { label: 'Primera vez',      icon: '1️⃣', tone: 'plain' },
+  nightBlowout:  { label: 'Noche de palizas',    short: 'La noche', icon: '🧹', tone: 'plain' },
+  nightComeback: { label: 'Noche de remontadas', short: 'La noche', icon: '🔄', tone: 'plain' },
+  nightOT:       { label: 'Noche de prórrogas',  short: 'La noche', icon: '⏱️', tone: 'plain' },
+  // datos de temporada que completan las noches tranquilas (solo en "Para redes")
+  seasonQ:      { label: 'Temporada', short: 'La temporada', icon: '📅', tone: 'plain' },
+  seasonClose:  { label: 'Temporada', short: 'La temporada', icon: '📅', tone: 'plain' },
+  seasonBench:  { label: 'Temporada', short: 'La temporada', icon: '📅', tone: 'plain' },
+  seasonCb:     { label: 'Temporada', short: 'La temporada', icon: '📅', tone: 'plain' },
+  seasonStreak: { label: 'Temporada', short: 'La temporada', icon: '📅', tone: 'plain' },
 };
 let curioFeedAll = false;
 
@@ -5163,6 +5178,37 @@ function curioJornadaItems(src, after) {
     });
   });
 
+  // Datos de la noche: muchas palizas / remontadas / prórrogas el mismo día, si es récord o top 3.
+  // Cuando sale uno, resume las tarjetas individuales de ese tipo (no se repiten).
+  const gWin = g => (g.winner || (g.ptsL > g.ptsA ? 'L' : 'A'));
+  const isBlow = g => Math.abs((g.ptsL || 0) - (g.ptsA || 0)) >= CURIO_J.blowout;
+  const isOT = g => (g.otL || 0) + (g.otA || 0) > 0;
+  const isCb = g => {
+    if (!curioHasQuarters(g)) return false;
+    const w = gWin(g), o = w === 'L' ? 'A' : 'L', d = n => -[1, 2, 3].slice(0, n).reduce((a, i) => a + g[`q${i}${w}`] - g[`q${i}${o}`], 0);
+    return d(3) >= CURIO_J.comeback || d(2) >= CURIO_J.comebackHalf;
+  };
+  const byDay = {}; src.forEach(g => { (byDay[g.date] = byDay[g.date] || []).push(g); });
+  const days = Object.keys(byDay);
+  if (days.length >= CURIO_J.nightMinDays) {
+    [['nightBlowout', isBlow, 'blowout', 'palizas en una sola noche', 'partidos ganados por ' + CURIO_J.blowout + ' o más'],
+     ['nightComeback', isCb, 'comeback', 'remontadas en una sola noche', 'partidos remontados'],
+     ['nightOT', isOT, 'ot', 'partidos a prórroga en una noche', 'partidos a prórroga']].forEach(([type, test, single, head, what]) => {
+      const gs = day.filter(test), n = gs.length;
+      if (n < CURIO_J.nightMin) return;
+      const counts = days.filter(d => d !== D).map(d => byDay[d].filter(test).length);
+      const r = 1 + counts.filter(x => x > n).length, tie = counts.some(x => x === n);
+      if (r > CURIO_J.nightTop) return;
+      const ctx = r === 1 ? (tie ? 'Iguala el récord de la temporada.' : 'Récord de la temporada.') : `Top ${r} de la temporada.`;
+      const winners = gs.map(g => gWin(g) === 'L' ? g.local : g.away);
+      const list = gs.map(g => { const w = gWin(g); return `${sh(w === 'L' ? g.local : g.away)} ${g['pts' + w]}-${g['pts' + (w === 'L' ? 'A' : 'L')]}`; }).join(', ');
+      for (let i = out.length - 1; i >= 0; i--) if (out[i].type === single) out.splice(i, 1);
+      out.push({ type, value: String(n), dot: CURIO_NIGHT, teamLabel: 'Toda la liga', night: true, nightTeams: winners,
+        hook: `${n} ${what} el mismo día (${list}). ${ctx}`, score: 3 + n / 2 + (r === 1 ? 2 : 1), teams: [],
+        soc: { big: String(n), head, ctx, foot: winners.map(sh).join(' · ') } });
+    });
+  }
+
   // Más llamativo primero; máx. 2 tarjetas por equipo para que la jornada no sea de uno solo
   out.sort((a, b) => b.score - a.score);
   const per = {}, items = [];
@@ -5171,7 +5217,7 @@ function curioJornadaItems(src, after) {
     it.teams.forEach(t => { per[t] = (per[t] || 0) + 1; });
     items.push(it);
   }
-  return { date: D, nGames: day.length, nPrev: prev.length, items };
+  return { date: D, nGames: day.length, nPrev: prev.length, items, dayTeams: [...new Set(day.flatMap(g => [g.local, g.away]))] };
 }
 
 function renderCurioFeed() {
@@ -5184,7 +5230,7 @@ function renderCurioFeed() {
     const ty = CURIO_JTYPES[it.type];
     const inner = `<div class="cur-fcard-top"><span class="cur-fcard-icon">${ty.icon}</span><span class="cur-fcard-cat">${ty.label}</span></div>
       <div class="cur-fcard-val">${it.value}</div>
-      <div class="cur-fcard-team">${curioDot(it.dot)}${it.teamLabel}</div>
+      <div class="cur-fcard-team">${it.night ? '' : curioDot(it.dot)}${it.teamLabel}</div>
       <div class="cur-fcard-hook">${it.hook}</div>`;
     return ty.panel
       ? `<button type="button" class="cur-fcard cur-fcard--${ty.tone}" onclick="goCurioPanel('${ty.panel}')" title="Ver el panel de ${CURIO_PANELS.find(p => p.id === ty.panel).label}">${inner}</button>`
@@ -5371,7 +5417,7 @@ const CURIO_SOCIAL = {
   SAFE: { l: 90, r: 930, t: 250, b: 1460 },
   DUR: { cover: 2.4, card: 3.8, outro: 2.4 }, // segundos
   AUTO_MIN: 3, AUTO_MAX: 5, AUTO_SCORE: 2.5,  // 3 siempre; 4º y 5º solo si su puntaje llega a AUTO_SCORE
-  HANDLE: '',                                  // tu usuario (p. ej. '@nba.raro'); vacío = no se muestra
+  HANDLE: '@carrestats',                       // tu usuario; vacío = no se muestra
   MUXER_URL: 'https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js',
 };
 let curioSocialState = null; // { J, sel:Set(idx), video:{blob,url,name} }
@@ -5413,7 +5459,7 @@ function curioSocialAuto(items) {
 function curioSocialSlides(J, sel) {
   const picks = J.items.filter((it, i) => sel.has(i) && it.soc);
   const date = fmtDate(J.date);
-  const slides = [{ kind: 'cover', date, picks, dur: CURIO_SOCIAL.DUR.cover }];
+  const slides = [{ kind: 'cover', date, picks, quiet: !!J.quiet, dur: CURIO_SOCIAL.DUR.cover }];
   picks.forEach((it, i) => slides.push({ kind: 'card', date, it, n: i + 1, of: picks.length, dur: CURIO_SOCIAL.DUR.card }));
   slides.push({ kind: 'outro', n: picks.length, dur: CURIO_SOCIAL.DUR.outro });
   return slides;
@@ -5654,15 +5700,26 @@ function curioSocialCaption(J, slides) {
   const picks = slides[0].picks;
   const lines = picks.map((it, i) => `${i + 1}. ${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}`);
   const tags = ['#NBA', '#NBAenEspañol', '#baloncesto', '#basketball']
-    .concat([...new Set(picks.map(it => '#' + curioShort(it.dot).replace(/[^\p{L}\p{N}]/gu, '')))]);
-  return `Lo más raro de la NBA · ${fmtDate(J.date)} 🏀\n\n${lines.join('\n')}\n\n¿Cuál no viste venir?\n\n${tags.join(' ')}`;
+    .concat([...new Set(picks.filter(it => !it.night).map(it => '#' + curioShort(it.dot).replace(/[^\p{L}\p{N}]/gu, '')))]);
+  const intro = J.quiet ? `Noche tranquila en la NBA · ${fmtDate(J.date)} 😴 …pero igual hay datos 🏀` : `Lo más raro de la NBA · ${fmtDate(J.date)} 🏀`;
+  return `${intro}\n\n${lines.join('\n')}\n\n¿Cuál no viste venir?\n\n${tags.join(' ')}`;
 }
 
 // ─ Interfaz ─
 function openCurioSocial() {
-  const J = curioJornadaItems(curioSource(), curioData);
-  if (!J || !J.items.length) { toast('No hay hallazgos en esta jornada', 'var(--lose)'); return; }
-  curioSocialState = { J, sel: curioSocialAuto(J.items), video: null, style: curioSocialStyleGet() };
+  let J = curioJornadaItems(curioSource(), curioData), sel = null;
+  if (!J) { toast('No hay hallazgos en esta jornada', 'var(--lose)'); return; }
+  // Datos de temporada de los equipos que jugaron: siempre como opciones para marcar a mano.
+  // Noche tranquila (menos de AUTO_MIN datos llamativos): se marcan solos los que falten.
+  const strong = J.items.map((it, i) => (it.soc && it.score >= CURIO_SOCIAL.AUTO_SCORE ? i : -1)).filter(i => i >= 0);
+  const extra = curioSeasonFacts(curioSource(), J);
+  if (extra.length) {
+    const n0 = J.items.length, quiet = strong.length < CURIO_SOCIAL.AUTO_MIN;
+    J = { ...J, quiet, items: [...J.items, ...extra] };
+    if (quiet) sel = new Set([...strong, ...extra.slice(0, CURIO_SOCIAL.AUTO_MIN - strong.length).map((_, k) => n0 + k)]);
+  }
+  if (!J.items.some(it => it.soc)) { toast('No hay hallazgos en esta jornada', 'var(--lose)'); return; }
+  curioSocialState = { J, sel: sel || curioSocialAuto(J.items), video: null, style: curioSocialStyleGet(), suggestQuiet: !!J.quiet };
   let ov = document.getElementById('cur-social');
   if (!ov) {
     ov = document.createElement('div');
@@ -5679,6 +5736,13 @@ function curioSocialStyleGet() { try { return localStorage.getItem('curioSocialS
 function setCurioSocialStyle(v) {
   const st = curioSocialState; if (!st || st.style === v) return;
   st.style = v; try { localStorage.setItem('curioSocialStyle', v); } catch (e) {}
+  if (st.video) { URL.revokeObjectURL(st.video.url); st.video = null; }
+  renderCurioSocial();
+}
+// Portada del video pixel: 'Dato principal' o 'Noche tranquila'. La página propone una (st.suggestQuiet) y se puede cambiar.
+function setCurioSocialCover(quiet) {
+  const st = curioSocialState; if (!st || !!st.J.quiet === quiet) return;
+  st.J.quiet = quiet;
   if (st.video) { URL.revokeObjectURL(st.video.url); st.video = null; }
   renderCurioSocial();
 }
@@ -5719,6 +5783,9 @@ function renderCurioSocial() {
     <div class="soc-style">
       <button type="button" class="cur-preset ${st.style === 'pixel' ? 'active' : ''}" onclick="setCurioSocialStyle('pixel')">👾 Pixel</button>
       <button type="button" class="cur-preset ${st.style === 'normal' ? 'active' : ''}" onclick="setCurioSocialStyle('normal')">Normal</button>
+      ${st.style === 'pixel' ? `<span class="soc-sep"></span><span class="soc-sub soc-lbl">Portada</span>
+      <button type="button" class="cur-preset ${!J.quiet ? 'active' : ''}" onclick="setCurioSocialCover(false)">Dato principal${!st.suggestQuiet ? ' · sugerida' : ''}</button>
+      <button type="button" class="cur-preset ${J.quiet ? 'active' : ''}" onclick="setCurioSocialCover(true)">😴 Noche tranquila${st.suggestQuiet ? ' · sugerida' : ''}</button>` : ''}
     </div>
     <div class="soc-list">${rows}</div>
     <div class="soc-strip" id="soc-strip"></div>
@@ -5846,7 +5913,8 @@ const pstep = (t, fps = 12) => Math.floor(t * fps) / fps; // movimiento "a salto
 const PXV = 1.4; // segundo en que arranca el gráfico de cada dato
 const PXDUR = { cover: 3.75, card: 5, outro: 3.75 }; // a 96 BPM (tiempo = 0,625 s): todo cae en un tiempo de la música
 const PXBEAT = 60 / 96;
-const pxSlides = slides => slides.map(s => ({ ...s, dur: PXDUR[s.kind] || s.dur }));
+let PXCOVER = 2; // portada: 2 = gancho + elige tu equipo (la única en uso); 0 balón y 1 arcade quedan de respaldo
+const pxSlides = slides => slides.map(s => ({ ...s, dur: s.kind === 'cover' && PXCOVER === 2 ? 12 * PXBEAT : (PXDUR[s.kind] || s.dur) }));
 const pclamp = x => Math.max(0, Math.min(1, x));
 
 // Balón de 8×8
@@ -5867,6 +5935,32 @@ function pviz(c, it, t, col, R = { x: PX.S.l, y: 190, W: PX.S.r - PX.S.l }) {
   const y0 = R.y, W = R.W, L = R.x, RR = R.x + R.W, per = Math.floor((W + 2) / 10);
   const nums = (it.soc.foot.match(/(\d+)-(\d+)/) || []).slice(1).map(Number);
   const typ = it.type;
+  if (it.season) {
+    const V = it.seasonViz, g = pclamp((t - 0.6) / 1.0);
+    if (V.kind === 'bars') {
+      const mx = Math.max(V.a[1], V.b[1]) || 1;
+      // etiqueta a la izquierda, barra al medio y valor a la derecha (todo dentro del ancho)
+      [[V.a, 0, col.accent], [V.b, 16, PXC.gray]].forEach(([[lab, val], dy, cc]) => {
+        const bx = L + 52, bmax = W - 52 - 40, bw = Math.max(2, Math.round(bmax * (val / mx) * g));
+        ptext(c, lab, L, y0 + dy + 1, 8, col.text); pbox(c, bx, y0 + dy, bw, 10, cc);
+        ptext(c, (val * g).toFixed(1), RR, y0 + dy + 1, 8, col.text, 'right');
+      });
+    } else {
+      const blocks = [...Array(V.W).fill('W'), ...Array(V.L).fill('L')].slice(0, per * 3), shown = Math.floor(g * blocks.length + 0.001);
+      blocks.forEach((b, i) => { if (i < shown) pbox(c, L + (i % per) * 10, y0 + Math.floor(i / per) * 10, 8, 8, b === 'W' ? PXC.mint : PXC.red); });
+    }
+    return;
+  }
+  if (it.night) {
+    const n = it.nightTeams.length, per5 = Math.max(1, Math.floor(W / 28)), shown = Math.floor(pclamp((t - 0.6) / 1.4) * n + 0.001);
+    it.nightTeams.forEach((tm, i) => {
+      if (i >= shown) return;
+      const row = Math.floor(i / per5), inRow = Math.min(per5, n - row * per5), x0 = L + (W - inRow * 28) / 2 + (i % per5) * 28, y = y0 + row * 42, cc = curioSocialColors(tm);
+      pjersey(c, Math.round(x0 + 2), y, cc.bg, cc.accent, PXC.ink, null, 2);
+      ptext(c, pxAbbr(tm), x0 + 14, y + 31, 8, col.text, 'center');
+    });
+    return;
+  }
   if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
     const n = parseInt(it.soc.big, 10) || 0;
     const blocks = Array.from({ length: n }, () => typ === 'drought' || typ === 'streakL' ? 'L' : 'W');
@@ -5895,7 +5989,7 @@ function pviz(c, it, t, col, R = { x: PX.S.l, y: 190, W: PX.S.r - PX.S.l }) {
     });
     return;
   }
-  if (typ === 'upset') {
+  if (typ === 'upset' && /%/.test(it.soc.big)) {
     const p = parseInt(it.soc.big, 10) / 100, g = pclamp((t - 0.6) / 0.8);
     pbox(c, L, y0, W, 12, PXC.gray); prect(c, L, y0, Math.round(W * p * g), 12, col.accent);
     ptext(c, 'MODELO', L, y0 + 18, 8, col.text);
@@ -5905,7 +5999,7 @@ function pviz(c, it, t, col, R = { x: PX.S.l, y: 190, W: PX.S.r - PX.S.l }) {
   if (typ === 'bench') {
     const p = (parseInt((it.soc.ctx.match(/(\d+)%/) || [])[1], 10) || 0) / 100, g = pclamp((t - 0.6) / 0.8);
     pbox(c, L, y0, W, 12, PXC.gray); prect(c, L, y0, Math.round(W * p * g), 12, col.accent);
-    ptext(c, 'BANCA', L, y0 + 18, 8, col.text); ptext(c, 'TITULARES', RR, y0 + 18, 8, col.text, 'right');
+    ptext(c, `BANCA ${Math.round(p * 100)}%`, L, y0 + 18, 8, col.text); ptext(c, 'RESTO', RR, y0 + 18, 8, col.text, 'right');
     return;
   }
   if (typ === 'comeback' && nums.length === 2) {
@@ -5930,16 +6024,27 @@ function pviz(c, it, t, col, R = { x: PX.S.l, y: 190, W: PX.S.r - PX.S.l }) {
   const bx = L + Math.round(pclamp((t - 0.4) / 2) * (W - 8)), by = y0 + 20 - Math.round(Math.abs(Math.sin(pstep(t) * 5)) * 18);
   pball(c, bx, by - 8, 2); prect(c, L, y0 + 29, W, 1, col.text);
 }
+// Textos del estilo pixel: cortos y sin repetir lo que ya dicen la etiqueta, el gráfico o el pie
 function pxHead(it) {
   let h = it.soc.head;
-  if (it.type === 'cut' || it.type === 'drought' || it.type === 'upset') h = h.replace(/\s*…\s*y (se acabó|ganó)\s*$/, '');
+  if (['cut', 'drought', 'upset'].includes(it.type)) h = h.replace(/\s*…\s*y (se acabó|ganó|por fin ganó)\s*$/, '');
   if (it.type === 'blowout') h = h.replace('de paliza a ', 'de diferencia ante ');
+  if (it.type === 'comeback') h = 'perdía ' + h.replace(/…\s*y lo ganó$/, '… y ganó');
+  if (it.type === 'bench') h = `puntos de la banca de ${curioShort(it.dot)}`;
   return h;
 }
 function pxCtx(it) {
-  const c = it.soc.ctx || '';
-  if (it.type === 'blowout') return c.replace(/^Es la paliza más/, 'La más');
-  return it.type === 'upset' && /^Le ganó/.test(c) ? '' : c; // el rival ya sale en el pie y el "¡GANÓ!" en el gráfico
+  let c = it.soc.ctx || '';
+  c = c.replace(/Es (la|el) [^.]*? de la temporada\./, 'Récord de la temporada.')
+    .replace(/Ya es la racha (más larga|de derrotas más larga) de la liga esta temporada\./, 'La más larga de la liga.')
+    .replace(/Iguala la racha (más larga|de derrotas más larga) de la liga esta temporada\./, 'Iguala la más larga de la liga.')
+    .replace(/Era la racha más larga de la liga\./, 'Era la más larga de la liga.')
+    .replace(/Es su racha más larga del año\./, 'Su mejor racha del año.').replace(/Iguala su racha más larga del año\./, 'Iguala su mejor racha del año.')
+    .replace(/Es su peor racha del año\./, 'Su peor racha del año.').replace(/Iguala su peor racha del año\./, 'Iguala su peor racha del año.')
+    // el rival y si fue en casa o de visita ya salen en el pie; el "% de sus puntos" ya sale en el gráfico
+    .replace(/(Remontada|Cayó|Ganó|Le ganó a)[^.]*\./g, '')
+    .replace(/El \d+% de sus puntos\./, '');
+  return c.replace(/\s+/g, ' ').trim();
 }
 let _pxAvg = null;
 function curioPixelLeagueQ() {
@@ -5966,9 +6071,13 @@ function pxStyle(slides) {
 
 // Piezas de las tarjetas
 function pxLabel(c, it, x, y, col, align = 'left') {
-  const txt = CURIO_JTYPES[it.type].label.toUpperCase(); c.font = pf(8);
+  const ty = CURIO_JTYPES[it.type], txt = (ty.short || ty.label).toUpperCase(); c.font = pf(8);
   const lw = c.measureText(pclean(txt)).width + 8, bx = align === 'center' ? Math.round(x - lw / 2) : x;
   pbox(c, bx, y, lw, 14, col.accent, PXC.ink); ptext(c, txt, bx + 4, y + 3, 8, col.bg);
+  if (it.season) { // calendario: avisa que el dato es de toda la temporada, no de anoche
+    const ix = bx + lw + 4; prect(c, ix, y + 1, 12, 12, col.accent); prect(c, ix, y + 1, 12, 3, col.text); prect(c, ix + 2, y, 1, 2, col.text); prect(c, ix + 9, y, 1, 2, col.text);
+    for (let k = 0; k < 6; k++) prect(c, ix + 2 + (k % 3) * 3, y + 6 + Math.floor(k / 3) * 3, 2, 2, col.bg);
+  }
 }
 function pxNumber(c, it, x, y, t, col, { sizes = [32, 24], align = 'left', maxW = PX.S.r - PX.S.l } = {}) {
   const raw = pclean(it.soc.big), m = raw.match(/^([+-]?)(\d+)(.*)$/);
@@ -5989,8 +6098,18 @@ function pxType(c, lines, x, y, lh, t, t0, dur, colr, align = 'left') {
   });
 }
 function pxFoot(it) {
-  const team = curioShort(it.dot), score = (it.soc.foot.match(/\d+-\d+/) || [''])[0];
-  let rival = it.soc.foot.replace(score, '').replace(team, '').replace(/·/g, '').replace(/\s+/g, ' ').trim();
+  if (it.night) return { team: 'NBA', score: '', rival: 'Toda la liga' }; // los equipos ya salen en el gráfico
+  if (it.season) return { team: curioShort(it.dot), score: (it.soc.foot.match(/\d+-\d+/) || [''])[0], rival: 'temporada' };
+  const team = curioShort(it.dot), f = it.soc.foot;
+  // Pie tipo marcador ("Local 104-133 Visita"): se pasa al punto de vista del equipo del dato
+  const m = f.match(/^(.+?) (\d+)-(\d+) (.+)$/);
+  if (m && !/^(vs|@)\s/.test(f)) {
+    const [, A, x, y, Bn] = m;
+    if (team === Bn) return { team, score: `${y}-${x}`, rival: `@ ${A}` };
+    return { team, score: `${x}-${y}`, rival: `vs ${team === A ? Bn : A}` };
+  }
+  const score = (f.match(/\d+-\d+/) || [''])[0];
+  let rival = f.replace(score, '').replace(team, '').replace(/·/g, '').replace(/\s+/g, ' ').trim();
   if (rival && !/^(vs|@)(\s|$)/.test(rival)) rival = 'vs ' + rival;
   return { team, score, rival };
 }
@@ -6006,6 +6125,8 @@ function pxFooter(c, it, col, y) {
 // Alto real que ocupa el gráfico de cada tipo (para que el resto se acomode y no queden huecos)
 function pxVizH(it, W = PX.S.r - PX.S.l) {
   const typ = it.type;
+  if (it.night) return Math.ceil(it.nightTeams.length / Math.max(1, Math.floor(W / 28))) * 42 - 2;
+  if (it.season) { const V = it.seasonViz, per = Math.floor((W + 2) / 10); return V.kind === 'bars' ? 26 : Math.min(3, Math.ceil((V.W + V.L) / per)) * 10 - 2; }
   if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
     const n = (parseInt(it.soc.big, 10) || 0) + 1, per = Math.floor((W + 2) / 10);
     return Math.ceil(n / per) * 10 - 2;
@@ -6081,6 +6202,11 @@ function pxCardC(c, s, it, t, col) { // Marcador: el partido arriba en un tabler
   ]);
 }
 
+// Tu usuario (CURIO_SOCIAL.HANDLE) en portada y cierre; vacío = no se muestra
+function pxHandle(c, x, y, col, align) {
+  const h = (typeof CURIO_SOCIAL !== 'undefined' && CURIO_SOCIAL.HANDLE) || ''; if (!h) return;
+  ptext(c, h.startsWith('@') ? h : '@' + h, x, y, 8, col, align);
+}
 function pxCoverBall(c, s, t, P) { // Portada 1: tiro al aro
   const { w, h, S } = PX, cw = S.r - S.l;
   prect(c, 0, 0, w, h, P.bg);
@@ -6093,10 +6219,11 @@ function pxCoverBall(c, s, t, P) { // Portada 1: tiro al aro
   const top = s.picks[0];
   if (top && t > 0.5) {
     ptext(c, pclean(top.soc.big), S.l, 110, 24, P.hi);
-    pwrap(c, `${curioShort(top.dot)}: ${CURIO_JTYPES[top.type].label.toLowerCase()}`, cw, 8, 3).forEach((l, i) => ptext(c, l, S.l, 142 + i * 11, 8, P.fg));
+    pwrap(c, top.night ? CURIO_JTYPES[top.type].label : `${curioShort(top.dot)}: ${CURIO_JTYPES[top.type].label.toLowerCase()}`, cw, 8, 3).forEach((l, i) => ptext(c, l, S.l, 142 + i * 11, 8, P.fg));
   }
-  if (t > 0.9) ptext(c, 'Y ADEMÁS', S.l, 180, 8, P.hi);
-  s.picks.slice(1).forEach((it, i) => { if (t > 0.9 + i * 0.15) ptext(c, pwrap(c, `${i + 2} ${curioShort(it.dot)} ${it.soc.big}`, cw, 8, 1)[0], S.l, 194 + i * 12, 8, P.dim); });
+  if (t > 0.9) ptext(c, 'Y ADEMÁS', S.l, 176, 8, P.hi);
+  s.picks.slice(1).forEach((it, i) => { if (t > 0.9 + i * 0.15) ptext(c, pwrap(c, `${i + 2} ${curioShort(it.dot)} ${it.soc.big}`, cw, 8, 1)[0], S.l, 188 + i * 11, 8, P.dim); });
+  pxHandle(c, S.l, 235, P.fg, 'left');
 }
 function pxCoverArcade(c, s, t, P) { // Portada 2: pantalla de título de arcade con tabla de récords
   const { w, h, S } = PX, cw = S.r - S.l, cx = PXCX;
@@ -6118,6 +6245,7 @@ function pxCoverArcade(c, s, t, P) { // Portada 2: pantalla de título de arcade
     ptext(c, pwrap(c, curioShort(it.dot).toUpperCase(), 72, 8, 1)[0], S.l + 32, y, 8, colr);
     ptext(c, pclean(it.soc.big), S.r - 2, y, 8, colr, 'right');
   });
+  pxHandle(c, cx, 216, P.hi, 'center');
   if (t > 2 && Math.floor(t / (PXBEAT / 2)) % 2 === 0) ptext(c, 'PRESS START', cx, 232, 8, P.fg, 'center');
 }
 function pxOutro(c, s, t, P) { // Cierre: GAME OVER + CONTINUE? con cuenta regresiva a tiempo con la música
@@ -6137,17 +6265,124 @@ function pxOutro(c, s, t, P) { // Cierre: GAME OVER + CONTINUE? con cuenta regre
     pbox(c, bx, 184, bw, 20, P.hi, P.star);
     ptext(c, 'MAÑANA HAY MÁS', bx + 8, 190, 8, P.bg);
   }
+  if (t > 1.0) pxHandle(c, cx, 216, P.hi, 'center');
   pball(c, S.r - 16, 230 - Math.round(Math.abs(Math.sin((t / B) * Math.PI)) * 18), 2);
+}
+
+
+// ── Portada "gancho": dato fuerte como pregunta → selección de equipos → "N DATOS QUE NO VISTE" ──
+const PX_ABBR = { Hawks: 'ATL', Celtics: 'BOS', Nets: 'BKN', Hornets: 'CHA', Bulls: 'CHI', Cavaliers: 'CLE', Mavericks: 'DAL', Nuggets: 'DEN',
+  Pistons: 'DET', Warriors: 'GSW', Rockets: 'HOU', Pacers: 'IND', Clippers: 'LAC', Lakers: 'LAL', Grizzlies: 'MEM', Heat: 'MIA', Bucks: 'MIL',
+  Timberwolves: 'MIN', Pelicans: 'NOP', Knicks: 'NYK', Thunder: 'OKC', Magic: 'ORL', '76ers': 'PHI', Suns: 'PHX', Blazers: 'POR', Kings: 'SAC',
+  Spurs: 'SAS', Raptors: 'TOR', Jazz: 'UTA', Wizards: 'WAS' };
+const pxAbbr = team => PX_ABBR[curioShort(team)] || curioShort(team).slice(0, 3).toUpperCase();
+// Camiseta genérica (solo los colores del equipo; sin escudos ni diseños oficiales). 12×14, se dibuja ×2.
+const JERSEY = ['...TT..TT...', '...TB..BT...', '..TBBTTBBT..', '.TBBBBBBBBT.', 'TBBBBBBBBBBT', 'TBBBBBBBBBBT', '.BBBBBBBBBB.',
+  '.BBBBBBBBBB.', '.BBBBBBBBBB.', '.BBBBBBBBBB.', '.BBBBBBBBBB.', '.BBBBBBBBBB.', '.TTTTTTTTTT.', '............'];
+function pjersey(c, x, y, body, trim, outline, num, k = 3) {
+  JERSEY.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => prect(c, x + i * k + dx, y + j * k + dy, k, k, outline)); }));
+  JERSEY.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') prect(c, x + i * k, y + j * k, k, k, ch === 'T' ? trim : body); }));
+  if (num != null) ptext(c, String(num), x + 6 * k, y + 5 * k, 16, trim, 'center');
+}
+function pxHookTeams(s) { // equipos en el orden de los datos, sin repetir
+  const seen = new Set(), out = [];
+  // un dato de la noche cuenta como una sola casilla (un balón); máximo 6 casillas (2 filas)
+  s.picks.forEach((it, i) => { if (!seen.has(it.dot)) { seen.add(it.dot); out.push({ team: it.dot, n: i + 1 }); } });
+  return out.slice(0, 6);
+}
+
+// ── Noche tranquila: gancho con humor (rota según la fecha) ──
+const PXQ_TXT = ['#e0b46a', '#b9833f'];
+function pxQuietVariant(s) { return pxDay(s) % 3; }
+function pxQuietHook(c, s, t, P) {
+  const { w, h, S } = PX, cx = PXCX, cw = S.r - S.l, B = PXBEAT, v = pxQuietVariant(s);
+  prect(c, 0, 0, w, h, P.bg);
+  ptext(c, `NBA · ${s.date}`, cx, S.t, 8, P.dim, 'center');
+  if (v === 0) { // planta rodadora por la cancha vacía + grillos
+    prect(c, 0, 206, w, 1, P.dim); for (let x = 0; x < w; x += 12) prect(c, x, 207, 6, 1, P.star);
+    if (t > 0.2) ptext(c, 'ANOCHE…', cx, 76, 16, P.fg, 'center');
+    if (t > 1.5 * B) { ptext(c, 'NO PASÓ', cx, 104, 16, P.hi, 'center'); ptext(c, 'MUCHO', cx, 124, 16, P.hi, 'center'); }
+    const p = pclamp(pstep(t) / (4 * B)), bx = Math.round(-20 + p * (w + 40)), by = 186 - Math.round(Math.abs(Math.sin(pstep(t) * 7)) * 10);
+    for (let a = 0; a < 46; a++) { const r = 6 + (a % 4) * 3, x = bx + Math.round(Math.cos(a * 0.9 + t * 4) * r), y = by - 4 + Math.round(Math.sin(a * 1.3 + t * 4) * (r - 3)); prect(c, x, y, 2, 2, PXQ_TXT[a % 2]); }
+  } else if (v === 1) { // barra de carga que se queda trabada
+    if (t > 0.2) { ptext(c, 'CARGANDO', cx, 80, 16, P.fg, 'center'); ptext(c, 'DRAMA…', cx, 100, 16, P.hi, 'center'); }
+    const pct = Math.min(12, Math.floor(pclamp(pstep(t) / (1.6 * B)) * 12));
+    pframe(c, S.l, 140, cw, 14, P.fg); prect(c, S.l + 2, 142, Math.round((cw - 4) * pct / 100), 10, P.hi);
+    ptext(c, `${pct}%`, cx, 164, 16, P.fg, 'center');
+    if (t > 2 * B && Math.floor(t / (B / 2)) % 2 === 0) ptext(c, 'NOCHE TRANQUILA', cx, 196, 8, P.hi, 'center');
+  } else { // balón dormido en el aro
+    if (t > 0.2) { ptext(c, 'LA NBA SE TOMÓ', cx, 64, 8, P.fg, 'center'); ptext(c, 'LA NOCHE', cx, 78, 16, P.hi, 'center'); ptext(c, 'LIBRE', cx, 98, 16, P.hi, 'center'); }
+    const bx = Math.round(cx - 30), by = 172; // tablero 60×40, aro 34 de ancho
+    prect(c, bx, by, 60, 40, '#ffffff'); pframe(c, bx, by, 60, 40, PXC.ink); pframe(c, bx + 18, by + 16, 24, 16, PXC.red);
+    prect(c, cx - 17, by + 36, 34, 3, PXC.red);
+    for (let i = 0; i < 8; i++) prect(c, cx - 15 + i * 4, by + 39 + (i % 2) * 2, 2, 12 - (i % 3) * 2, '#ffffff');
+    const breath = Math.floor(t / B) % 2; pball(c, cx - 16, by + 4 - 32 + breath, 4); // el balón "respira" sobre el aro
+    for (let i = 0; i < 3; i++) { const ph = ((t / B) + i * 0.66) % 2; if (ph < 1.7) ptext(c, i === 2 ? 'Z' : 'z', cx + 18 + i * 8 + Math.round(ph * 4), by - 34 - Math.round(ph * 8), i === 2 ? 16 : 8, P.fg); }
+  }
+  pxHandle(c, cx, 235, P.fg, 'center');
+}
+
+function pxCoverHook(c, s, t, P) {
+  const { w, h, S } = PX, cx = PXCX, cw = S.r - S.l, B = PXBEAT, top = s.picks[0];
+  if (t < 4 * B && s.quiet) { pxQuietHook(c, s, t, P); return; }
+  if (t < 4 * B && top) {
+    // 1) Gancho: el dato más fuerte en los colores de su equipo, con flash en cada tiempo
+    const col = top.night ? { bg: P.bg, text: P.fg, accent: P.hi } : curioSocialColors(top.dot);
+    prect(c, 0, 0, w, h, col.bg);
+    if (t < 0.18 * B) prect(c, 0, 0, w, h, t < 0.09 * B ? '#ffffff' : col.accent); // un solo flash al inicio
+    // líneas de velocidad
+    for (let i = 0; i < 9; i++) { const yy = 60 + i * 22 + (Math.floor(t * 12) * 7 + i * 5) % 22; prect(c, 0, yy, 4 + (i * 37) % 8, 1, col.accent); prect(c, w - 4 - (i * 53) % 8, yy + 9, 12, 1, col.accent); }
+    ptext(c, CURIO_JTYPES[top.type].label.toUpperCase(), cx, 78, 8, col.accent, 'center');
+    const q = '¿' + pclean(top.soc.big) + '?'; let sz = 32; c.font = pf(32); if (c.measureText(q).width > cw) sz = 24;
+    const shake = t < 0.25 ? Math.round(Math.sin(t * 90) * 2) : 0;
+    ptext(c, q, cx + 1 + shake, 101, sz, PXC.ink, 'center'); ptext(c, q, cx + shake, 100, sz, col.accent, 'center');
+    const hl = pwrap(c, pxHead(top), cw, 8, 3); if (t > B * 0.5) hl.forEach((l, i) => ptext(c, l, cx, 148 + i * 12, 8, col.text, 'center'));
+    if (t > 1.5 * B && pxCtx(top)) pwrap(c, pxCtx(top), cw, 8, 2).forEach((l, i) => ptext(c, l, cx, 156 + hl.length * 12 + i * 11, 8, col.accent, 'center'));
+    const tn = curioShort(top.dot).toUpperCase(); c.font = pf(16); if (t > 2.5 * B) ptext(c, tn, cx, 210, c.measureText(tn).width <= cw ? 16 : 8, col.text, 'center');
+    ptext(c, `NBA · ${s.date}`, cx, S.t, 8, col.text, 'center');
+    pxHandle(c, cx, 235, col.text, 'center');
+    return;
+  }
+  // 2) Selección de equipos
+  prect(c, 0, 0, w, h, P.bg);
+  for (let i = 0; i < 24; i++) { const x = (i * 37) % w, y = 8 + (i * 53) % 34; if ((Math.floor(t * 4) + i) % 3) prect(c, x, y, 1, 1, P.star); }
+  ptext(c, `NBA · ${s.date}`, cx, S.t, 8, P.dim, 'center');
+  ptext(c, 'ELIGE TU', cx, 58, 16, P.fg, 'center'); ptext(c, 'EQUIPO', cx, 76, 16, P.hi, 'center');
+  const teams = pxHookTeams(s), per = 3, slot = 46, t2 = t - 4 * B, rowH = 56, y0 = 100, tc = teams.length * B / 2;
+  teams.forEach((tm, i) => {
+    if (t2 < i * B / 2) return; // aparecen una tras otra
+    const row = Math.floor(i / per), inRow = Math.min(per, teams.length - row * per), x0 = cx - inRow * slot / 2 + (i % per) * slot;
+    const y = y0 + row * rowH, col = curioSocialColors(tm.team);
+    const pop = t2 - i * B / 2 < 0.08 ? -3 : 0;
+    if (tm.team === CURIO_NIGHT) { pball(c, Math.round(x0 + slot / 2 - 16), y + 6 + pop, 4); ptext(c, String(tm.n), x0 + slot / 2, y + 16, 16, '#ffffff', 'center'); }
+    else pjersey(c, Math.round(x0 + (slot - 36) / 2), y + pop, col.bg, col.accent, P.bg === '#ffffff' ? PXC.ink : P.dim, tm.n);
+    ptext(c, tm.team === CURIO_NIGHT ? 'NOCHE' : pxAbbr(tm.team), x0 + slot / 2, y + 44, 8, P.fg, 'center');
+  });
+  // Cursor: recorre las camisetas a medio tiempo y se queda en la del dato 1
+  const hops = Math.max(teams.length, 3) + 1, k = Math.floor(Math.max(0, t2 - tc) / (B / 4)), land = k >= hops;
+  const ci = land ? 0 : k % teams.length;
+  if (t2 > tc && teams.length) {
+    const row = Math.floor(ci / per), inRow = Math.min(per, teams.length - row * per), x0 = cx - inRow * slot / 2 + (ci % per) * slot, y = y0 + row * rowH;
+    const on = !land || Math.floor(t * 8) % 2 === 0;
+    if (on) { pframe(c, Math.round(x0 + 1), y - 4, slot - 2, 58, P.hi); pframe(c, Math.round(x0 + 2), y - 3, slot - 4, 56, P.hi); }
+  }
+  // 3) "N DATOS QUE NO VISTE"
+  if (t >= 9 * B) {
+    const n = s.picks.length, by = 212;
+    pbox(c, S.l, by, cw, 30, P.hi, P.star);
+    ptext(c, `${n} DATOS`, cx, by + 4, 16, P.bg, 'center');
+    ptext(c, s.quiet ? 'IGUAL HAY' : 'QUE NO VISTE', cx, by + 21, 8, P.bg, 'center');
+  } else pxHandle(c, cx, 235, P.fg, 'center');
 }
 
 function pixelDrawSlide(c, s, t, st) {
   const { w, h } = PX;
   st = st || { pal: PXPAL[0], coverV: 0, shift: 0 };
   if (s.kind === 'card') {
-    const it = s.it, col = curioSocialColors(it.dot);
+    const it = s.it, col = it.night ? { bg: st.pal.bg, text: st.pal.fg, accent: st.pal.hi } : curioSocialColors(it.dot);
     prect(c, 0, 0, w, h, col.bg);
     [pxCardA, pxCardB, pxCardC][(s.n - 1 + st.shift) % 3](c, s, it, t, col);
-  } else if (s.kind === 'cover') (st.coverV ? pxCoverArcade : pxCoverBall)(c, s, t, st.pal);
+  } else if (s.kind === 'cover') [pxCoverBall, pxCoverArcade, pxCoverHook][PXCOVER](c, s, t, st.pal);
   else pxOutro(c, s, t, st.pal);
 }
 
@@ -6276,6 +6511,9 @@ function pxSfx(ac) {
     crowd: (t, d) => noise(t, d, { v: 0.07, f: 700, kind: 'lowpass', a: 0.3 }),
     iris: t => { tone(t, 900, PXTR_H, { v: 0.07, f2: 160 }); tone(t + PXTR_H, 160, PXTR_H, { v: 0.07, f2: 900 }); },
     staticFx: t => noise(t, PXTR_H * 2, { v: 0.12, f: 3000, kind: 'highpass', a: PXTR_H }),
+    chirp: t => [0, 0.07, 0.14].forEach(d => tone(t + d, 4200, 0.03, { type: 'sine', v: 0.05 })),
+    snore: t => { tone(t, 110, 0.5, { type: 'sawtooth', v: 0.05, f2: 75, a: 0.15 }); tone(t + 0.6, 90, 0.4, { type: 'triangle', v: 0.05, f2: 130, a: 0.1 }); },
+    hit: t => { duck(t); tone(t, 160, 0.18, { type: 'square', v: 0.14, f2: 55 }); noise(t, 0.16, { v: 0.16, f: 2500, q: 0.7 }); },
     whoosh: t => noise(t, 0.22, { v: 0.12, f: 400, f2: 3500, q: 3 }),
     levelUp: t => { duck(t); [392, 523, 659, 784, 1047].forEach((f, i) => tone(t + i * 0.07, f, 0.06, { v: 0.1 })); [523, 659, 784].forEach(f => tone(t + 0.4, f * 2, 0.5, { v: 0.06, type: 'square' })); },
     count: (t, last) => { duck(t); tone(t, last ? 1047 : 784, 0.12, { v: 0.09 }); },
@@ -6287,7 +6525,20 @@ function pxSfx(ac) {
 function pxSchedule(fx, slides) {
   let T = 0;
   slides.forEach((s, k) => {
-    if (s.kind === 'cover') {
+    if (s.kind === 'cover' && PXCOVER === 2) {
+      const B = PXBEAT, nT = pxHookTeams(s).length, hops = Math.max(nT, 3);
+      if (s.quiet) { // noche tranquila: grillos / carga trabada / ronquido
+        const v = pxQuietVariant(s);
+        if (v === 0) for (let k = 0; k < 4; k++) { fx.chirp(T + 0.3 + k * B); fx.thump(T + 0.2 + k * B * 0.9); }
+        else if (v === 1) { for (let k = 0; k < 6; k++) fx.blip(T + 0.2 + k * B * 0.25, 600 + k * 40); fx.error(T + 1.6 * B); }
+        else { fx.snore(T + 0.4); fx.snore(T + 0.4 + 2 * B); }
+      } else { fx.hit(T); fx.blip(T + 0.5 * B, 700); fx.blip(T + 1.5 * B, 780); fx.blip(T + 2.5 * B, 880); } // gancho
+      for (let i = 0; i < nT; i++) fx.note(T + 4 * B + i * B / 2, 7 + i);                       // camisetas
+      const tc = T + 4 * B + nT * B / 2, h2 = hops + 1;
+      for (let k = 0; k < h2; k++) fx.blip(tc + k * B / 4, 880);                                  // cursor
+      fx.ding(tc + h2 * B / 4);
+      fx.hit(T + 9 * B);                                                                          // N DATOS
+    } else if (s.kind === 'cover') {
       fx.launch(T + 0.05); fx.swish(T + 1.25); fx.crowd(T + 1.2, 2.2);
       fx.thump(T + 1.55); fx.thump(T + 1.9);
       fx.ding(T + 0.5);
@@ -6295,7 +6546,9 @@ function pxSchedule(fx, slides) {
       const it = s.it, typ = it.type;
       fx.ding(T + 1.0);
       const V = T + PXV - 0.6; // tiempo cero del gráfico
-      if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
+      if (it.season) { const SV = it.seasonViz; if (SV.kind === 'bars') { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); } else { const n = Math.min(SV.W + SV.L, 30); for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.0 * (i + 1) / n, i < SV.W ? Math.min(i, 13) : 0); } }
+      else if (it.night) { const n = it.nightTeams.length; for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.4 * (i + 1) / n, 4 + i); fx.ding(V + 2.2); }
+      else if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
         const len = (parseInt(it.soc.big, 10) || 0) + (typ === 'cut' || typ === 'drought' ? 1 : 0);
         for (let i = 0; i < len; i++) {
           const at = V + 0.6 + 1.4 * (i + 1) / len, last = i === len - 1;
@@ -6413,6 +6666,74 @@ function pixelThumb(rawSlides, idx) {
   const slides = pxSlides(rawSlides), c = document.createElement('canvas'); c.width = PX.w; c.height = PX.h;
   pixelDrawSlide(c.getContext('2d'), slides[idx], slides[idx].dur - 0.01, pxStyle(slides));
   return c;
+}
+
+// ── Datos de temporada para "Para redes" ──
+// Solo de equipos que jugaron esa noche: para cada uno se busca en qué tema está entre los 5 mejores
+// o los 5 peores de la liga (cierres, arranques, partidos cerrados, banca, remontadas, rachas).
+// Se ofrecen como opciones en la ventana; en noches tranquilas se marcan solos los que hagan falta.
+// (Sin Sorpresas: dependen del modelo.)
+const CURIO_SEASON = { minDays: 14, minGp: 10, minClose: 5, top: 5, maxOptions: 8, score: 2.4 };
+function curioSeasonFacts(src, J) {
+  const days = new Set(src.map(g => g.date));
+  if (days.size < CURIO_SEASON.minDays) return [];
+  const S = computeCuriosidades(src), T = S.teams.filter(t => t.gp >= CURIO_SEASON.minGp);
+  if (T.length < 10) return [];
+  const sh = curioShort, f1 = v => (v > 0 ? '+' : '') + v.toFixed(1), n1 = v => v.toFixed(1);
+  const avg = arr => arr.reduce((a, b) => a + b, 0) / (arr.length || 1);
+  const ord = (r, fem) => r === 1 ? '' : `${r}${fem ? 'ª' : 'º'} `;
+  // Temas: valor, a quién aplica, si "más alto es mejor" y cómo se dice el puesto
+  const lgBench = avg(T.filter(t => t.bGp >= CURIO_SEASON.minGp).map(t => t.benchPerG));
+  const M = [
+    { topic: 'q4', type: 'seasonQ', ok: t => t.qGp >= CURIO_SEASON.minGp, val: t => t.q4Diff,
+      up: r => `El ${ord(r)}mejor cierre de la liga.`, down: r => `El ${ord(r)}peor cierre de la liga.`,
+      soc: (t, v) => ({ big: f1(v), head: 'en el 4º cuarto, por partido' }), viz: t => ({ kind: 'bars', a: ['ANOTA', t.qForAvg[3]], b: ['RECIBE', t.qAgAvg[3]] }) },
+    { topic: 'q1', type: 'seasonQ', ok: t => t.qGp >= CURIO_SEASON.minGp, val: t => t.qDiff[0],
+      up: r => `El ${ord(r)}mejor arranque de la liga.`, down: r => `El ${ord(r)}peor arranque de la liga.`,
+      soc: (t, v) => ({ big: f1(v), head: 'en el 1er cuarto, por partido' }), viz: t => ({ kind: 'bars', a: ['ANOTA', t.qForAvg[0]], b: ['RECIBE', t.qAgAvg[0]] }) },
+    { topic: 'close', type: 'seasonClose', ok: t => t.closeGp >= CURIO_SEASON.minClose, val: t => t.closePct,
+      up: r => `El ${ord(r)}mejor en finales apretados.`, down: r => `El ${ord(r)}peor en finales apretados.`,
+      soc: t => ({ big: `${t.closeW}-${t.closeGp - t.closeW}`, head: 'en partidos cerrados' }), viz: t => ({ kind: 'blocks', W: t.closeW, L: t.closeGp - t.closeW }) },
+    { topic: 'bench', type: 'seasonBench', ok: t => t.bGp >= CURIO_SEASON.minGp, val: t => t.benchPerG,
+      up: r => `La ${ord(r, true)}banca que más anota.`, down: r => `La ${ord(r, true)}banca que menos anota.`,
+      soc: (t, v) => ({ big: n1(v), head: `de la banca de ${sh(t.team)}, por partido` }), viz: t => ({ kind: 'bars', a: ['BANCA', t.benchPerG], b: ['LIGA', lgBench] }) },
+    { topic: 'cb', type: 'seasonCb', ok: t => t.trailHalfWins >= 3, val: t => t.trailHalfWins, onlyUp: true,
+      up: r => r === 1 ? 'Nadie remonta más.' : `El ${r}º que más remonta.`,
+      soc: t => ({ big: String(t.trailHalfWins), head: 'partidos ganados perdiendo al descanso' }), viz: t => ({ kind: 'blocks', W: t.trailHalfWins, L: t.trailHalf - t.trailHalfWins }) },
+    { topic: 'collapse', type: 'seasonCb', ok: t => t.leadHalfLosses >= 3, val: t => t.leadHalfLosses, onlyUp: true,
+      up: r => r === 1 ? 'Nadie deja escapar más.' : `El ${r}º que más deja escapar.`,
+      soc: t => ({ big: String(t.leadHalfLosses), head: 'partidos perdidos ganando al descanso' }), viz: t => ({ kind: 'blocks', W: t.leadHalf - t.leadHalfLosses, L: t.leadHalfLosses }) },
+    { topic: 'streak', type: 'seasonStreak', ok: t => t.bestW >= 5, val: t => t.bestW, onlyUp: true,
+      up: r => r === 1 ? 'La racha más larga de la temporada.' : `La ${r}ª racha más larga de la temporada.`,
+      soc: t => ({ big: String(t.bestW), head: 'victorias seguidas, su mejor racha' }), viz: t => ({ kind: 'blocks', W: t.bestW, L: 0 }) },
+  ];
+  // Temas que ya cubre un dato de la noche, para no repetir lo mismo del mismo equipo
+  const nightTopic = { comeback: 'cb', quarter: 'q4', bench: 'bench', cut: 'streak', streakW: 'streak', streakL: 'streak', drought: 'streak' };
+  const covered = new Set(J.items.filter(it => !it.night).map(it => `${it.dot}|${nightTopic[it.type] || ''}`));
+  const shown = new Set(J.items.filter(it => it.score >= CURIO_SOCIAL.AUTO_SCORE).map(it => it.dot));
+  const cands = [];
+  (J.dayTeams || []).forEach(team => {
+    M.forEach(m => {
+      const pool = T.filter(t => m.ok(t) && m.val(t) != null && isFinite(m.val(t)));
+      const me = pool.find(t => t.team === team);
+      if (!me || pool.length < 10 || covered.has(`${team}|${m.topic}`)) return;
+      const v = m.val(me), rUp = 1 + pool.filter(t => m.val(t) > v).length, rDown = 1 + pool.filter(t => m.val(t) < v).length;
+      const dir = rUp <= CURIO_SEASON.top ? 'up' : !m.onlyUp && rDown <= CURIO_SEASON.top ? 'down' : null;
+      if (!dir) return;
+      const r = dir === 'up' ? rUp : rDown, ctx = m[dir](r), soc = m.soc(me, v);
+      cands.push({ r, team, topic: m.topic, it: {
+        type: m.type, value: soc.big, dot: team, teamLabel: team, season: true, seasonViz: m.viz(me), hook: `${sh(team)}: ${soc.big} ${soc.head}. ${ctx}`,
+        score: CURIO_SEASON.score, teams: [team], soc: { ...soc, ctx, foot: `${me.w}-${me.l} · temporada` } } });
+    });
+  });
+  // Mejor puesto primero; a igual puesto, primero equipos que no salieron en la noche; un solo dato por equipo
+  // en la primera vuelta (variedad) y después el resto, como opciones para marcar a mano
+  const d0 = Math.round(Date.parse(J.date + 'T12:00:00Z') / 864e5);
+  cands.sort((a, b) => a.r - b.r || (shown.has(a.team) - shown.has(b.team)) || ((a.topic.length + d0) % 3) - ((b.topic.length + d0) % 3));
+  const out = [], teams = new Set(), topics = new Set();
+  cands.forEach(c => { if (!teams.has(c.team) && !topics.has(c.topic)) { out.push(c.it); teams.add(c.team); topics.add(c.topic); } });
+  cands.forEach(c => { if (!out.includes(c.it)) out.push(c.it); });
+  return out.slice(0, CURIO_SEASON.maxOptions);
 }
 
 // ── Modo demo: temporada 2024-25 desde games.json, SOLO en memoria ──
