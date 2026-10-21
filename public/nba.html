@@ -1009,6 +1009,16 @@
   .soc-thumb.px{image-rendering:pixelated;}
   .soc-style{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
   .soc-sep{width:1px;height:24px;background:var(--outline-var);margin:0 6px;}
+  .soc-del{margin-left:auto;border:none;background:none;cursor:pointer;font-size:14px;color:var(--outline);padding:2px 6px;}
+  .soc-del:hover{color:var(--lose);}
+  .soc-form{display:flex;flex-direction:column;gap:12px;border:1px solid var(--hairline);border-radius:16px;padding:16px;}
+  .soc-form-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;}
+  .soc-f{display:flex;flex-direction:column;gap:4px;}
+  .soc-f--s{grid-column:span 2;} .soc-f--m{grid-column:span 2;} .soc-f--l{grid-column:span 3;}
+  .soc-f input,.soc-f select{width:100%;height:40px;border:1px solid var(--hairline);border-radius:10px;padding:0 10px;font-size:14px;background:var(--canvas);color:var(--hairline);}
+  .soc-row-main{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer;}
+  .soc-row-main input{width:18px;height:18px;-webkit-appearance:auto;appearance:auto;accent-color:var(--violet);}
+  @media (max-width:768px){ .soc-f--s,.soc-f--m,.soc-f--l{grid-column:span 6;} }
   .soc-lbl{margin-top:0;text-transform:uppercase;letter-spacing:1px;}
   .soc-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
   .soc-actions .btn:disabled{opacity:0.4;cursor:not-allowed;}
@@ -5243,7 +5253,7 @@ function renderCurioFeed() {
   el.innerHTML = `<div class="cur-feed-head">
       <div class="cur-feed-titlerow">
         <div class="cur-block-title">La jornada · ${fmtDate(J.date)}</div>
-        ${J.items.some(it => it.soc) ? '<button type="button" class="cur-demo-btn" onclick="openCurioSocial()">📲 Para redes</button>' : ''}
+        <button type="button" class="cur-demo-btn" onclick="openCurioSocial()">📲 Para redes</button>
       </div>
       <div class="cur-block-note">Lo raro de los ${J.nGames} partido${J.nGames === 1 ? '' : 's'} del último día registrado, comparado con la temporada hasta ese día. Lo de toda la temporada está en Explorar.</div>
     </div>
@@ -5524,7 +5534,7 @@ function curioDrawSlide(ctx, s, t) {
     // Etiqueta
     const e1 = at(0.05);
     ctx.font = curioFont(600, 38, 'mono');
-    const lab = ty.label.toUpperCase(), lw = ctx.measureText(lab).width + 56;
+    const lab = (it.label || ty.label).toUpperCase(), lw = ctx.measureText(lab).width + 56;
     ctx.save(); ctx.globalAlpha = e1; ctx.strokeStyle = c.accent; ctx.lineWidth = 4;
     const py = SAFE.t + 70 + (1 - e1) * 50;
     ctx.beginPath(); ctx.roundRect(SAFE.l, py, lw, 76, 38); ctx.stroke();
@@ -5708,18 +5718,21 @@ function curioSocialCaption(J, slides) {
 // ─ Interfaz ─
 function openCurioSocial() {
   let J = curioJornadaItems(curioSource(), curioData), sel = null;
-  if (!J) { toast('No hay hallazgos en esta jornada', 'var(--lose)'); return; }
+  if (!J) { toast('No hay partidos en la base', 'var(--lose)'); return; }
+  const baseItems = J.items;
+  // Datos manuales guardados para esta fecha (p. ej. un jugador con 55): se marcan siempre
+  const dayGames = curioSource().filter(g => g.date === J.date);
+  const manual = curioManualLoad(J.date).map(m => curioManualItem(m, dayGames));
+  J = { ...J, items: curioManualMerge(baseItems, manual) };
   // Datos de temporada de los equipos que jugaron: siempre como opciones para marcar a mano.
   // Noche tranquila (menos de AUTO_MIN datos llamativos): se marcan solos los que falten.
   const strong = J.items.map((it, i) => (it.soc && it.score >= CURIO_SOCIAL.AUTO_SCORE ? i : -1)).filter(i => i >= 0);
   const extra = curioSeasonFacts(curioSource(), J);
-  if (extra.length) {
-    const n0 = J.items.length, quiet = strong.length < CURIO_SOCIAL.AUTO_MIN;
-    J = { ...J, quiet, items: [...J.items, ...extra] };
-    if (quiet) sel = new Set([...strong, ...extra.slice(0, CURIO_SOCIAL.AUTO_MIN - strong.length).map((_, k) => n0 + k)]);
-  }
-  if (!J.items.some(it => it.soc)) { toast('No hay hallazgos en esta jornada', 'var(--lose)'); return; }
-  curioSocialState = { J, sel: sel || curioSocialAuto(J.items), video: null, style: curioSocialStyleGet(), suggestQuiet: !!J.quiet };
+  const n0 = J.items.length, quiet = !!extra.length && strong.length < CURIO_SOCIAL.AUTO_MIN;
+  J = { ...J, quiet, items: [...J.items, ...extra] };
+  if (quiet) sel = new Set([...strong, ...extra.slice(0, CURIO_SOCIAL.AUTO_MIN - strong.length).map((_, k) => n0 + k)]);
+  if (!sel) { sel = curioSocialAuto(J.items); J.items.forEach((it, i) => { if (it.manual) sel.add(i); }); }
+  curioSocialState = { J, sel, video: null, style: curioSocialStyleGet(), suggestQuiet: quiet, baseItems, extraItems: extra, form: null };
   let ov = document.getElementById('cur-social');
   if (!ov) {
     ov = document.createElement('div');
@@ -5770,8 +5783,8 @@ function renderCurioSocial() {
   const nPick = slides.length - 2, secs = curioSocialSecs(st, slides);
   const rows = J.items.map((it, i) => it.soc ? `<label class="soc-row">
       <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="toggleCurioSocialItem(${i})">
-      <span class="soc-type">${CURIO_JTYPES[it.type].label}</span>
-      <span class="soc-txt">${curioDot(it.dot)}<b>${curioShort(it.dot)}:</b> ${it.soc.big} ${it.soc.head}</span>
+      <span class="soc-type">${it.manual ? '✍️ ' + curioEsc(it.label) : CURIO_JTYPES[it.type].label}</span>
+      <span class="soc-txt">${curioDot(it.dot)}<b>${curioShort(it.dot)}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.soc.head)}${it.manual ? `<button type="button" class="soc-del" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
     </label>` : '').join('');
   const vid = st.video;
   ov.innerHTML = `<div class="profile-modal soc-modal">
@@ -5788,6 +5801,7 @@ function renderCurioSocial() {
       <button type="button" class="cur-preset ${J.quiet ? 'active' : ''}" onclick="setCurioSocialCover(true)">😴 Noche tranquila${st.suggestQuiet ? ' · sugerida' : ''}</button>` : ''}
     </div>
     <div class="soc-list">${rows}</div>
+    ${st.form ? curioManualFormHtml(st) : `<div><button type="button" class="cur-preset" onclick="openCurioManualForm()">➕ Agregar dato</button></div>`}
     <div class="soc-strip" id="soc-strip"></div>
     <div class="soc-actions">
       <button type="button" class="btn btn-primary" onclick="curioSocialMakeVideo()" ${nPick ? '' : 'disabled'}>🎬 Generar video (${Math.round(secs)} s)</button>
@@ -5935,6 +5949,12 @@ function pviz(c, it, t, col, R = { x: PX.S.l, y: 190, W: PX.S.r - PX.S.l }) {
   const y0 = R.y, W = R.W, L = R.x, RR = R.x + R.W, per = Math.floor((W + 2) / 10);
   const nums = (it.soc.foot.match(/(\d+)-(\d+)/) || []).slice(1).map(Number);
   const typ = it.type;
+  if (it.manual) {
+    if (it.night || t < 0.6) return;
+    const cc = curioSocialColors(it.dot), num = /^\d{1,2}$/.test(it.soc.big) ? it.soc.big : null, pop = t < 0.75 ? -3 : 0;
+    pjersey(c, Math.round(L + W / 2 - 18), y0 + pop, cc.bg, cc.accent, PXC.ink, num, 3);
+    return;
+  }
   if (it.season) {
     const V = it.seasonViz, g = pclamp((t - 0.6) / 1.0);
     if (V.kind === 'bars') {
@@ -6026,6 +6046,7 @@ function pviz(c, it, t, col, R = { x: PX.S.l, y: 190, W: PX.S.r - PX.S.l }) {
 }
 // Textos del estilo pixel: cortos y sin repetir lo que ya dicen la etiqueta, el gráfico o el pie
 function pxHead(it) {
+  if (it.manual) return it.soc.head; // lo escrito a mano se respeta tal cual
   let h = it.soc.head;
   if (['cut', 'drought', 'upset'].includes(it.type)) h = h.replace(/\s*…\s*y (se acabó|ganó|por fin ganó)\s*$/, '');
   if (it.type === 'blowout') h = h.replace('de paliza a ', 'de diferencia ante ');
@@ -6034,6 +6055,7 @@ function pxHead(it) {
   return h;
 }
 function pxCtx(it) {
+  if (it.manual) return it.soc.ctx || '';
   let c = it.soc.ctx || '';
   c = c.replace(/Es (la|el) [^.]*? de la temporada\./, 'Récord de la temporada.')
     .replace(/Ya es la racha (más larga|de derrotas más larga) de la liga esta temporada\./, 'La más larga de la liga.')
@@ -6071,7 +6093,7 @@ function pxStyle(slides) {
 
 // Piezas de las tarjetas
 function pxLabel(c, it, x, y, col, align = 'left') {
-  const ty = CURIO_JTYPES[it.type], txt = (ty.short || ty.label).toUpperCase(); c.font = pf(8);
+  const ty = CURIO_JTYPES[it.type], txt = (it.label || ty.short || ty.label).toUpperCase(); c.font = pf(8);
   const lw = c.measureText(pclean(txt)).width + 8, bx = align === 'center' ? Math.round(x - lw / 2) : x;
   pbox(c, bx, y, lw, 14, col.accent, PXC.ink); ptext(c, txt, bx + 4, y + 3, 8, col.bg);
   if (it.season) { // calendario: avisa que el dato es de toda la temporada, no de anoche
@@ -6125,6 +6147,7 @@ function pxFooter(c, it, col, y) {
 // Alto real que ocupa el gráfico de cada tipo (para que el resto se acomode y no queden huecos)
 function pxVizH(it, W = PX.S.r - PX.S.l) {
   const typ = it.type;
+  if (it.manual) return it.night ? 0 : 42;
   if (it.night) return Math.ceil(it.nightTeams.length / Math.max(1, Math.floor(W / 28))) * 42 - 2;
   if (it.season) { const V = it.seasonViz, per = Math.floor((W + 2) / 10); return V.kind === 'bars' ? 26 : Math.min(3, Math.ceil((V.W + V.L) / per)) * 10 - 2; }
   if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
@@ -6287,7 +6310,7 @@ function pjersey(c, x, y, body, trim, outline, num, k = 3) {
 function pxHookTeams(s) { // equipos en el orden de los datos, sin repetir
   const seen = new Set(), out = [];
   // un dato de la noche cuenta como una sola casilla (un balón); máximo 6 casillas (2 filas)
-  s.picks.forEach((it, i) => { if (!seen.has(it.dot)) { seen.add(it.dot); out.push({ team: it.dot, n: i + 1 }); } });
+  s.picks.forEach((it, i) => { if (!seen.has(it.dot)) { seen.add(it.dot); out.push({ team: it.dot, n: i + 1, tag: it.manual ? 'NBA' : 'NOCHE' }); } });
   return out.slice(0, 6);
 }
 
@@ -6332,7 +6355,7 @@ function pxCoverHook(c, s, t, P) {
     if (t < 0.18 * B) prect(c, 0, 0, w, h, t < 0.09 * B ? '#ffffff' : col.accent); // un solo flash al inicio
     // líneas de velocidad
     for (let i = 0; i < 9; i++) { const yy = 60 + i * 22 + (Math.floor(t * 12) * 7 + i * 5) % 22; prect(c, 0, yy, 4 + (i * 37) % 8, 1, col.accent); prect(c, w - 4 - (i * 53) % 8, yy + 9, 12, 1, col.accent); }
-    ptext(c, CURIO_JTYPES[top.type].label.toUpperCase(), cx, 78, 8, col.accent, 'center');
+    ptext(c, (top.label || CURIO_JTYPES[top.type].label).toUpperCase(), cx, 78, 8, col.accent, 'center');
     const q = '¿' + pclean(top.soc.big) + '?'; let sz = 32; c.font = pf(32); if (c.measureText(q).width > cw) sz = 24;
     const shake = t < 0.25 ? Math.round(Math.sin(t * 90) * 2) : 0;
     ptext(c, q, cx + 1 + shake, 101, sz, PXC.ink, 'center'); ptext(c, q, cx + shake, 100, sz, col.accent, 'center');
@@ -6356,7 +6379,7 @@ function pxCoverHook(c, s, t, P) {
     const pop = t2 - i * B / 2 < 0.08 ? -3 : 0;
     if (tm.team === CURIO_NIGHT) { pball(c, Math.round(x0 + slot / 2 - 16), y + 6 + pop, 4); ptext(c, String(tm.n), x0 + slot / 2, y + 16, 16, '#ffffff', 'center'); }
     else pjersey(c, Math.round(x0 + (slot - 36) / 2), y + pop, col.bg, col.accent, P.bg === '#ffffff' ? PXC.ink : P.dim, tm.n);
-    ptext(c, tm.team === CURIO_NIGHT ? 'NOCHE' : pxAbbr(tm.team), x0 + slot / 2, y + 44, 8, P.fg, 'center');
+    ptext(c, tm.team === CURIO_NIGHT ? tm.tag : pxAbbr(tm.team), x0 + slot / 2, y + 44, 8, P.fg, 'center');
   });
   // Cursor: recorre las camisetas a medio tiempo y se queda en la del dato 1
   const hops = Math.max(teams.length, 3) + 1, k = Math.floor(Math.max(0, t2 - tc) / (B / 4)), land = k >= hops;
@@ -6449,6 +6472,14 @@ function pixelDrawAt(big, small, slides, time) {
   const B = big.getContext('2d'); B.imageSmoothingEnabled = false;
   B.drawImage(small, 0, 0, big.width, big.height);
   B.fillStyle = 'rgba(0,0,0,0.10)'; for (let y = 4; y < big.height; y += PX.s) B.fillRect(0, y, big.width, 2);
+  // Marca de agua mínima en las tarjetas: @usuario abajo a la derecha, más pequeño que el texto pixel
+  // (se dibuja ya en alta resolución), justo debajo de la zona segura y a la izquierda de los botones de la app
+  const hd = (typeof CURIO_SOCIAL !== 'undefined' && CURIO_SOCIAL.HANDLE) || '', sl = slides[idx];
+  if (hd && sl.kind === 'card' && b < 0) {
+    const col = sl.it.night ? { text: st.pal.fg } : curioSocialColors(sl.it.dot);
+    B.save(); B.globalAlpha = 0.55; B.font = "16px 'Press Start 2P'"; B.fillStyle = col.text; B.textAlign = 'right'; B.textBaseline = 'top';
+    B.fillText(hd.startsWith('@') ? hd : '@' + hd, PX.S.r * PX.s, PX.S.b * PX.s + 22); B.restore();
+  }
 }
 
 
@@ -6546,7 +6577,8 @@ function pxSchedule(fx, slides) {
       const it = s.it, typ = it.type;
       fx.ding(T + 1.0);
       const V = T + PXV - 0.6; // tiempo cero del gráfico
-      if (it.season) { const SV = it.seasonViz; if (SV.kind === 'bars') { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); } else { const n = Math.min(SV.W + SV.L, 30); for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.0 * (i + 1) / n, i < SV.W ? Math.min(i, 13) : 0); } }
+      if (it.manual) { if (!it.night) fx.hit(V + 0.6); }
+      else if (it.season) { const SV = it.seasonViz; if (SV.kind === 'bars') { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); } else { const n = Math.min(SV.W + SV.L, 30); for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.0 * (i + 1) / n, i < SV.W ? Math.min(i, 13) : 0); } }
       else if (it.night) { const n = it.nightTeams.length; for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.4 * (i + 1) / n, 4 + i); fx.ding(V + 2.2); }
       else if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
         const len = (parseInt(it.soc.big, 10) || 0) + (typ === 'cut' || typ === 'drought' ? 1 : 0);
@@ -6666,6 +6698,101 @@ function pixelThumb(rawSlides, idx) {
   const slides = pxSlides(rawSlides), c = document.createElement('canvas'); c.width = PX.w; c.height = PX.h;
   pixelDrawSlide(c.getContext('2d'), slides[idx], slides[idx].dur - 0.01, pxStyle(slides));
   return c;
+}
+
+// ── Datos manuales para "Para redes" (p. ej. un jugador que anotó 55) ──
+// Se guardan SOLO en este navegador, por fecha de la jornada; nunca en Firestore ni en los partidos.
+const CURIO_MANUAL = { label: 14, big: 6, head: 50, ctx: 50 };
+const curioManualKey = date => 'curioManual:' + date;
+function curioManualLoad(date) { try { return JSON.parse(localStorage.getItem(curioManualKey(date)) || '[]'); } catch (e) { return []; } }
+function curioManualSave(date, list) { try { localStorage.setItem(curioManualKey(date), JSON.stringify(list)); } catch (e) {} }
+
+// Convierte lo guardado en un dato como los demás. Equipo = uno que jugó esa noche, o "Toda la liga".
+function curioManualItem(m, dayGames) {
+  const liga = !m.team, sh = curioShort;
+  let foot = '';
+  if (!liga) {
+    const g = dayGames.find(x => x.local === m.team || x.away === m.team);
+    if (g) {
+      const home = g.local === m.team, pf = g[home ? 'ptsL' : 'ptsA'], pa = g[home ? 'ptsA' : 'ptsL'];
+      foot = `${home ? 'vs' : '@'} ${sh(home ? g.away : g.local)} · ${pf}-${pa}`;
+    }
+  }
+  return {
+    type: 'manual', manual: true, mid: m.id, label: m.label || 'Dato', main: !!m.main,
+    value: m.big, dot: liga ? CURIO_NIGHT : m.team, teamLabel: liga ? 'Toda la liga' : m.team,
+    night: liga, nightTeams: [], hook: `${m.big} ${m.head}${m.ctx ? '. ' + m.ctx : ''}`,
+    score: m.main ? 99 : 2.6, teams: liga ? [] : [m.team],
+    soc: { big: m.big, head: m.head, ctx: m.ctx || '', foot },
+  };
+}
+// Los principales van primero; los demás, entre los datos de la noche según su puntaje
+function curioManualMerge(base, manual) {
+  const out = [...base];
+  manual.filter(m => !m.main).forEach(m => { const k = out.findIndex(x => x.score < m.score); out.splice(k < 0 ? out.length : k, 0, m); });
+  return [...manual.filter(m => m.main), ...out];
+}
+const curioSocialKey = it => it.manual ? 'm' + it.mid : `${it.type}|${it.dot}|${it.value}|${it.soc ? it.soc.head : ''}`;
+
+// Rehace la lista tras agregar o borrar un dato manual, conservando lo que estaba marcado
+function curioSocialRebuild(selectMid) {
+  const st = curioSocialState; if (!st) return;
+  const keep = new Set([...st.sel].map(i => curioSocialKey(st.J.items[i])));
+  const games = curioSource().filter(g => g.date === st.J.date);
+  const manual = curioManualLoad(st.J.date).map(m => curioManualItem(m, games));
+  const items = [...curioManualMerge(st.baseItems, manual), ...st.extraItems];
+  st.J = { ...st.J, items };
+  st.sel = new Set(items.map((it, i) => (keep.has(curioSocialKey(it)) || (it.manual && it.mid === selectMid) ? i : -1)).filter(i => i >= 0));
+  if (st.video) { URL.revokeObjectURL(st.video.url); st.video = null; }
+  renderCurioSocial();
+}
+
+// Formulario
+function openCurioManualForm() { const st = curioSocialState; if (!st) return; st.form = { team: (st.J.dayTeams || [])[0] || '', label: 'Jugador', big: '', head: '', ctx: '', main: true }; renderCurioSocial(); }
+function closeCurioManualForm() { const st = curioSocialState; if (!st) return; st.form = null; renderCurioSocial(); }
+function curioManualInput(field, el) {
+  const st = curioSocialState; if (!st || !st.form) return;
+  st.form[field] = el.type === 'checkbox' ? el.checked : el.value;
+  const cnt = document.getElementById('soc-cnt-' + field);
+  if (cnt) cnt.textContent = `${el.value.length}/${CURIO_MANUAL[field]}`;
+}
+function saveCurioManual() {
+  const st = curioSocialState; if (!st || !st.form) return;
+  const f = st.form, big = f.big.trim(), head = f.head.trim();
+  if (!big || !head) { toast('Falta el número grande o el titular', 'var(--lose)'); return; }
+  const list = curioManualLoad(st.J.date), id = Date.now();
+  if (f.main) list.forEach(m => { m.main = false; }); // un solo principal
+  list.push({ id, team: f.team, label: f.label.trim() || 'Dato', big, head, ctx: f.ctx.trim(), main: !!f.main });
+  curioManualSave(st.J.date, list);
+  st.form = null;
+  curioSocialRebuild(id);
+}
+function deleteCurioManual(mid, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  const st = curioSocialState; if (!st) return;
+  curioManualSave(st.J.date, curioManualLoad(st.J.date).filter(m => m.id !== mid));
+  curioSocialRebuild();
+}
+function curioManualFormHtml(st) {
+  const f = st.form, opts = (st.J.dayTeams || []).map(t => `<option value="${curioEsc(t)}" ${f.team === t ? 'selected' : ''}>${curioEsc(t)}</option>`).join('');
+  const inp = (field, ph, w) => `<label class="soc-f soc-f--${w}"><span class="soc-sub">${ph} <span id="soc-cnt-${field}">${f[field].length}/${CURIO_MANUAL[field]}</span></span>
+      <input type="text" maxlength="${CURIO_MANUAL[field]}" value="${curioEsc(f[field])}" oninput="curioManualInput('${field}', this)"></label>`;
+  return `<div class="soc-form">
+    <div class="soc-sub">Dato manual · se guarda solo en este navegador para el ${fmtDate(st.J.date)}. Revisa bien el número antes de publicar.</div>
+    <div class="soc-form-grid">
+      <label class="soc-f soc-f--m"><span class="soc-sub">Equipo</span>
+        <select onchange="curioManualInput('team', this)">${opts}<option value="" ${f.team === '' ? 'selected' : ''}>Toda la liga</option></select></label>
+      ${inp('label', 'Etiqueta', 's')}
+      ${inp('big', 'Número grande', 's')}
+      ${inp('head', 'Titular (p. ej. "puntos de Luka Dončić")', 'l')}
+      ${inp('ctx', 'Contexto (opcional)', 'l')}
+    </div>
+    <label class="soc-row-main"><input type="checkbox" ${f.main ? 'checked' : ''} onchange="curioManualInput('main', this)"> Dato principal (abre el video)</label>
+    <div class="soc-actions">
+      <button type="button" class="btn btn-primary" onclick="saveCurioManual()">Agregar</button>
+      <button type="button" class="btn btn-secondary" onclick="closeCurioManualForm()">Cancelar</button>
+    </div>
+  </div>`;
 }
 
 // ── Datos de temporada para "Para redes" ──
