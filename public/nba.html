@@ -1009,9 +1009,10 @@
   .soc-thumb.px{image-rendering:pixelated;}
   .soc-style{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
   .soc-sep{width:1px;height:24px;background:var(--outline-var);margin:0 6px;}
-  .soc-music{height:36px;border:1px solid var(--hairline);border-radius:9999px;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;background:var(--canvas);color:var(--hairline);cursor:pointer;}
+  .soc-music{width:auto;height:36px;border:1px solid var(--hairline);border-radius:9999px;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;background:var(--canvas);color:var(--hairline);cursor:pointer;}
   .soc-del{margin-left:auto;border:none;background:none;cursor:pointer;font-size:14px;color:var(--outline);padding:2px 6px;}
   .soc-del:hover{color:var(--lose);}
+  .soc-del--x{margin-left:0;}
   .soc-form{display:flex;flex-direction:column;gap:12px;border:1px solid var(--hairline);border-radius:16px;padding:16px;}
   .soc-form-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;}
   .soc-f{display:flex;flex-direction:column;gap:4px;}
@@ -5793,7 +5794,7 @@ function renderCurioSocial() {
   const rows = J.items.map((it, i) => it.soc ? `<label class="soc-row">
       <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="toggleCurioSocialItem(${i})">
       <span class="soc-type">${it.manual ? '✍️ ' + curioEsc(it.label) : CURIO_JTYPES[it.type].label}</span>
-      <span class="soc-txt">${curioDot(it.dot)}<b>${curioShort(it.dot)}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.soc.head)}${it.manual ? `<button type="button" class="soc-del" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
+      <span class="soc-txt">${curioDot(it.dot)}<b>${curioShort(it.dot)}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.soc.head)}${it.manual ? `<button type="button" class="soc-del" title="Editar este dato" onclick="editCurioManual(${it.mid}, event)">✏️</button><button type="button" class="soc-del soc-del--x" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
     </label>` : '').join('');
   const vid = st.video;
   ov.innerHTML = `<div class="profile-modal soc-modal">
@@ -6821,12 +6822,22 @@ function saveCurioManual() {
   const st = curioSocialState; if (!st || !st.form) return;
   const f = st.form, big = f.big.trim(), head = f.head.trim();
   if (!big || !head) { toast('Falta el número grande o el titular', 'var(--lose)'); return; }
-  const list = curioManualLoad(st.J.date), id = Date.now();
+  const list = curioManualLoad(st.J.date), id = f.id || Date.now();
   if (f.main) list.forEach(m => { m.main = false; }); // un solo principal
-  list.push({ id, team: f.team, label: f.label.trim() || 'Dato', big, head, ctx: f.ctx.trim(), main: !!f.main });
+  const rec = { id, team: f.team, label: f.label.trim() || 'Dato', big, head, ctx: f.ctx.trim(), main: !!f.main };
+  const k = list.findIndex(m => m.id === id);
+  if (k >= 0) list[k] = rec; else list.push(rec); // editar reemplaza en su lugar; si no, se agrega
   curioManualSave(st.J.date, list);
   st.form = null;
   curioSocialRebuild(id);
+}
+// Editar: abre el mismo formulario con lo guardado
+function editCurioManual(mid, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  const st = curioSocialState; if (!st) return;
+  const m = curioManualLoad(st.J.date).find(x => x.id === mid); if (!m) return;
+  st.form = { id: m.id, team: m.team || '', label: m.label || '', big: m.big || '', head: m.head || '', ctx: m.ctx || '', main: !!m.main };
+  renderCurioSocial();
 }
 function deleteCurioManual(mid, ev) {
   if (ev) { ev.preventDefault(); ev.stopPropagation(); }
@@ -6839,7 +6850,7 @@ function curioManualFormHtml(st) {
   const inp = (field, ph, w) => `<label class="soc-f soc-f--${w}"><span class="soc-sub">${ph} <span id="soc-cnt-${field}">${f[field].length}/${CURIO_MANUAL[field]}</span></span>
       <input type="text" maxlength="${CURIO_MANUAL[field]}" value="${curioEsc(f[field])}" oninput="curioManualInput('${field}', this)"></label>`;
   return `<div class="soc-form">
-    <div class="soc-sub">Dato manual · se guarda solo en este navegador para el ${fmtDate(st.J.date)}. Revisa bien el número antes de publicar.</div>
+    <div class="soc-sub">${f.id ? 'Editar dato manual' : 'Dato manual'} · se guarda solo en este navegador para el ${fmtDate(st.J.date)}. Revisa bien el número antes de publicar.</div>
     <div class="soc-form-grid">
       <label class="soc-f soc-f--m"><span class="soc-sub">Equipo</span>
         <select onchange="curioManualInput('team', this)">${opts}<option value="" ${f.team === '' ? 'selected' : ''}>Toda la liga</option></select></label>
@@ -6850,7 +6861,7 @@ function curioManualFormHtml(st) {
     </div>
     <label class="soc-row-main"><input type="checkbox" ${f.main ? 'checked' : ''} onchange="curioManualInput('main', this)"> Dato principal (abre el video)</label>
     <div class="soc-actions">
-      <button type="button" class="btn btn-primary" onclick="saveCurioManual()">Agregar</button>
+      <button type="button" class="btn btn-primary" onclick="saveCurioManual()">${f.id ? 'Guardar cambios' : 'Agregar'}</button>
       <button type="button" class="btn btn-secondary" onclick="closeCurioManualForm()">Cancelar</button>
     </div>
   </div>`;
