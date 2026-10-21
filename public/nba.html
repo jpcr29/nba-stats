@@ -5711,9 +5711,11 @@ async function curioRenderImages(slides) {
 function curioSocialCaption(J, slides) {
   const picks = slides[0].picks;
   const lines = picks.map((it, i) => `${i + 1}. ${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}`);
-  const tags = ['#NBA', '#NBAenEspañol', '#baloncesto', '#basketball']
-    .concat([...new Set(picks.filter(it => !it.night).map(it => '#' + curioShort(it.dot).replace(/[^\p{L}\p{N}]/gu, '')))]);
-  const intro = J.quiet ? `Noche tranquila en la NBA · ${fmtDate(J.date)} 😴 …pero igual hay datos 🏀` : `Lo más raro de la NBA · ${fmtDate(J.date)} 🏀`;
+  // Máximo 5 hashtags (límite de Instagram): #NBA #NBAenEspañol, luego los equipos en el orden de los datos,
+  // y si faltan, #baloncesto y #basketball
+  const teamTags = [...new Set(picks.filter(it => !it.night).map(it => '#' + curioShort(it.dot).replace(/[^\p{L}\p{N}]/gu, '')))];
+  const tags = ['#NBA', '#NBAenEspañol', ...teamTags, '#baloncesto', '#basketball'].slice(0, 5);
+  const intro = J.quiet ? `Noche tranquila en la NBA · ${fmtDate(J.date)} 😴 …pero igual hay datos 🏀` : `La jornada NBA · ${fmtDate(J.date)} 🏀`;
   return `${intro}\n\n${lines.join('\n')}\n\n¿Cuál no viste venir?\n\n${tags.join(' ')}`;
 }
 
