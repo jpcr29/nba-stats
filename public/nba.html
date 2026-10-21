@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NBA Stats Tracker</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&family=Hanken+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&family=Hanken+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@500;600;700&family=Press+Start+2P&display=swap');
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -993,6 +993,30 @@
   .firma-read{margin-top:12px;font-size:14px;line-height:1.5;}
   .firma-empty{font-size:13px;color:var(--outline);padding:12px 0;}
   @media (max-width:768px){ .firma-row,.firma-axis{grid-template-columns:72px 1fr 52px;gap:10px;} }
+  .cur-feed-titlerow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .soc-modal{max-width:880px;gap:18px;}
+  .soc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .soc-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);line-height:1.5;margin-top:4px;}
+  .soc-modal > *{flex-shrink:0;}
+  .soc-list{display:flex;flex-direction:column;border:1px solid var(--outline-var);border-radius:16px;overflow-y:auto;max-height:272px;}
+  .soc-row{display:grid;grid-template-columns:22px 150px minmax(0,1fr);gap:12px;align-items:center;padding:10px 16px;border-top:1px dashed var(--outline-var);cursor:pointer;font-size:14px;}
+  .soc-row:first-child{border-top:none;}
+  .soc-row input[type=checkbox]{width:18px;height:18px;padding:0;margin:0;-webkit-appearance:auto;appearance:auto;border-radius:4px;accent-color:var(--violet);}
+  .soc-type{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--outline);}
+  .soc-txt{display:flex;gap:8px;align-items:center;min-width:0;}
+  .soc-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;min-height:160px;}
+  .soc-thumb{width:90px;height:160px;border-radius:10px;border:1px solid var(--hairline);flex-shrink:0;}
+  .soc-thumb.px{image-rendering:pixelated;}
+  .soc-style{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .soc-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .soc-actions .btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .soc-status{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);}
+  .soc-result{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;align-items:start;}
+  .soc-result video{width:200px;border-radius:12px;border:1px solid var(--hairline);background:#000;}
+  .soc-result-side{display:flex;flex-direction:column;gap:10px;align-items:flex-start;}
+  .soc-cap{display:flex;flex-direction:column;gap:8px;align-items:flex-start;}
+  .soc-cap textarea{width:100%;height:auto;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;border:1px solid var(--hairline);border-radius:12px;padding:12px;resize:vertical;background:var(--surface);color:var(--hairline);}
+  @media (max-width:768px){ .soc-row{grid-template-columns:22px minmax(0,1fr);} .soc-type{display:none;} .soc-result{grid-template-columns:1fr;} }
   .cur-hero{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .cur-hero-card{border:1px solid var(--hairline);border-radius:2rem;padding:24px 28px;display:flex;flex-direction:column;gap:6px;}
   .cur-hero--good{background:var(--mint);}
@@ -5008,7 +5032,8 @@ function curioJornadaItems(src, after) {
   const preds = curioModelPreds();
   const upsetPs = curioEvaluated(src).map(e => e.pW);
   const out = [];
-  const add = (type, value, dot, teamLabel, hook, score, teams) => out.push({ type, value, dot, teamLabel, hook, score, teams: teams || [dot] });
+  // soc = versión para redes: número grande, titular corto, contexto y pie (rival / marcador)
+  const add = (type, value, dot, teamLabel, hook, score, teams, soc) => out.push({ type, value, dot, teamLabel, hook, score, teams: teams || [dot], soc });
 
   day.forEach(g => {
     const hasQ = curioHasQuarters(g);
@@ -5021,19 +5046,24 @@ function curioJornadaItems(src, after) {
     // Partido: paliza, marcador extremo, prórroga
     if (mg >= CURIO_J.blowout) {
       const r = rankHi(mg, dist.margin);
-      add('blowout', '+' + mg, W, W, `${sh(W)} aplasta a ${sh(Lt)} por ${mg}: ${wp}-${lp}.${rankTxt(r, 'la paliza más grande')}`, mg / 10 + bonus(r), [W, Lt]);
+      add('blowout', '+' + mg, W, W, `${sh(W)} aplasta a ${sh(Lt)} por ${mg}: ${wp}-${lp}.${rankTxt(r, 'la paliza más grande')}`, mg / 10 + bonus(r), [W, Lt],
+        { big: '+' + mg, head: `puntos de paliza a ${sh(Lt)}`, ctx: rankTxt(r, 'la paliza más grande').trim(), foot: score });
     }
     if (enough) {
       const rh = rankHi(total, dist.total), rl = rankLo(total, dist.total);
-      if (rh <= CURIO_J.rankTop) add('total', String(total), W, `${sh(g.local)} vs ${sh(g.away)}`, `${score}: ${total} pts entre los dos.${rankTxt(rh, 'el partido con más puntos')}`, 1 + bonus(rh), [g.local, g.away]);
-      else if (rl <= CURIO_J.rankTop) add('total', String(total), W, `${sh(g.local)} vs ${sh(g.away)}`, `${score}: apenas ${total} pts entre los dos.${rankTxt(rl, 'el partido con menos puntos')}`, 1 + bonus(rl), [g.local, g.away]);
+      if (rh <= CURIO_J.rankTop) add('total', String(total), W, `${sh(g.local)} vs ${sh(g.away)}`, `${score}: ${total} pts entre los dos.${rankTxt(rh, 'el partido con más puntos')}`, 1 + bonus(rh), [g.local, g.away],
+        { big: String(total), head: 'puntos en un solo partido', ctx: rankTxt(rh, 'el partido con más puntos').trim(), foot: score });
+      else if (rl <= CURIO_J.rankTop) add('total', String(total), W, `${sh(g.local)} vs ${sh(g.away)}`, `${score}: apenas ${total} pts entre los dos.${rankTxt(rl, 'el partido con menos puntos')}`, 1 + bonus(rl), [g.local, g.away],
+        { big: String(total), head: 'puntos entre los dos equipos', ctx: rankTxt(rl, 'el partido con menos puntos').trim(), foot: score });
     }
     if ((g.otL || 0) + (g.otA || 0) > 0)
-      add('ot', 'OT', W, `${sh(g.local)} vs ${sh(g.away)}`, `${score} tras prórroga.`, 1, [g.local, g.away]);
+      add('ot', 'OT', W, `${sh(g.local)} vs ${sh(g.away)}`, `${score} tras prórroga.`, 1, [g.local, g.away],
+        { big: 'OT', head: 'hubo que ir a la prórroga', ctx: '', foot: score });
 
     [['L', 'A', g.local, g.away], ['A', 'L', g.away, g.local]].forEach(([me, op, t, o]) => {
       const pf = g['pts' + me] || 0, pa = g['pts' + op] || 0, won = me === winSide, home = me === 'L';
       const bt = B(t), bo = B(o), at = A(t);
+      const vsTxt = `${home ? 'vs' : '@'} ${sh(o)} · ${pf}-${pa}`; // pie de la tarjeta para redes
 
       // Remontada (desde el lado del ganador)
       if (won && hasQ) {
@@ -5041,9 +5071,11 @@ function curioJornadaItems(src, after) {
         const defH = -[1, 2].reduce((a, i) => a + g[`q${i}${me}`] - g[`q${i}${op}`], 0);
         if (def3 >= CURIO_J.comeback) {
           const r = rankHi(def3, dist.cb);
-          add('comeback', '−' + def3, t, t, `${sh(t)} perdía por ${def3} al terminar el 3er cuarto ${ante(home, o)} y ganó ${pf}-${pa}.${rankTxt(r, 'la mayor remontada')}`, def3 / 4 + bonus(r), [t, o]);
+          add('comeback', '−' + def3, t, t, `${sh(t)} perdía por ${def3} al terminar el 3er cuarto ${ante(home, o)} y ganó ${pf}-${pa}.${rankTxt(r, 'la mayor remontada')}`, def3 / 4 + bonus(r), [t, o],
+            { big: '−' + def3, head: 'tras 3 cuartos… y lo ganó', ctx: rankTxt(r, 'la mayor remontada').trim() || `Remontada ${ante(home, o)}.`, foot: vsTxt });
         } else if (defH >= CURIO_J.comebackHalf) {
-          add('comeback', '−' + defH, t, t, `${sh(t)} perdía por ${defH} al descanso ${ante(home, o)} y ganó ${pf}-${pa}.`, defH / 5, [t, o]);
+          add('comeback', '−' + defH, t, t, `${sh(t)} perdía por ${defH} al descanso ${ante(home, o)} y ganó ${pf}-${pa}.`, defH / 5, [t, o],
+            { big: '−' + defH, head: 'al descanso… y lo ganó', ctx: `Remontada ${ante(home, o)}.`, foot: vsTxt });
         }
       }
       // Cuarto explosivo (el mejor cuarto del equipo en el partido)
@@ -5051,14 +5083,16 @@ function curioJornadaItems(src, after) {
         let bi = 1; for (let i = 2; i <= 4; i++) if (g[`q${i}${me}`] > g[`q${bi}${me}`]) bi = i;
         const v = g[`q${bi}${me}`], r = rankHi(v, dist.q);
         if ((enough && r <= 10) || v >= 42)
-          add('quarter', String(v), t, t, `${sh(t)} anotó ${v} pts en el ${CURIO_QNAMES[bi - 1]} ${ante(home, o)}.${rankTxt(r, 'el cuarto más alto')}`, 1 + (v - 36) / 4 + bonus(r) * 1.2);
+          add('quarter', String(v), t, t, `${sh(t)} anotó ${v} pts en el ${CURIO_QNAMES[bi - 1]} ${ante(home, o)}.${rankTxt(r, 'el cuarto más alto')}`, 1 + (v - 36) / 4 + bonus(r) * 1.2, null,
+            { big: String(v), head: `puntos en el ${CURIO_QNAMES[bi - 1]}`, ctx: rankTxt(r, 'el cuarto más alto').trim(), foot: vsTxt });
       }
       // Banca encendida
       const bp = g['bpts' + me];
       if (Number.isFinite(bp) && bp > 0) {
         const r = rankHi(bp, dist.bench);
         if ((enough && r <= CURIO_J.rankTop) || bp >= 65)
-          add('bench', String(bp), t, t, `La banca de ${sh(t)} metió ${bp} pts ${ante(home, o)}, el ${Math.round(bp / pf * 100)}% de sus puntos.${rankTxt(r, 'la banca con más puntos')}`, 1.5 + bonus(r));
+          add('bench', String(bp), t, t, `La banca de ${sh(t)} metió ${bp} pts ${ante(home, o)}, el ${Math.round(bp / pf * 100)}% de sus puntos.${rankTxt(r, 'la banca con más puntos')}`, 1.5 + bonus(r), null,
+            { big: String(bp), head: 'puntos desde la banca', ctx: `El ${Math.round(bp / pf * 100)}% de sus puntos.${rankTxt(r, 'la banca con más puntos')}`, foot: vsTxt });
       }
       // Sorpresa: según el modelo (si el partido ya sale del calentamiento); si no, por récord
       const pL = preds.get(curioGameKey(g));
@@ -5066,18 +5100,22 @@ function curioJornadaItems(src, after) {
         const pW = me === 'L' ? pL : 1 - pL;
         if (pW <= CURIO_UPSET) {
           const r = 1 + upsetPs.filter(x => x < pW).length;
-          add('upset', curioPct(pW), t, t, `${sh(t)} vence ${pf}-${pa} a ${sh(o)} (${home ? 'en casa' : 'de visita'}): el modelo le daba un ${curioPct(pW)}.${rankTxt(r, 'la mayor sorpresa')}`, (0.5 - pW) * 10 + bonus(r), [t, o]);
+          add('upset', curioPct(pW), t, t, `${sh(t)} vence ${pf}-${pa} a ${sh(o)} (${home ? 'en casa' : 'de visita'}): el modelo le daba un ${curioPct(pW)}.${rankTxt(r, 'la mayor sorpresa')}`, (0.5 - pW) * 10 + bonus(r), [t, o],
+            { big: curioPct(pW), head: 'le daba el modelo… y ganó', ctx: `Le ganó a ${sh(o)}.${rankTxt(r, 'la mayor sorpresa')}`, foot: vsTxt });
         }
       } else if (won && bt && bo && bt.gp >= CURIO_J.upsetMinGp && bo.gp >= CURIO_J.upsetMinGp && bo.pct - bt.pct >= CURIO_J.upsetGap)
-        add('upset', `${bt.w}-${bt.l}`, t, t, `${sh(t)} (${bt.w}-${bt.l}) le gana ${pf}-${pa} a ${sh(o)} (${bo.w}-${bo.l}).`, (bo.pct - bt.pct) * 6, [t, o]);
+        add('upset', `${bt.w}-${bt.l}`, t, t, `${sh(t)} (${bt.w}-${bt.l}) le gana ${pf}-${pa} a ${sh(o)} (${bo.w}-${bo.l}).`, (bo.pct - bt.pct) * 6, [t, o],
+          { big: `${bt.w}-${bt.l}`, head: `y le ganó al ${bo.w}-${bo.l}`, ctx: `Le ganó a ${sh(o)}.`, foot: vsTxt });
 
       // Rachas: cortadas, sequías que terminan, hitos
       if (bt && bt.streak.won === true && bt.streak.len >= CURIO_J.streak && !won) {
         const lg = bt.streak.len >= leagueBest.W ? ' Era la racha más larga de la liga.' : '';
-        add('cut', 'V' + bt.streak.len, t, t, `${sh(t)} pierde ${pf}-${pa} ${ante(home, o)} y se le corta una racha de ${bt.streak.len} victorias.${lg}`, bt.streak.len / 2 + 1 + (lg ? 1 : 0), [t, o]);
+        add('cut', 'V' + bt.streak.len, t, t, `${sh(t)} pierde ${pf}-${pa} ${ante(home, o)} y se le corta una racha de ${bt.streak.len} victorias.${lg}`, bt.streak.len / 2 + 1 + (lg ? 1 : 0), [t, o],
+          { big: String(bt.streak.len), head: 'victorias seguidas… y se acabó', ctx: lg.trim() || `Cayó ${ante(home, o)}.`, foot: vsTxt });
       }
       if (bt && bt.streak.won === false && bt.streak.len >= 5 && won)
-        add('drought', 'D' + bt.streak.len, t, t, `${sh(t)} gana ${pf}-${pa} ${ante(home, o)} y corta ${bt.streak.len} derrotas seguidas.`, bt.streak.len / 2.5 + 0.5);
+        add('drought', 'D' + bt.streak.len, t, t, `${sh(t)} gana ${pf}-${pa} ${ante(home, o)} y corta ${bt.streak.len} derrotas seguidas.`, bt.streak.len / 2.5 + 0.5, null,
+          { big: String(bt.streak.len), head: 'derrotas seguidas… y por fin ganó', ctx: `Ganó ${ante(home, o)}.`, foot: vsTxt });
       if (at && at.streak.len >= CURIO_J.streak && at.streak.won === won) {
         const len = at.streak.len, k = won ? 'W' : 'L', prevBest = bt ? (won ? bt.bestW : bt.bestL) : 0;
         const word = won ? 'victorias' : 'derrotas', mine = won ? 'su racha más larga del año' : 'su peor racha del año';
@@ -5088,7 +5126,8 @@ function curioJornadaItems(src, after) {
         if (ctx || len % 5 === 0)
           add(won ? 'streakW' : 'streakL', (won ? 'V' : 'D') + len, t, t,
             `Con ${won ? 'el triunfo' : 'la derrota'} ${pf}-${pa} ${ante(home, o)}, ${sh(t)} llega a ${len} ${word} seguidas.${ctx}`,
-            len / 2.5 + (ctx.includes('liga') ? 1.5 : ctx ? 0.7 : 0));
+            len / 2.5 + (ctx.includes('liga') ? 1.5 : ctx ? 0.7 : 0), null,
+            { big: String(len), head: `${word} seguidas`, ctx: ctx.trim(), foot: vsTxt });
       }
 
       // Marcas propias del año (con algo de temporada encima)
@@ -5097,23 +5136,29 @@ function curioJornadaItems(src, after) {
         const wins = s.filter(x => x.won), losses = s.filter(x => !x.won);
         if (pf > maxPf) {
           const lg = enough && rankHi(pf, dist.pts) === 1 ? ' Nadie había anotado tanto esta temporada.' : '';
-          add('mark', String(pf), t, t, `${sh(t)} anotó ${pf} ${ante(home, o)}: su mayor anotación de la temporada (antes, ${maxPf}).${lg}`, 1.2 + (lg ? 1.5 : 0));
+          add('mark', String(pf), t, t, `${sh(t)} anotó ${pf} ${ante(home, o)}: su mayor anotación de la temporada (antes, ${maxPf}).${lg}`, 1.2 + (lg ? 1.5 : 0), null,
+            { big: String(pf), head: 'puntos: su récord del año', ctx: `Antes, ${maxPf}.${lg}`, foot: vsTxt });
         } else if (pf < minPf) {
-          add('mark', String(pf), t, t, `${sh(t)} se quedó en ${pf} ${ante(home, o)}: su anotación más baja de la temporada (antes, ${minPf}).`, 1.1);
+          add('mark', String(pf), t, t, `${sh(t)} se quedó en ${pf} ${ante(home, o)}: su anotación más baja de la temporada (antes, ${minPf}).`, 1.1, null,
+            { big: String(pf), head: 'puntos: su peor marca del año', ctx: `Antes, ${minPf}.`, foot: vsTxt });
         }
         if (!won && losses.length && pf - pa < Math.min(...losses.map(x => x.diff)))
-          add('mark', '−' + (pa - pf), t, t, `${sh(t)} cae por ${pa - pf} ${ante(home, o)}: su peor derrota del año.`, 1.2, [t, o]);
+          add('mark', '−' + (pa - pf), t, t, `${sh(t)} cae por ${pa - pf} ${ante(home, o)}: su peor derrota del año.`, 1.2, [t, o],
+            { big: '−' + (pa - pf), head: 'su peor derrota del año', ctx: '', foot: vsTxt });
         if (won && mg < CURIO_J.blowout && wins.length && pf - pa > Math.max(...wins.map(x => x.diff)))
-          add('mark', '+' + (pf - pa), t, t, `${sh(t)} gana por ${pf - pa} ${ante(home, o)}: su victoria más amplia del año.`, 1);
+          add('mark', '+' + (pf - pa), t, t, `${sh(t)} gana por ${pf - pa} ${ante(home, o)}: su victoria más amplia del año.`, 1, null,
+            { big: '+' + (pf - pa), head: 'su victoria más amplia del año', ctx: '', foot: vsTxt });
       }
       // Primeras veces
       if (bt && bt.gp >= CURIO_J.firstGp) {
         const side = bt.seq.filter(x => x.home === home);
         const where = home ? 'en casa' : 'de visitante';
         if (side.length >= CURIO_J.firstMinSide && won && side.every(x => !x.won))
-          add('first', '1ª', t, t, `${sh(t)} gana ${pf}-${pa} ante ${sh(o)}: su primera victoria ${where} de la temporada (venía 0-${side.length}).`, 1.6, [t, o]);
+          add('first', '1ª', t, t, `${sh(t)} gana ${pf}-${pa} ante ${sh(o)}: su primera victoria ${where} de la temporada (venía 0-${side.length}).`, 1.6, [t, o],
+            { big: '1ª', head: `victoria ${where} del año`, ctx: `Venía 0-${side.length}.`, foot: vsTxt });
         if (side.length >= CURIO_J.firstMinSide && !won && side.every(x => x.won))
-          add('first', '1ª', t, t, `${sh(t)} cae ${pf}-${pa} ante ${sh(o)}: su primera derrota ${where} de la temporada (venía ${side.length}-0).`, 1.6, [t, o]);
+          add('first', '1ª', t, t, `${sh(t)} cae ${pf}-${pa} ante ${sh(o)}: su primera derrota ${where} de la temporada (venía ${side.length}-0).`, 1.6, [t, o],
+            { big: '1ª', head: `derrota ${where} del año`, ctx: `Venía ${side.length}-0.`, foot: vsTxt });
       }
     });
   });
@@ -5150,7 +5195,10 @@ function renderCurioFeed() {
   const thin = J.nPrev < CURIO_J.rankMinSample
     ? `<div class="cur-feed-note">Todavía hay pocos partidos en la base para comparar contra la temporada: los "Top de la temporada" y las marcas del año aparecen a medida que se acumulan.</div>` : '';
   el.innerHTML = `<div class="cur-feed-head">
-      <div class="cur-block-title">La jornada · ${fmtDate(J.date)}</div>
+      <div class="cur-feed-titlerow">
+        <div class="cur-block-title">La jornada · ${fmtDate(J.date)}</div>
+        ${J.items.some(it => it.soc) ? '<button type="button" class="cur-demo-btn" onclick="openCurioSocial()">📲 Para redes</button>' : ''}
+      </div>
       <div class="cur-block-note">Lo raro de los ${J.nGames} partido${J.nGames === 1 ? '' : 's'} del último día registrado, comparado con la temporada hasta ese día. Lo de toda la temporada está en Explorar.</div>
     </div>
     ${J.items.length ? `<div class="cur-feed">${cards}</div>${more}`
@@ -5312,6 +5360,1059 @@ function renderCurioSorpresas() {
     `Toca una columna para ordenar. "Vs modelo" compara las victorias reales con las que el modelo esperaba (la suma de sus probabilidades): + rinde por encima de lo previsto. Los equipos con menos de ${CURIO_MIN_GP} partidos evaluados aparecen atenuados.`,
     curioSortTable('sorpresas', cols, rows, s => s.n < CURIO_MIN_GP, `Muestra corta (menos de ${CURIO_MIN_GP} partidos evaluados)`));
   el.innerHTML = html;
+}
+
+// ── Para redes: video 9:16 e imágenes de La jornada ──
+// Todo se dibuja en un <canvas> de 1080×1920 y se codifica en el navegador (WebCodecs +
+// mp4-muxer; MediaRecorder de respaldo). No hay servidor ni datos nuevos: sale de La jornada.
+const CURIO_SOCIAL = {
+  W: 1080, H: 1920, FPS: 30,
+  // Zonas que tapa la interfaz de TikTok / Reels: arriba, abajo y la columna de botones a la derecha
+  SAFE: { l: 90, r: 930, t: 250, b: 1460 },
+  DUR: { cover: 2.4, card: 3.8, outro: 2.4 }, // segundos
+  AUTO_MIN: 3, AUTO_MAX: 5, AUTO_SCORE: 2.5,  // 3 siempre; 4º y 5º solo si su puntaje llega a AUTO_SCORE
+  HANDLE: '',                                  // tu usuario (p. ej. '@nba.raro'); vacío = no se muestra
+  MUXER_URL: 'https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js',
+};
+let curioSocialState = null; // { J, sel:Set(idx), video:{blob,url,name} }
+
+// ─ Colores: el del equipo, asegurando contraste legible ─
+function curioLum(hex) {
+  const c = hex.replace('#', '');
+  const v = [0, 2, 4].map(i => parseInt(c.substr(i, 2), 16) / 255)
+    .map(x => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4));
+  return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+}
+function curioContrast(a, b) { const A = curioLum(a), B = curioLum(b); return (Math.max(A, B) + 0.05) / (Math.min(A, B) + 0.05); }
+function curioSocialColors(team) {
+  const tc = TEAM_TEXT_COLORS[team] || { banner: '#131313', bannerText: '#3cffd0' };
+  const bg = tc.banner;
+  const text = curioContrast('#ffffff', bg) >= curioContrast('#131313', bg) ? '#ffffff' : '#131313';
+  const accent = curioContrast(tc.bannerText, bg) >= 3 ? tc.bannerText : text;
+  return { bg, text, accent };
+}
+
+// ─ Selección automática: los 3 más llamativos, y el 4º / 5º si destacan ─
+// Variedad: en lo automático, un hallazgo por equipo y por tipo (a mano se puede marcar cualquiera)
+function curioSocialAuto(items) {
+  const sel = new Set(), teams = new Set(), types = new Set();
+  const fits = it => it.score >= CURIO_SOCIAL.AUTO_SCORE || sel.size < CURIO_SOCIAL.AUTO_MIN;
+  items.forEach((it, i) => {
+    if (!it.soc || sel.size >= CURIO_SOCIAL.AUTO_MAX || !fits(it)) return;
+    const kind = it.type.replace(/[WL]$/, '');
+    if (it.teams.some(t => teams.has(t)) || types.has(kind)) return;
+    sel.add(i); it.teams.forEach(t => teams.add(t)); types.add(kind);
+  });
+  // Si la variedad dejó menos de AUTO_MIN, se completa con los siguientes más llamativos
+  items.forEach((it, i) => { if (it.soc && sel.size < CURIO_SOCIAL.AUTO_MIN) sel.add(i); });
+  // En el orden de la jornada (más llamativo primero)
+  return new Set([...sel].sort((a, b) => a - b));
+}
+
+// Diapositivas del video: portada, un hallazgo por tarjeta, cierre
+function curioSocialSlides(J, sel) {
+  const picks = J.items.filter((it, i) => sel.has(i) && it.soc);
+  const date = fmtDate(J.date);
+  const slides = [{ kind: 'cover', date, picks, dur: CURIO_SOCIAL.DUR.cover }];
+  picks.forEach((it, i) => slides.push({ kind: 'card', date, it, n: i + 1, of: picks.length, dur: CURIO_SOCIAL.DUR.card }));
+  slides.push({ kind: 'outro', n: picks.length, dur: CURIO_SOCIAL.DUR.outro });
+  return slides;
+}
+
+// ─ Dibujo ─
+const curioEase = x => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
+function curioFont(w, px, fam) {
+  const f = fam === 'mono' ? "'JetBrains Mono', monospace" : fam === 'body' ? "'Hanken Grotesk', sans-serif" : "'Space Grotesk', sans-serif";
+  return `${w} ${px}px ${f}`;
+}
+// Parte un texto en líneas que caben en maxW (máx. maxLines; la última con "…" si no cabe)
+function curioWrap(ctx, text, maxW, maxLines = 4) {
+  const words = String(text).split(/\s+/).filter(Boolean), lines = [];
+  let cur = '';
+  for (const w of words) {
+    const t = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) {
+    const keep = lines.slice(0, maxLines);
+    let last = keep[maxLines - 1];
+    while (last.length > 1 && ctx.measureText(last + '…').width > maxW) last = last.slice(0, -1);
+    keep[maxLines - 1] = last.replace(/[\s,.;:]+$/, '') + '…';
+    return keep;
+  }
+  return lines;
+}
+// Dibuja un bloque de texto con entrada animada (sube y aparece); devuelve la y siguiente
+function curioText(ctx, lines, x, y, lh, color, e) {
+  ctx.save(); ctx.globalAlpha = e; ctx.fillStyle = color;
+  lines.forEach((l, i) => ctx.fillText(l, x, y + i * lh + (1 - e) * 50));
+  ctx.restore();
+  return y + lines.length * lh;
+}
+// Fija el tamaño de letra más grande que entra en maxW
+function curioFit(ctx, text, maxW, w, px, fam, min = 80) {
+  let s = px;
+  ctx.font = curioFont(w, s, fam);
+  while (s > min && ctx.measureText(text).width > maxW) { s -= 8; ctx.font = curioFont(w, s, fam); }
+  return s;
+}
+// Número que "cuenta" hasta su valor: '+41' → '+0'…'+41'; '15' → '0'…'15'; texto sin número queda igual
+function curioCount(big, p) {
+  const m = String(big).match(/^([+−-]?)(\d+)(.*)$/);
+  if (!m || p >= 1) return big;
+  return m[1] + Math.round(+m[2] * curioEase(p)) + m[3];
+}
+
+function curioDrawSlide(ctx, s, t) {
+  const { W, H, SAFE } = CURIO_SOCIAL, cw = SAFE.r - SAFE.l;
+  const at = (start, len = 0.45) => curioEase((t - start) / len);
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  if (s.kind === 'card') {
+    const it = s.it, c = curioSocialColors(it.dot), ty = CURIO_JTYPES[it.type];
+    ctx.fillStyle = c.bg; ctx.fillRect(0, 0, W, H);
+    // Marca de la serie + número de tarjeta (para "comenta el 1, 2 o 3")
+    ctx.font = curioFont(600, 34, 'mono');
+    curioText(ctx, [`LA JORNADA · ${s.date}`], SAFE.l, SAFE.t, 40, c.text, at(0) * 0.85);
+    ctx.textAlign = 'right'; curioText(ctx, [`${s.n}/${s.of}`], SAFE.r, SAFE.t, 40, c.text, at(0) * 0.85); ctx.textAlign = 'left';
+    // Etiqueta
+    const e1 = at(0.05);
+    ctx.font = curioFont(600, 38, 'mono');
+    const lab = ty.label.toUpperCase(), lw = ctx.measureText(lab).width + 56;
+    ctx.save(); ctx.globalAlpha = e1; ctx.strokeStyle = c.accent; ctx.lineWidth = 4;
+    const py = SAFE.t + 70 + (1 - e1) * 50;
+    ctx.beginPath(); ctx.roundRect(SAFE.l, py, lw, 76, 38); ctx.stroke();
+    ctx.fillStyle = c.accent; ctx.fillText(lab, SAFE.l + 28, py + 51); ctx.restore();
+    // Número grande
+    const big = it.soc.big;
+    const bs = curioFit(ctx, big, cw, 700, 460, 'sans');
+    let y = SAFE.t + 200 + bs * 0.76;
+    curioText(ctx, [curioCount(big, (t - 0.1) / 0.8)], SAFE.l - bs * 0.03, y, bs, c.accent, at(0.1));
+    // Titular corto (si necesita 3 líneas, un poco más chico para no chocar con el pie)
+    ctx.font = curioFont(700, 96, 'sans');
+    let head = curioWrap(ctx, it.soc.head, cw, 3), hs = 96;
+    if (head.length > 2) { hs = 82; ctx.font = curioFont(700, hs, 'sans'); head = curioWrap(ctx, it.soc.head, cw, 3); }
+    y = curioText(ctx, head, SAFE.l, y + 130, hs + 8, c.text, at(0.25));
+    // Contexto: solo las líneas que caben antes del equipo y el partido
+    if (it.soc.ctx) {
+      ctx.font = curioFont(500, 54, 'body');
+      const room = Math.floor((SAFE.b - 190 - (y + 44)) / 68) + 1;
+      if (room > 0) curioText(ctx, curioWrap(ctx, it.soc.ctx, cw, Math.min(3, room)), SAFE.l, y + 44, 68, c.text, at(0.38) * 0.9);
+    }
+    // Equipo y partido, abajo
+    ctx.font = curioFont(700, 64, 'sans');
+    curioText(ctx, curioWrap(ctx, it.teamLabel, cw, 1), SAFE.l, SAFE.b - 70, 70, c.accent, at(0.45));
+    ctx.font = curioFont(500, 40, 'mono');
+    curioText(ctx, [it.soc.foot], SAFE.l, SAFE.b, 46, c.text, at(0.5));
+  } else if (s.kind === 'cover') {
+    ctx.fillStyle = '#131313'; ctx.fillRect(0, 0, W, H);
+    const mint = '#3cffd0', top = s.picks[0];
+    ctx.font = curioFont(600, 36, 'mono');
+    curioText(ctx, [`NBA · LA JORNADA · ${s.date}`], SAFE.l, SAFE.t, 40, mint, at(0));
+    ctx.font = curioFont(700, 96, 'sans');
+    let y = curioText(ctx, curioWrap(ctx, 'Lo más raro de la noche', cw, 2), SAFE.l, SAFE.t + 130, 100, '#ffffff', at(0.05));
+    if (top) {
+      // Gancho del primer segundo: el hallazgo más fuerte, con su número grande
+      const bs = curioFit(ctx, top.soc.big, cw, 700, 340, 'sans');
+      y += 50 + bs * 0.76;
+      curioText(ctx, [curioCount(top.soc.big, (t - 0.15) / 0.7)], SAFE.l - bs * 0.03, y, bs, mint, at(0.15));
+      ctx.font = curioFont(700, 76, 'sans');
+      y = curioText(ctx, curioWrap(ctx, top.soc.head, cw, 2), SAFE.l, y + 100, 84, '#ffffff', at(0.25));
+      ctx.font = curioFont(500, 50, 'body');
+      y = curioText(ctx, [curioShort(top.dot)], SAFE.l, y + 26, 56, '#ffffff', at(0.3) * 0.8);
+    }
+    // Y además…
+    const rest = s.picks.slice(1);
+    if (rest.length) {
+      ctx.font = curioFont(600, 34, 'mono');
+      y = curioText(ctx, ['Y ADEMÁS'], SAFE.l, Math.max(y + 90, SAFE.b - rest.length * 66 - 50), 40, mint, at(0.4));
+      ctx.font = curioFont(500, 44, 'body');
+      rest.forEach((it, i) => {
+        const line = curioWrap(ctx, `${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}`, cw - 70, 1);
+        ctx.save(); ctx.globalAlpha = at(0.45 + i * 0.08); ctx.fillStyle = mint; ctx.font = curioFont(700, 44, 'mono');
+        ctx.fillText(String(i + 2), SAFE.l, y + 30 + i * 66); ctx.restore();
+        ctx.font = curioFont(500, 44, 'body');
+        curioText(ctx, line, SAFE.l + 60, y + 30 + i * 66, 66, '#ffffff', at(0.45 + i * 0.08));
+      });
+    }
+  } else {
+    ctx.fillStyle = '#3cffd0'; ctx.fillRect(0, 0, W, H);
+    const ink = '#131313';
+    ctx.font = curioFont(700, 104, 'sans');
+    let y = curioText(ctx, curioWrap(ctx, '¿Cuál no viste venir?', cw, 3), SAFE.l, SAFE.t + 380, 110, ink, at(0));
+    const nums = Array.from({ length: s.n }, (_, i) => i + 1);
+    const cta = nums.length > 1 ? `Comenta el ${nums.slice(0, -1).join(', ')} o el ${nums[nums.length - 1]}.` : 'Comenta qué te pareció.';
+    ctx.font = curioFont(500, 54, 'body');
+    y = curioText(ctx, curioWrap(ctx, cta, cw, 2), SAFE.l, y + 50, 66, ink, at(0.15));
+    ctx.font = curioFont(500, 44, 'body');
+    y = curioText(ctx, curioWrap(ctx, 'Lo raro de cada noche de NBA.', cw, 2), SAFE.l, y + 40, 56, ink, at(0.25));
+    if (CURIO_SOCIAL.HANDLE) { ctx.font = curioFont(700, 52, 'mono'); curioText(ctx, [CURIO_SOCIAL.HANDLE], SAFE.l, y + 70, 60, ink, at(0.35)); }
+  }
+}
+
+// Dibuja el instante `time` (segundos) del video completo
+function curioDrawAt(ctx, slides, time) {
+  let acc = 0;
+  for (const s of slides) {
+    if (time < acc + s.dur || s === slides[slides.length - 1]) { curioDrawSlide(ctx, s, Math.min(time - acc, s.dur)); return; }
+    acc += s.dur;
+  }
+}
+
+async function curioSocialFonts() {
+  try {
+    await Promise.all([
+      document.fonts.load("700 100px 'Space Grotesk'"), document.fonts.load("600 40px 'JetBrains Mono'"),
+      document.fonts.load("500 40px 'JetBrains Mono'"), document.fonts.load("700 40px 'JetBrains Mono'"),
+      document.fonts.load("500 40px 'Hanken Grotesk'"),
+    ]);
+  } catch (e) { /* si una fuente no carga se usa la de respaldo */ }
+}
+
+function curioLoadMuxer() {
+  if (window.Mp4Muxer) return Promise.resolve(window.Mp4Muxer);
+  return new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = CURIO_SOCIAL.MUXER_URL;
+    sc.onload = () => window.Mp4Muxer ? res(window.Mp4Muxer) : rej(new Error('mp4-muxer no se cargó'));
+    sc.onerror = () => rej(new Error('No se pudo descargar mp4-muxer'));
+    document.head.appendChild(sc);
+  });
+}
+
+// ─ Video: WebCodecs (H.264 si el navegador lo trae; si no VP9/AV1) + mp4-muxer ─
+async function curioRenderVideo(slides, onProgress) {
+  const { W, H, FPS } = CURIO_SOCIAL;
+  await curioSocialFonts();
+  const total = slides.reduce((a, s) => a + s.dur, 0), frames = Math.round(total * FPS);
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  if (window.VideoEncoder) {
+    const opts = [['avc1.640028', 'avc'], ['vp09.00.40.08', 'vp9'], ['av01.0.08M.08', 'av1']];
+    let pick = null;
+    for (const [codec, mux] of opts) {
+      try { if ((await VideoEncoder.isConfigSupported({ codec, width: W, height: H, bitrate: 8e6, framerate: FPS })).supported) { pick = { codec, mux }; break; } } catch (e) {}
+    }
+    if (pick) {
+      const { Muxer, ArrayBufferTarget } = await curioLoadMuxer();
+      const muxer = new Muxer({ target: new ArrayBufferTarget(), video: { codec: pick.mux, width: W, height: H, frameRate: FPS }, fastStart: 'in-memory' });
+      let failed = null;
+      const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: e => { failed = e; } });
+      enc.configure({ codec: pick.codec, width: W, height: H, bitrate: 8e6, framerate: FPS, ...(pick.mux === 'avc' ? { avc: { format: 'avc' } } : {}) });
+      for (let i = 0; i < frames; i++) {
+        if (failed) throw failed;
+        curioDrawAt(ctx, slides, i / FPS);
+        const vf = new VideoFrame(canvas, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+        enc.encode(vf, { keyFrame: i % (FPS * 2) === 0 });
+        vf.close();
+        if (enc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 0));
+        if (i % 10 === 0 && onProgress) onProgress(i / frames);
+      }
+      await enc.flush();
+      if (failed) throw failed;
+      muxer.finalize();
+      return { blob: new Blob([muxer.target.buffer], { type: 'video/mp4' }), ext: 'mp4', codec: pick.mux };
+    }
+  }
+  // Respaldo: grabar el canvas en tiempo real con MediaRecorder
+  const type = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  if (!type) throw new Error('Este navegador no puede generar video');
+  const stream = canvas.captureStream(FPS), rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 8e6 }), parts = [];
+  rec.ondataavailable = e => e.data.size && parts.push(e.data);
+  const done = new Promise(r => { rec.onstop = r; });
+  rec.start();
+  const t0 = performance.now();
+  await new Promise(r => {
+    const tick = () => {
+      const s = (performance.now() - t0) / 1000;
+      curioDrawAt(ctx, slides, Math.min(s, total));
+      if (onProgress) onProgress(s / total);
+      if (s < total) requestAnimationFrame(tick); else r();
+    };
+    tick();
+  });
+  rec.stop(); await done;
+  return { blob: new Blob(parts, { type: type.split(';')[0] }), ext: type.includes('mp4') ? 'mp4' : 'webm', codec: 'recorder' };
+}
+
+// ─ Imágenes JPG: el cuadro final de cada diapositiva ─
+async function curioRenderImages(slides) {
+  await curioSocialFonts();
+  const { W, H } = CURIO_SOCIAL, out = [];
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  for (const s of slides) {
+    curioDrawSlide(ctx, s, s.dur);
+    out.push(await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92)));
+  }
+  return out;
+}
+
+// ─ Texto de la publicación ─
+function curioSocialCaption(J, slides) {
+  const picks = slides[0].picks;
+  const lines = picks.map((it, i) => `${i + 1}. ${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}`);
+  const tags = ['#NBA', '#NBAenEspañol', '#baloncesto', '#basketball']
+    .concat([...new Set(picks.map(it => '#' + curioShort(it.dot).replace(/[^\p{L}\p{N}]/gu, '')))]);
+  return `Lo más raro de la NBA · ${fmtDate(J.date)} 🏀\n\n${lines.join('\n')}\n\n¿Cuál no viste venir?\n\n${tags.join(' ')}`;
+}
+
+// ─ Interfaz ─
+function openCurioSocial() {
+  const J = curioJornadaItems(curioSource(), curioData);
+  if (!J || !J.items.length) { toast('No hay hallazgos en esta jornada', 'var(--lose)'); return; }
+  curioSocialState = { J, sel: curioSocialAuto(J.items), video: null, style: curioSocialStyleGet() };
+  let ov = document.getElementById('cur-social');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'cur-social'; ov.className = 'profile-overlay';
+    ov.addEventListener('click', e => { if (e.target === ov) closeCurioSocial(); });
+    document.body.appendChild(ov);
+  }
+  ov.style.display = 'flex';
+  renderCurioSocial();
+}
+
+// Estilo del video: 'pixel' (por defecto) o 'normal'. Se recuerda en este navegador.
+function curioSocialStyleGet() { try { return localStorage.getItem('curioSocialStyle') === 'normal' ? 'normal' : 'pixel'; } catch (e) { return 'pixel'; } }
+function setCurioSocialStyle(v) {
+  const st = curioSocialState; if (!st || st.style === v) return;
+  st.style = v; try { localStorage.setItem('curioSocialStyle', v); } catch (e) {}
+  if (st.video) { URL.revokeObjectURL(st.video.url); st.video = null; }
+  renderCurioSocial();
+}
+const curioSocialSecs = (st, slides) => (st.style === 'pixel' ? pxSlides(slides) : slides).reduce((a, s) => a + s.dur, 0);
+
+function closeCurioSocial() {
+  const ov = document.getElementById('cur-social');
+  if (ov) ov.style.display = 'none';
+  if (curioSocialState && curioSocialState.video) URL.revokeObjectURL(curioSocialState.video.url);
+  curioSocialState = null;
+}
+
+function toggleCurioSocialItem(i) {
+  const st = curioSocialState; if (!st) return;
+  if (st.sel.has(i)) st.sel.delete(i); else st.sel.add(i);
+  if (st.video) { URL.revokeObjectURL(st.video.url); st.video = null; }
+  renderCurioSocial();
+}
+
+function renderCurioSocial() {
+  const st = curioSocialState, ov = document.getElementById('cur-social');
+  if (!st || !ov) return;
+  const { J } = st;
+  const slides = curioSocialSlides(J, st.sel);
+  const nPick = slides.length - 2, secs = curioSocialSecs(st, slides);
+  const rows = J.items.map((it, i) => it.soc ? `<label class="soc-row">
+      <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="toggleCurioSocialItem(${i})">
+      <span class="soc-type">${CURIO_JTYPES[it.type].label}</span>
+      <span class="soc-txt">${curioDot(it.dot)}<b>${curioShort(it.dot)}:</b> ${it.soc.big} ${it.soc.head}</span>
+    </label>` : '').join('');
+  const vid = st.video;
+  ov.innerHTML = `<div class="profile-modal soc-modal">
+    <div class="soc-head">
+      <div><div class="profile-modal-title">Para redes</div>
+        <div class="soc-sub">La jornada · ${fmtDate(J.date)} · se marcan solos los ${CURIO_SOCIAL.AUTO_MIN} a ${CURIO_SOCIAL.AUTO_MAX} más llamativos</div></div>
+      <button type="button" class="del-btn" onclick="closeCurioSocial()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="soc-style">
+      <button type="button" class="cur-preset ${st.style === 'pixel' ? 'active' : ''}" onclick="setCurioSocialStyle('pixel')">👾 Pixel</button>
+      <button type="button" class="cur-preset ${st.style === 'normal' ? 'active' : ''}" onclick="setCurioSocialStyle('normal')">Normal</button>
+    </div>
+    <div class="soc-list">${rows}</div>
+    <div class="soc-strip" id="soc-strip"></div>
+    <div class="soc-actions">
+      <button type="button" class="btn btn-primary" onclick="curioSocialMakeVideo()" ${nPick ? '' : 'disabled'}>🎬 Generar video (${Math.round(secs)} s)</button>
+      <button type="button" class="btn btn-secondary" onclick="curioSocialImages()" ${nPick ? '' : 'disabled'}>🖼️ Bajar imágenes</button>
+      <span class="soc-status" id="soc-status">${nPick ? `${nPick} hallazgo${nPick === 1 ? '' : 's'} + portada y cierre` : 'Marca al menos un hallazgo'}</span>
+    </div>
+    ${vid ? `<div class="soc-result">
+      <video src="${vid.url}" controls playsinline></video>
+      <div class="soc-result-side">
+        <div class="soc-sub">${vid.name} · ${(vid.blob.size / 1048576).toFixed(1)} MB${vid.codec === 'avc' ? '' : vid.codec === 'recorder' ? '' : ` · códec ${vid.codec.toUpperCase()} (tu navegador no trae H.264: Instagram podría rechazarlo)`}${st.style === 'pixel' && !vid.audio ? ' · sin audio (tu navegador no pudo codificarlo)' : ''}</div>
+        ${curioCanShare(vid) ? `<button type="button" class="btn btn-primary" onclick="curioSocialShare()">📲 Compartir</button>` : ''}
+        <button type="button" class="btn btn-secondary" onclick="curioSocialDownload()">⬇️ Descargar</button>
+      </div>
+    </div>` : ''}
+    <div class="soc-cap">
+      <div class="soc-sub">Texto para la publicación</div>
+      <textarea id="soc-caption" readonly rows="7">${curioEsc(curioSocialCaption(J, slides))}</textarea>
+      <button type="button" class="btn btn-secondary" onclick="curioSocialCopy()">Copiar texto</button>
+    </div>
+  </div>`;
+  curioSocialThumbs(slides);
+}
+
+// Miniaturas del cuadro final de cada diapositiva
+async function curioSocialThumbs(slides) {
+  const strip = document.getElementById('soc-strip'); if (!strip) return;
+  if (curioSocialState && curioSocialState.style === 'pixel') {
+    try { await document.fonts.load("8px 'Press Start 2P'"); } catch (e) {}
+    strip.innerHTML = '';
+    slides.forEach((s, i) => { const c = pixelThumb(slides, i); c.className = 'soc-thumb px'; strip.appendChild(c); });
+    return;
+  }
+  await curioSocialFonts();
+  const { W, H } = CURIO_SOCIAL, big = document.createElement('canvas');
+  big.width = W; big.height = H;
+  const bctx = big.getContext('2d');
+  strip.innerHTML = '';
+  slides.forEach(s => {
+    curioDrawSlide(bctx, s, s.dur);
+    const c = document.createElement('canvas'); c.width = 180; c.height = 320; c.className = 'soc-thumb';
+    c.getContext('2d').drawImage(big, 0, 0, 180, 320);
+    strip.appendChild(c);
+  });
+}
+
+function curioSocialStatus(t) { const el = document.getElementById('soc-status'); if (el) el.textContent = t; }
+
+async function curioSocialMakeVideo() {
+  const st = curioSocialState; if (!st) return;
+  const slides = curioSocialSlides(st.J, st.sel);
+  try {
+    curioSocialStatus('Generando video… 0%');
+    const prog = p => curioSocialStatus(`Generando video… ${Math.min(99, Math.round(p * 100))}%`);
+    const r = st.style === 'pixel' ? await pixelRenderVideo(slides, prog) : await curioRenderVideo(slides, prog);
+    if (st.video) URL.revokeObjectURL(st.video.url);
+    st.video = { ...r, url: URL.createObjectURL(r.blob), name: `nba-jornada-${st.J.date}.${r.ext}` };
+    renderCurioSocial();
+  } catch (e) {
+    console.error('[para redes] Error generando el video:', e);
+    curioSocialStatus('No se pudo generar el video: ' + (e && e.message ? e.message : e));
+  }
+}
+
+function curioCanShare(v) {
+  try { return !!(navigator.canShare && navigator.canShare({ files: [new File([v.blob], v.name, { type: v.blob.type })] })); } catch (e) { return false; }
+}
+async function curioSocialShare() {
+  const v = curioSocialState && curioSocialState.video; if (!v) return;
+  try { await navigator.share({ files: [new File([v.blob], v.name, { type: v.blob.type })], text: document.getElementById('soc-caption').value }); }
+  catch (e) { if (e && e.name !== 'AbortError') curioSocialStatus('No se pudo compartir; usa Descargar.'); }
+}
+function curioDownloadBlob(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function curioSocialDownload() { const v = curioSocialState && curioSocialState.video; if (v) curioDownloadBlob(v.blob, v.name); }
+
+async function curioSocialImages() {
+  const st = curioSocialState; if (!st) return;
+  const slides = curioSocialSlides(st.J, st.sel);
+  curioSocialStatus('Preparando imágenes…');
+  const blobs = st.style === 'pixel' ? await pixelRenderImages(slides) : await curioRenderImages(slides);
+  const files = blobs.map((b, i) => new File([b], `nba-jornada-${st.J.date}-${String(i + 1).padStart(2, '0')}.jpg`, { type: 'image/jpeg' }));
+  try {
+    if (navigator.canShare && navigator.canShare({ files }) && matchMedia('(pointer: coarse)').matches) { await navigator.share({ files }); curioSocialStatus(`${files.length} imágenes listas`); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  for (const f of files) { curioDownloadBlob(f, f.name); await new Promise(r => setTimeout(r, 350)); }
+  curioSocialStatus(`${files.length} imágenes descargadas`);
+}
+
+async function curioSocialCopy() {
+  const ta = document.getElementById('soc-caption'); if (!ta) return;
+  try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); }
+  toast('Texto copiado ✓');
+}
+
+// ── Para redes · estilo PIXEL ART ──
+// Se dibuja en 180×320 y se amplía ×6 sin suavizado (1080×1920). Usa las mismas diapositivas que el
+// estilo normal (curioSocialSlides) con duraciones propias, música y efectos 8-bit sintetizados.
+const PX = { w: 180, h: 320, s: 6, S: { l: 15, r: 155, t: 42, b: 243 } };
+const PXC = { ink: '#131313', white: '#ffffff', mint: '#3cffd0', red: '#e5383b', orange: '#f28c28', gray: '#6b6b6b', dark: '#0b0b0b' };
+const pf = (sz) => `${sz}px 'Press Start 2P'`;
+const pclean = s => String(s).replace(/−/g, '-');
+function prect(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+function ptext(c, s, x, y, sz, col, align = 'left') {
+  c.font = pf(sz); c.fillStyle = col; c.textBaseline = 'top'; c.textAlign = align;
+  c.fillText(pclean(s), Math.round(x), Math.round(y));
+}
+function pwrap(c, s, maxW, sz, maxLines = 3) {
+  c.font = pf(sz);
+  const words = pclean(s).split(/\s+/), out = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (c.measureText(t).width <= maxW || !cur) cur = t; else { out.push(cur); cur = w; } }
+  if (cur) out.push(cur);
+  return out.slice(0, maxLines);
+}
+// Marco de "pantalla de arcade": borde de 1 px + sombra
+function pbox(c, x, y, w, h, col, shadow = PXC.ink) {
+  prect(c, x + 1, y + 1, w, h, shadow); prect(c, x, y, w, h, col);
+}
+function pframe(c, x, y, w, h, col) { prect(c, x, y, w, 1, col); prect(c, x, y + h - 1, w, 1, col); prect(c, x, y, 1, h, col); prect(c, x + w - 1, y, 1, h, col); }
+const pstep = (t, fps = 12) => Math.floor(t * fps) / fps; // movimiento "a saltos", como en un juego de 8 bits
+const PXV = 1.4; // segundo en que arranca el gráfico de cada dato
+const PXDUR = { cover: 3.75, card: 5, outro: 3.75 }; // a 96 BPM (tiempo = 0,625 s): todo cae en un tiempo de la música
+const PXBEAT = 60 / 96;
+const pxSlides = slides => slides.map(s => ({ ...s, dur: PXDUR[s.kind] || s.dur }));
+const pclamp = x => Math.max(0, Math.min(1, x));
+
+// Balón de 8×8
+const BALL = ['..XXXX..', '.XXOXXX.', 'XXXOXXXX', 'OOOOOOOO', 'XXXOXXXX', 'XXXOXXXX', '.XXOXXX.', '..XXXX..'];
+function pball(c, x, y, k = 1) {
+  // contorno oscuro para que se vea sobre cualquier fondo (también el naranja)
+  BALL.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => prect(c, x + i * k + dx, y + j * k + dy, k, k, PXC.ink)); }));
+  BALL.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') prect(c, x + i * k, y + j * k, k, k, ch === 'X' ? PXC.orange : PXC.ink); })); }
+// Aro con tablero
+function phoop(c, x, y) {
+  prect(c, x, y, 22, 14, PXC.white); pframe(c, x, y, 22, 14, PXC.ink); pframe(c, x + 7, y + 6, 8, 6, PXC.red);
+  prect(c, x + 4, y + 14, 14, 2, PXC.red);
+  for (let i = 0; i < 6; i++) prect(c, x + 5 + i * 2 + (i % 2), y + 16 + (i % 3), 1, 6 - (i % 3), PXC.white);
+}
+
+// Gráficos de datos por tipo de hallazgo (zona y 176..214)
+function pviz(c, it, t, col, R = { x: PX.S.l, y: 190, W: PX.S.r - PX.S.l }) {
+  const y0 = R.y, W = R.W, L = R.x, RR = R.x + R.W, per = Math.floor((W + 2) / 10);
+  const nums = (it.soc.foot.match(/(\d+)-(\d+)/) || []).slice(1).map(Number);
+  const typ = it.type;
+  if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
+    const n = parseInt(it.soc.big, 10) || 0;
+    const blocks = Array.from({ length: n }, () => typ === 'drought' || typ === 'streakL' ? 'L' : 'W');
+    if (typ === 'cut') blocks.push('L'); if (typ === 'drought') blocks.push('W');
+    const shown = Math.floor(pclamp((t - 0.6) / 1.4) * blocks.length + 0.001);
+    blocks.forEach((b, i) => {
+      if (i >= shown) return;
+      const x = L + (i % per) * 10, y = y0 + Math.floor(i / per) * 10;
+      const last = i === blocks.length - 1 && (typ === 'cut' || typ === 'drought');
+      const flash = last && Math.floor(t * 6) % 2 === 0;
+      pbox(c, x, y, 8, 8, b === 'W' ? PXC.mint : PXC.red);
+      if (flash) pframe(c, x - 1, y - 1, 10, 10, PXC.white);
+    });
+    if ((typ === 'streakW' || typ === 'streakL') && shown >= blocks.length && Math.floor(t * 3) % 2 === 0) {
+      const i = blocks.length, x = L + (i % per) * 10, y = y0 + Math.floor(i / per) * 10;
+      pframe(c, x, y, 8, 8, typ === 'streakW' ? PXC.mint : PXC.red); ptext(c, '?', x + 1, y, 8, col.text);
+    }
+    return;
+  }
+  if ((typ === 'blowout' || typ === 'total' || typ === 'mark' || typ === 'first' || typ === 'ot') && nums.length === 2) {
+    const [a, b] = nums, mx = Math.max(a, b), g = pclamp((t - 0.6) / 1.0);
+    [[a, 0], [b, 16]].forEach(([v, dy]) => {
+      const w = Math.max(2, Math.round((W - 30) * (v / mx) * g));
+      pbox(c, L, y0 + dy, w, 10, v === mx ? col.accent : PXC.gray);
+      ptext(c, String(Math.round(v * g)), L + w + 4, y0 + dy + 1, 8, col.text);
+    });
+    return;
+  }
+  if (typ === 'upset') {
+    const p = parseInt(it.soc.big, 10) / 100, g = pclamp((t - 0.6) / 0.8);
+    pbox(c, L, y0, W, 12, PXC.gray); prect(c, L, y0, Math.round(W * p * g), 12, col.accent);
+    ptext(c, 'MODELO', L, y0 + 18, 8, col.text);
+    if (t > 1.6 && Math.floor(t * 4) % 2 === 0) ptext(c, '¡GANÓ!', RR, y0 + 18, 8, col.accent, 'right');
+    return;
+  }
+  if (typ === 'bench') {
+    const p = (parseInt((it.soc.ctx.match(/(\d+)%/) || [])[1], 10) || 0) / 100, g = pclamp((t - 0.6) / 0.8);
+    pbox(c, L, y0, W, 12, PXC.gray); prect(c, L, y0, Math.round(W * p * g), 12, col.accent);
+    ptext(c, 'BANCA', L, y0 + 18, 8, col.text); ptext(c, 'TITULARES', RR, y0 + 18, 8, col.text, 'right');
+    return;
+  }
+  if (typ === 'comeback' && nums.length === 2) {
+    // Medidor: de -déficit (rojo) a +margen final (verde); el marcador viaja de un lado al otro
+    const def = parseInt(pclean(it.soc.big).replace('-', ''), 10), fin = nums[0] - nums[1], span = def + fin;
+    const zx = L + Math.round(W * def / span), g = pclamp((t - 0.6) / 1.4);
+    prect(c, L, y0 + 6, zx - L, 6, PXC.red); prect(c, zx, y0 + 6, RR - zx, 6, PXC.mint); prect(c, zx, y0 + 2, 1, 14, PXC.white);
+    const mx = L + Math.round((W - 1) * g); pball(c, mx - 4, y0 - 4 + (Math.floor(t * 8) % 2));
+    ptext(c, '-' + def, L, y0 + 20, 8, col.text); ptext(c, (fin > 0 ? '+' : '') + fin, RR, y0 + 20, 8, col.text, 'right');
+    return;
+  }
+  if (typ === 'quarter') {
+    // Barra del cuarto frente a la media de la liga, con "fuego" que parpadea
+    const v = parseInt(it.soc.big, 10), avg = curioPixelLeagueQ(), mx = Math.max(v, avg) * 1.1, g = pclamp((t - 0.6) / 0.8);
+    const w1 = Math.round(W * v / mx * g), w2 = Math.round(W * avg / mx);
+    pbox(c, L, y0, w1, 10, col.accent);
+    for (let i = 0; i < 5; i++) if ((Math.floor(t * 10) + i) % 2) prect(c, L + w1 - 2 - i * 3, y0 - 3 - (i % 2) * 2, 2, 3, PXC.orange);
+    pbox(c, L, y0 + 16, w2, 10, PXC.gray); ptext(c, 'MEDIA ' + Math.round(avg), L + w2 + 4, y0 + 17, 8, col.text);
+    return;
+  }
+  // Por defecto: balón rebotando
+  const bx = L + Math.round(pclamp((t - 0.4) / 2) * (W - 8)), by = y0 + 20 - Math.round(Math.abs(Math.sin(pstep(t) * 5)) * 18);
+  pball(c, bx, by - 8, 2); prect(c, L, y0 + 29, W, 1, col.text);
+}
+function pxHead(it) {
+  let h = it.soc.head;
+  if (it.type === 'cut' || it.type === 'drought' || it.type === 'upset') h = h.replace(/\s*…\s*y (se acabó|ganó)\s*$/, '');
+  if (it.type === 'blowout') h = h.replace('de paliza a ', 'de diferencia ante ');
+  return h;
+}
+function pxCtx(it) {
+  const c = it.soc.ctx || '';
+  if (it.type === 'blowout') return c.replace(/^Es la paliza más/, 'La más');
+  return it.type === 'upset' && /^Le ganó/.test(c) ? '' : c; // el rival ya sale en el pie y el "¡GANÓ!" en el gráfico
+}
+let _pxAvg = null;
+function curioPixelLeagueQ() {
+  if (_pxAvg) return _pxAvg;
+  let s = 0, n = 0; curioSource().forEach(g => { if (curioHasQuarters(g)) for (let i = 1; i <= 4; i++) { s += g[`q${i}L`] + g[`q${i}A`]; n += 2; } });
+  return (_pxAvg = n ? s / n : 28);
+}
+
+// ── Variantes: paleta y portada según la fecha; esquema de cada dato rotando A/B/C ──
+const PXPAL = [
+  { name: 'clasica',   bg: '#0b0b0b', fg: '#ffffff', hi: '#3cffd0', dim: '#8a8a8a', star: '#6b6b6b' },
+  { name: 'noche',     bg: '#120a3a', fg: '#ffffff', hi: '#ff3dbb', dim: '#9d8fd8', star: '#5c4fa8' },
+  { name: 'atardecer', bg: '#ff6b35', fg: '#1a0b2e', hi: '#ffffff', dim: '#6a1f2e', star: '#ffb38a' },
+  { name: 'gameboy',   bg: '#0f380f', fg: '#9bbc0f', hi: '#e0f8d0', dim: '#5f8f2f', star: '#306230' },
+];
+function pxDay(s) { // "19/11/24" → número de día; días seguidos alternan portada y paleta
+  const m = String(s.date || '').match(/(\d+)\/(\d+)\/(\d+)/); if (!m) return 0;
+  return Math.round(Date.UTC(2000 + +m[3], +m[2] - 1, +m[1]) / 864e5);
+}
+function pxStyle(slides) {
+  const cover = slides.find(x => x.kind === 'cover') || {}, d = pxDay(cover);
+  return { pal: PXPAL[d % PXPAL.length], coverV: Math.floor(d / PXPAL.length) % 2, shift: d % 3 }; // ciclo de 8 días con todas las combinaciones
+}
+
+// Piezas de las tarjetas
+function pxLabel(c, it, x, y, col, align = 'left') {
+  const txt = CURIO_JTYPES[it.type].label.toUpperCase(); c.font = pf(8);
+  const lw = c.measureText(pclean(txt)).width + 8, bx = align === 'center' ? Math.round(x - lw / 2) : x;
+  pbox(c, bx, y, lw, 14, col.accent, PXC.ink); ptext(c, txt, bx + 4, y + 3, 8, col.bg);
+}
+function pxNumber(c, it, x, y, t, col, { sizes = [32, 24], align = 'left', maxW = PX.S.r - PX.S.l } = {}) {
+  const raw = pclean(it.soc.big), m = raw.match(/^([+-]?)(\d+)(.*)$/);
+  const p = pclamp((pstep(t) - 0.2) / 0.8), shown = m ? m[1] + Math.round(+m[2] * p) + m[3] : raw;
+  let sz = sizes[sizes.length - 1]; for (const s of sizes) { c.font = pf(s); if (c.measureText(raw).width <= maxW) { sz = s; break; } }
+  // Remate: después de 5 s el número late con la música (cambia de color en cada tiempo)
+  const pulse = t > 3.75 && Math.floor((t - 3.75) / PXBEAT) % 2 === 0;
+  ptext(c, shown, x + 1, y + 1, sz, PXC.ink, align); ptext(c, shown, x, y, sz, pulse ? col.text : col.accent, align);
+  return sz;
+}
+// Texto que se escribe letra a letra; en centrado cada línea se ancla a su ancho final para que no "baile"
+function pxType(c, lines, x, y, lh, t, t0, dur, colr, align = 'left') {
+  const total = lines.join('').length; let left = Math.floor(pclamp((t - t0) / dur) * total);
+  lines.forEach((l, i) => {
+    const part = l.slice(0, Math.max(0, left)); left -= l.length; c.font = pf(8);
+    const lx = align === 'center' ? x - c.measureText(l).width / 2 : x;
+    ptext(c, part, lx, y + i * lh, 8, colr);
+  });
+}
+function pxFoot(it) {
+  const team = curioShort(it.dot), score = (it.soc.foot.match(/\d+-\d+/) || [''])[0];
+  let rival = it.soc.foot.replace(score, '').replace(team, '').replace(/·/g, '').replace(/\s+/g, ' ').trim();
+  if (rival && !/^(vs|@)(\s|$)/.test(rival)) rival = 'vs ' + rival;
+  return { team, score, rival };
+}
+function pxFooter(c, it, col, y) {
+  const { S } = PX, cw = S.r - S.l, { team, score, rival } = pxFoot(it);
+  c.font = pf(8); const fits = c.measureText(team + '  ' + score).width <= cw;
+  ptext(c, team, S.l, y, 8, col.accent);
+  if (fits) ptext(c, score, S.r, y, 8, col.accent, 'right');
+  ptext(c, pwrap(c, rival, cw - (fits ? 0 : c.measureText(score).width + 8), 8, 1)[0] || '', S.l, y + 11, 8, col.text);
+  if (!fits) ptext(c, score, S.r, y + 11, 8, col.text, 'right');
+}
+
+// Alto real que ocupa el gráfico de cada tipo (para que el resto se acomode y no queden huecos)
+function pxVizH(it, W = PX.S.r - PX.S.l) {
+  const typ = it.type;
+  if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
+    const n = (parseInt(it.soc.big, 10) || 0) + 1, per = Math.floor((W + 2) / 10);
+    return Math.ceil(n / per) * 10 - 2;
+  }
+  if (typ === 'comeback') return 28;
+  if (['blowout', 'total', 'mark', 'first', 'ot', 'upset', 'bench', 'quarter'].includes(typ)) return 26;
+  return 30;
+}
+const pxVizTop = it => (it.type === 'comeback' ? 4 : it.type === 'quarter' ? 5 : 0); // lo que sobresale por arriba
+
+// Centro horizontal = centro de la ZONA SEGURA (no del lienzo): la zona está corrida a la izquierda
+// para no quedar bajo los botones de TikTok/Reels, así que todo lo centrado usa esta referencia.
+const PXCX = (PX.S.l + PX.S.r) / 2;
+function pxNumSize(c, it, sizes = [32, 24], maxW = PX.S.r - PX.S.l) {
+  const raw = pclean(it.soc.big); for (const s of sizes) { c.font = pf(s); if (c.measureText(raw).width <= maxW) return s; }
+  return sizes[sizes.length - 1];
+}
+// Apila bloques con su alto REAL y centra el conjunto en [top, bottom]: sin huecos fijos
+function pxStack(top, bottom, parts) {
+  // Si no cabe, se aprietan los espacios entre bloques (nunca menos de 3 px) en vez de pisar el pie
+  const content = parts.reduce((a, p) => a + p.h, 0), gaps = parts.reduce((a, p) => a + (p.gap || 0), 0);
+  const k = gaps && content + gaps > bottom - top ? Math.max(0, (bottom - top - content) / gaps) : 1;
+  const total = content + gaps * k;
+  let y = Math.round(top + Math.max(0, (bottom - top - total) / 2));
+  parts.forEach(p => { p.draw(Math.round(y)); y += p.h + (p.gap ? Math.max(3, p.gap * k) : 0); });
+}
+const pxHeadH = n => n ? (n - 1) * 12 + 8 : 0, pxCtxH = n => n ? (n - 1) * 11 + 8 : 0;
+
+function pxCardA(c, s, it, t, col) { // Clásico: alineado a la izquierda, de arriba abajo
+  const { S } = PX, cw = S.r - S.l;
+  ptext(c, 'LA JORNADA', S.l, S.t, 8, col.text); ptext(c, `${s.n}/${s.of}`, S.r, S.t, 8, col.text, 'right');
+  const sz = pxNumSize(c, it), head = pwrap(c, pxHead(it), cw, 8, 3), ctx = pxCtx(it) ? pwrap(c, pxCtx(it), cw, 8, 3) : [];
+  const vt = pxVizTop(it), vh = pxVizH(it);
+  pxStack(56, 216, [
+    { h: 14, gap: 8, draw: y => t > 0.1 && pxLabel(c, it, S.l, y, col) },
+    { h: sz, gap: 12, draw: y => t > 0.2 && pxNumber(c, it, S.l, y, t, col) },
+    { h: pxHeadH(head.length), gap: ctx.length ? 8 : 0, draw: y => pxType(c, head, S.l, y, 12, t, 0.4, 0.9, col.text) },
+    ...(ctx.length ? [{ h: pxCtxH(ctx.length), gap: 0, draw: y => t > 1.3 && ctx.forEach((l, i) => ptext(c, l, S.l, y + i * 11, 8, col.accent)) }] : []),
+    { h: vt + vh, gap: 0, draw: y => t > PXV && pviz(c, it, t - PXV + 0.6, col, { x: S.l, y: y + vt, W: cw }), pre: 12 },
+  ].map((p, i, arr) => (i < arr.length - 1 && arr[i + 1].pre ? { ...p, gap: arr[i + 1].pre } : p)));
+  pxFooter(c, it, col, 224);
+}
+function pxCardB(c, s, it, t, col) { // Centrado: gráfico arriba entre dos líneas, número al medio, texto abajo
+  const { S } = PX, cw = S.r - S.l, cx = PXCX;
+  ptext(c, `${s.n}/${s.of}`, cx, S.t, 8, col.text, 'center');
+  const sz = pxNumSize(c, it), head = pwrap(c, pxHead(it), cw, 8, 3), ctx = pxCtx(it) ? pwrap(c, pxCtx(it), cw, 8, 2) : [];
+  const vt = pxVizTop(it), vh = pxVizH(it);
+  pxStack(54, 216, [
+    { h: 14, gap: 8, draw: y => t > 0.1 && pxLabel(c, it, cx, y, col, 'center') },
+    { h: 1, gap: 7, draw: y => prect(c, S.l, y, cw, 1, col.text) },
+    { h: vt + vh, gap: 7, draw: y => t > PXV && pviz(c, it, t - PXV + 0.6, col, { x: S.l, y: y + vt, W: cw }) },
+    { h: 1, gap: 10, draw: y => prect(c, S.l, y, cw, 1, col.text) },
+    { h: sz, gap: 12, draw: y => t > 0.2 && pxNumber(c, it, cx, y, t, col, { align: 'center' }) },
+    { h: pxHeadH(head.length), gap: ctx.length ? 8 : 0, draw: y => pxType(c, head, cx, y, 12, t, 0.4, 0.9, col.text, 'center') },
+    ...(ctx.length ? [{ h: pxCtxH(ctx.length), draw: y => t > 1.3 && ctx.forEach((l, i) => ptext(c, l, cx, y + i * 11, 8, col.accent, 'center')) }] : []),
+  ]);
+  pxFooter(c, it, col, 224);
+}
+function pxCardC(c, s, it, t, col) { // Marcador: el partido arriba en un tablero, número gigante
+  const { S } = PX, cw = S.r - S.l, { team, score, rival } = pxFoot(it);
+  pbox(c, S.l, S.t - 2, cw, 32, PXC.ink, col.accent); pframe(c, S.l, S.t - 2, cw, 32, col.accent);
+  for (let i = 0; i < cw; i += 4) if ((Math.floor(t * 4) + i / 4) % 2) prect(c, S.l + i + 1, S.t - 1, 2, 1, col.accent);
+  ptext(c, pwrap(c, team, cw - 70, 8, 1)[0], S.l + 5, S.t + 6, 8, '#ffffff'); ptext(c, score, S.r - 5, S.t + 6, 8, '#ffd23f', 'right');
+  ptext(c, pwrap(c, rival, cw - 40, 8, 1)[0] || '', S.l + 5, S.t + 17, 8, '#bdbdbd'); ptext(c, `${s.n}/${s.of}`, S.r - 5, S.t + 17, 8, '#bdbdbd', 'right');
+  const sizes = [48, 32, 24], sz = pxNumSize(c, it, sizes), head = pwrap(c, pxHead(it), cw, 8, 3), ctx = pxCtx(it) ? pwrap(c, pxCtx(it), cw, 8, 2) : [];
+  const vt = pxVizTop(it), vh = pxVizH(it);
+  pxStack(82, 243, [
+    { h: 14, gap: 8, draw: y => t > 0.1 && pxLabel(c, it, S.l, y, col) },
+    { h: sz, gap: 12, draw: y => t > 0.2 && pxNumber(c, it, S.l, y, t, col, { sizes }) },
+    { h: pxHeadH(head.length), gap: ctx.length ? 8 : 12, draw: y => pxType(c, head, S.l, y, 12, t, 0.4, 0.9, col.text) },
+    ...(ctx.length ? [{ h: pxCtxH(ctx.length), gap: 12, draw: y => t > 1.3 && ctx.forEach((l, i) => ptext(c, l, S.l, y + i * 11, 8, col.accent)) }] : []),
+    { h: vt + vh, draw: y => t > PXV && pviz(c, it, t - PXV + 0.6, col, { x: S.l, y: y + vt, W: cw }) },
+  ]);
+}
+
+function pxCoverBall(c, s, t, P) { // Portada 1: tiro al aro
+  const { w, h, S } = PX, cw = S.r - S.l;
+  prect(c, 0, 0, w, h, P.bg);
+  for (let i = 0; i < 24; i++) { const x = (i * 37) % w, y = 8 + (i * 53) % 34; if ((Math.floor(t * 4) + i) % 3) prect(c, x, y, 1, 1, P.star); }
+  ptext(c, `NBA · ${s.date}`, S.l, S.t, 8, P.hi);
+  ptext(c, 'LA', S.l, S.t + 14, 16, P.fg); ptext(c, 'JORNADA', S.l, S.t + 32, 16, P.fg);
+  const hx = 132, hy = 50; phoop(c, hx, hy);
+  const p = pclamp(pstep(t) / 1.2), bx = Math.round(140 - p * 5 + Math.sin(p * Math.PI) * 14), by = Math.round(130 - p * 80 - Math.sin(p * Math.PI) * 10);
+  if (t < 1.25) pball(c, bx, by, 2); else { pball(c, hx + 3, Math.min(hy + 22 + Math.round((t - 1.25) * 40), 92), 2); if (Math.floor(t * 6) % 2) ptext(c, '¡SWISH!', hx - 4, hy + 44, 8, P.hi, 'right'); }
+  const top = s.picks[0];
+  if (top && t > 0.5) {
+    ptext(c, pclean(top.soc.big), S.l, 110, 24, P.hi);
+    pwrap(c, `${curioShort(top.dot)}: ${CURIO_JTYPES[top.type].label.toLowerCase()}`, cw, 8, 3).forEach((l, i) => ptext(c, l, S.l, 142 + i * 11, 8, P.fg));
+  }
+  if (t > 0.9) ptext(c, 'Y ADEMÁS', S.l, 180, 8, P.hi);
+  s.picks.slice(1).forEach((it, i) => { if (t > 0.9 + i * 0.15) ptext(c, pwrap(c, `${i + 2} ${curioShort(it.dot)} ${it.soc.big}`, cw, 8, 1)[0], S.l, 194 + i * 12, 8, P.dim); });
+}
+function pxCoverArcade(c, s, t, P) { // Portada 2: pantalla de título de arcade con tabla de récords
+  const { w, h, S } = PX, cw = S.r - S.l, cx = PXCX;
+  prect(c, 0, 0, w, h, P.bg);
+  // Marco de máquina arcade
+  pframe(c, S.l - 9, 30, cw + 18, 224, P.dim); pframe(c, S.l - 7, 32, cw + 14, 220, P.star);
+  ptext(c, `NBA · ${s.date}`, cx, S.t, 8, P.dim, 'center');
+  // Título que cae desde arriba a saltos
+  const drop = Math.round((1 - pclamp(pstep(t) / 0.5)) * -40);
+  ptext(c, 'LA', cx + 1, 58 + drop + 1, 16, P.star, 'center'); ptext(c, 'LA', cx, 58 + drop, 16, P.fg, 'center');
+  ptext(c, 'JORNADA', cx + 1, 78 + drop + 1, 16, P.star, 'center'); ptext(c, 'JORNADA', cx, 78 + drop, 16, P.hi, 'center');
+  pball(c, cx - 8, 102 + (Math.floor(t / PXBEAT) % 2 ? 0 : -3), 2);
+  if (t > 0.6) { ptext(c, 'HI-SCORES', cx, 128, 8, P.hi, 'center'); prect(c, S.l + 10, 139, cw - 20, 1, P.dim); }
+  const ord = ['1ST', '2ND', '3RD', '4TH', '5TH', '6TH', '7TH'];
+  s.picks.forEach((it, i) => {
+    if (t < 0.8 + i * PXBEAT / 2) return;
+    const y = 146 + i * 14, colr = i === 0 ? P.hi : P.fg;
+    ptext(c, ord[i] || `${i + 1}`, S.l + 2, y, 8, i === 0 ? P.hi : P.dim);
+    ptext(c, pwrap(c, curioShort(it.dot).toUpperCase(), 72, 8, 1)[0], S.l + 32, y, 8, colr);
+    ptext(c, pclean(it.soc.big), S.r - 2, y, 8, colr, 'right');
+  });
+  if (t > 2 && Math.floor(t / (PXBEAT / 2)) % 2 === 0) ptext(c, 'PRESS START', cx, 232, 8, P.fg, 'center');
+}
+function pxOutro(c, s, t, P) { // Cierre: GAME OVER + CONTINUE? con cuenta regresiva a tiempo con la música
+  const { w, h, S } = PX, cx = PXCX;
+  prect(c, 0, 0, w, h, P.bg);
+  const g = pclamp(pstep(t) / 0.5); // "GAME OVER" se arma letra a letra
+  ptext(c, 'GAME OVER'.slice(0, Math.round(g * 9)), cx, 70, 16, P.hi, 'center');
+  if (t > 0.7) { ptext(c, '¿Cuál no', cx, 102, 8, P.fg, 'center'); ptext(c, 'viste venir?', cx, 114, 8, P.fg, 'center'); }
+  if (t > 1.0) { ptext(c, 'Cuéntalo en los', cx, 134, 8, P.dim, 'center'); ptext(c, 'comentarios', cx, 146, 8, P.dim, 'center'); }
+  const B = PXBEAT, k = Math.floor((t - 2 * B) / B);
+  if (t >= 2 * B) {
+    ptext(c, 'CONTINUE?', cx, 172, 8, P.fg, 'center');
+    if (k < 3) ptext(c, String(3 - k), cx, 186, 16, P.hi, 'center');
+  }
+  if (k >= 3) {
+    c.font = pf(8); const bw = Math.ceil(c.measureText('MAÑANA HAY MÁS').width) + 16, bx = Math.round(cx - bw / 2);
+    pbox(c, bx, 184, bw, 20, P.hi, P.star);
+    ptext(c, 'MAÑANA HAY MÁS', bx + 8, 190, 8, P.bg);
+  }
+  pball(c, S.r - 16, 230 - Math.round(Math.abs(Math.sin((t / B) * Math.PI)) * 18), 2);
+}
+
+function pixelDrawSlide(c, s, t, st) {
+  const { w, h } = PX;
+  st = st || { pal: PXPAL[0], coverV: 0, shift: 0 };
+  if (s.kind === 'card') {
+    const it = s.it, col = curioSocialColors(it.dot);
+    prect(c, 0, 0, w, h, col.bg);
+    [pxCardA, pxCardB, pxCardC][(s.n - 1 + st.shift) % 3](c, s, it, t, col);
+  } else if (s.kind === 'cover') (st.coverV ? pxCoverArcade : pxCoverBall)(c, s, t, st.pal);
+  else pxOutro(c, s, t, st.pal);
+}
+
+// Dibuja el instante `time` en el lienzo grande: lienzo chico → ampliado ×6 sin suavizado + líneas de TV
+// ── Transiciones entre diapositivas: duran un tiempo de la música, centradas en el cambio ──
+const PXTR_H = PXBEAT / 2;
+let PXTR_FORCE = null; // muestra: lista fija de transiciones (una por cada cambio)
+function pxTransitions(slides) {
+  if (PXTR_FORCE) return PXTR_FORCE;
+  // Iris al salir de la portada y al entrar al cierre; entre datos rotan las otras cuatro
+  const out = [], mid = ['blocksL', 'dissolve', 'static', 'blocksD'];
+  for (let i = 0; i < slides.length - 1; i++) out.push(i === 0 || i === slides.length - 2 ? 'iris' : mid[(i - 1) % mid.length]);
+  return out;
+}
+const _pxBufs = {};
+function pxBuf(name) { if (!_pxBufs[name]) { const b = document.createElement('canvas'); b.width = PX.w; b.height = PX.h; _pxBufs[name] = b; } return _pxBufs[name]; }
+const pxRand = i => { let x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+function pxComposite(c, A, B, type, p) { // p: 0 → todo A, 1 → todo B
+  const { w, h } = PX;
+  c.drawImage(A, 0, 0);
+  if (type.startsWith('blocks')) {
+    // Columnas de cuadros de 10 px que caen a saltos; cada columna arranca un poco después
+    const cell = 10, cols = w / cell, rows = Math.ceil(h / cell);
+    for (let i = 0; i < cols; i++) {
+      const order = type === 'blocksR' ? cols - 1 - i : type === 'blocksD' ? Math.abs(i - cols / 2 + 0.5) : i;
+      const span = type === 'blocksD' ? cols / 2 : cols;
+      const q = pclamp((p - 0.45 * order / span) / 0.55), n = Math.round(q * rows);
+      if (n > 0) c.drawImage(B, i * cell, 0, cell, n * cell, i * cell, 0, cell, n * cell);
+      if (n > 0 && n < rows) prect(c, i * cell, n * cell - 2, cell, 2, PXC.ink); // borde del bloque que cae
+    }
+  } else if (type === 'dissolve') {
+    const cell = 6;
+    for (let y = 0, k = 0; y < h; y += cell) for (let x = 0; x < w; x += cell, k++) if (pxRand(k) < p) c.drawImage(B, x, y, cell, cell, x, y, cell, cell);
+  } else if (type === 'iris') {
+    // Se cierra un círculo sobre A hasta negro y se abre mostrando B (bordes pixelados de 4 px)
+    const src = p < 0.5 ? A : B, r = (p < 0.5 ? 1 - p * 2 : (p - 0.5) * 2) * 190, cx = 85, cy = 160, cell = 4;
+    c.drawImage(src, 0, 0);
+    for (let y = 0; y < h; y += cell) for (let x = 0; x < w; x += cell) if (Math.hypot(x + 2 - cx, y + 2 - cy) > r) prect(c, x, y, cell, cell, PXC.ink);
+  } else if (type === 'static') {
+    // Cambio de canal: ruido que sube, imagen corrida en franjas, y baja sobre B
+    const src = p < 0.5 ? A : B, amt = 1 - Math.abs(p - 0.5) * 2, f = Math.floor(p * 40);
+    c.drawImage(src, 0, 0);
+    for (let y = 0; y < h; y += 8) if (pxRand(y + f * 97) < amt * 0.6) { const dx = Math.round((pxRand(y * 3 + f) - 0.5) * 30 * amt); c.drawImage(src, 0, y, w, 8, dx, y, w, 8); }
+    for (let y = 0, k = 0; y < h; y += 2) for (let x = 0; x < w; x += 2, k++) if (pxRand(k + f * 7919) < amt * 0.85) { const g = Math.floor(pxRand(k * 13 + f) * 255); prect(c, x, y, 2, 2, `rgb(${g},${g},${g})`); }
+  }
+}
+function pixelDrawAt(big, small, slides, time) {
+  const c = small.getContext('2d'), st = pxStyle(slides), tr = pxTransitions(slides);
+  let acc = 0, idx = slides.length - 1;
+  for (let i = 0; i < slides.length; i++) { if (time < acc + slides[i].dur || i === slides.length - 1) { idx = i; break; } acc += slides[i].dur; }
+  const local = Math.min(time - acc, slides[idx].dur);
+  // ¿Estamos cerca de un cambio? (al final de esta o al inicio de esta)
+  let b = -1, p = 0;
+  if (idx < slides.length - 1 && slides[idx].dur - local < PXTR_H) { b = idx; p = (local - (slides[idx].dur - PXTR_H)) / (2 * PXTR_H); }
+  else if (idx > 0 && local < PXTR_H) { b = idx - 1; p = (local + PXTR_H) / (2 * PXTR_H); }
+  if (b < 0) pixelDrawSlide(c, slides[idx], local, st);
+  else {
+    const A = pxBuf('A'), Bc = pxBuf('B');
+    const tA = b === idx ? local : slides[b].dur, tB = b === idx ? 0 : local;
+    pixelDrawSlide(A.getContext('2d'), slides[b], Math.min(tA, slides[b].dur - 0.001), st);
+    pixelDrawSlide(Bc.getContext('2d'), slides[b + 1], tB, st);
+    pxComposite(c, A, Bc, tr[b], pclamp(p));
+  }
+  const B = big.getContext('2d'); B.imageSmoothingEnabled = false;
+  B.drawImage(small, 0, 0, big.width, big.height);
+  B.fillStyle = 'rgba(0,0,0,0.10)'; for (let y = 4; y < big.height; y += PX.s) B.fillRect(0, y, big.width, 2);
+}
+
+
+// ── Sonido 8-bit: se sintetiza con Web Audio (sin archivos) en los mismos instantes que las animaciones ──
+const PXSR = 48000;
+function pxSfx(ac) {
+  const out = ac.createDynamicsCompressor(); out.connect(ac.destination);
+  const master = ac.createGain(); master.gain.value = 2.4; master.connect(out);
+  const musicBus = ac.createGain(); musicBus.gain.value = 1; musicBus.connect(master);
+  const ducks = [];
+  const nbuf = ac.createBuffer(1, PXSR, PXSR), nd = nbuf.getChannelData(0);
+  let seed = 7; for (let i = 0; i < nd.length; i++) { seed = (seed * 16807) % 2147483647; nd[i] = seed / 1073741823.5 - 1; }
+  const env = (g, t, a, d, v) => { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); };
+  const tone = (t, f, d, { type = 'square', v = 0.12, f2 = null, a = 0.004, bus = master } = {}) => {
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    env(g, t, a, d, v); o.connect(g).connect(bus); o.start(t); o.stop(t + a + d + 0.05);
+  };
+  const noise = (t, d, { v = 0.15, f = 1500, f2 = null, q = 1, kind = 'bandpass', a = 0.01, bus = master } = {}) => {
+    const s = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain(); s.buffer = nbuf; s.loop = true;
+    fl.type = kind; fl.Q.value = q; fl.frequency.setValueAtTime(f, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + d);
+    env(g, t, a, d, v); s.connect(fl).connect(g).connect(bus); s.start(t); s.stop(t + a + d + 0.05);
+  };
+  const NOTES = [523, 587, 659, 698, 784, 880, 988, 1047, 1175, 1319, 1397, 1568, 1760, 1976];
+  const duck = t => ducks.push(t);
+  return {
+    // Música de fondo: 96 BPM, Am–F–C–G. `off` corre el compás para que los datos entren en el tiempo 1.
+    music: (total, off) => {
+      const beat = 60 / 96, s16 = beat / 4, bar = beat * 4;
+      const CH = [[220, 261.6, 329.6], [174.6, 220, 261.6], [130.8, 196, 261.6], [196, 246.9, 293.7]];
+      const ROOT = [110, 87.3, 65.4, 98];
+      for (let m = 0; ; m += s16) {
+        const t = m - off; if (t >= total - 0.05) break; if (t < 0) continue;
+        const step = Math.round(m / s16) % 16, ci = Math.floor(m / bar + 1e-6) % 4, ch = CH[ci], fade = 1;
+        if (step % 2 === 0) tone(t, ROOT[ci] * (step % 4 === 2 ? 2 : 1), s16 * 1.6, { v: 0.07 * fade, bus: musicBus });
+        tone(t, ch[[0, 1, 2, 1][step % 4]] * 2, s16 * 0.7, { v: 0.022 * fade, bus: musicBus });
+        if (step === 0 || step === 8 || step === 10) tone(t, 150, 0.12, { type: 'sine', v: 0.24 * fade, f2: 45, bus: musicBus });
+        if (step === 4 || step === 12) noise(t, 0.12, { v: 0.12 * fade, f: 1800, q: 0.8, bus: musicBus });
+        if (step % 2 === 0) noise(t, 0.03, { v: 0.035 * fade, f: 7000, kind: 'highpass', a: 0.002, bus: musicBus });
+      }
+    },
+    applyDucks: () => {
+      ducks.sort((a, b) => a - b).forEach(t => {
+        musicBus.gain.setTargetAtTime(0.4, Math.max(0, t - 0.03), 0.02);
+        musicBus.gain.setTargetAtTime(1, t + 0.35, 0.15);
+      });
+    },
+    blip: (t, f = 560) => tone(t, f, 0.03, { v: 0.05 }),
+    tick: (t, p) => tone(t, 300 + 700 * p, 0.025, { v: 0.06 }),
+    ding: t => { duck(t); tone(t, 1319, 0.25, { type: 'triangle', v: 0.16 }); tone(t + 0.06, 1760, 0.3, { type: 'triangle', v: 0.12 }); },
+    note: (t, i) => tone(t, NOTES[i % NOTES.length], 0.09, { v: 0.09 }),
+    error: t => { duck(t); tone(t, 320, 0.45, { type: 'sawtooth', v: 0.13, f2: 70 }); tone(t, 330, 0.45, { type: 'square', v: 0.05, f2: 75 }); },
+    jingle: t => duck(t) || [523, 659, 784, 1047].forEach((f, i) => tone(t + i * 0.08, f, i === 3 ? 0.35 : 0.08, { v: 0.11 })),
+    question: t => { duck(t); tone(t, 660, 0.06, { v: 0.07 }); tone(t + 0.08, 880, 0.12, { v: 0.07 }); },
+    sweep: (t, d) => tone(t, 180, d, { v: 0.06, f2: 900, a: 0.02 }),
+    fire: (t, d) => noise(t, d, { v: 0.05, f: 2500, kind: 'highpass', a: 0.05 }),
+    thump: t => tone(t, 140, 0.09, { type: 'triangle', v: 0.22, f2: 50 }),
+    launch: t => tone(t, 200, 0.18, { v: 0.08, f2: 520 }),
+    swish: t => duck(t) || noise(t, 0.35, { v: 0.22, f: 5000, f2: 1800, q: 2 }),
+    crowd: (t, d) => noise(t, d, { v: 0.07, f: 700, kind: 'lowpass', a: 0.3 }),
+    iris: t => { tone(t, 900, PXTR_H, { v: 0.07, f2: 160 }); tone(t + PXTR_H, 160, PXTR_H, { v: 0.07, f2: 900 }); },
+    staticFx: t => noise(t, PXTR_H * 2, { v: 0.12, f: 3000, kind: 'highpass', a: PXTR_H }),
+    whoosh: t => noise(t, 0.22, { v: 0.12, f: 400, f2: 3500, q: 3 }),
+    levelUp: t => { duck(t); [392, 523, 659, 784, 1047].forEach((f, i) => tone(t + i * 0.07, f, 0.06, { v: 0.1 })); [523, 659, 784].forEach(f => tone(t + 0.4, f * 2, 0.5, { v: 0.06, type: 'square' })); },
+    count: (t, last) => { duck(t); tone(t, last ? 1047 : 784, 0.12, { v: 0.09 }); },
+    finale: t => { duck(t); [261.6, 329.6, 392, 523].forEach(f => tone(t, f, 1.1, { type: 'triangle', v: 0.09, a: 0.01 })); tone(t, 130.8, 1.1, { v: 0.05, a: 0.01 }); },
+    buzzer: t => { duck(t); tone(t, 220, 0.75, { type: 'sawtooth', v: 0.1, a: 0.01 }); tone(t, 233, 0.75, { type: 'square', v: 0.06, a: 0.01 }); },
+  };
+}
+// Programa los sonidos de cada diapositiva siguiendo los mismos tiempos que pixelDrawSlide/pviz
+function pxSchedule(fx, slides) {
+  let T = 0;
+  slides.forEach((s, k) => {
+    if (s.kind === 'cover') {
+      fx.launch(T + 0.05); fx.swish(T + 1.25); fx.crowd(T + 1.2, 2.2);
+      fx.thump(T + 1.55); fx.thump(T + 1.9);
+      fx.ding(T + 0.5);
+    } else if (s.kind === 'card') {
+      const it = s.it, typ = it.type;
+      fx.ding(T + 1.0);
+      const V = T + PXV - 0.6; // tiempo cero del gráfico
+      if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
+        const len = (parseInt(it.soc.big, 10) || 0) + (typ === 'cut' || typ === 'drought' ? 1 : 0);
+        for (let i = 0; i < len; i++) {
+          const at = V + 0.6 + 1.4 * (i + 1) / len, last = i === len - 1;
+          if (last && typ === 'cut') fx.error(at); else if (last && typ === 'drought') fx.jingle(at);
+          else fx.note(at, typ === 'streakL' ? Math.max(0, 13 - i) : i);
+        }
+        if (typ === 'streakW' || typ === 'streakL') fx.question(V + 2.1);
+      } else if (typ === 'upset') { fx.sweep(V + 0.6, 0.8); fx.jingle(V + 1.6); }
+      else if (typ === 'comeback') { fx.sweep(V + 0.6, 1.4); fx.jingle(V + 2.0); }
+      else if (typ === 'quarter') { fx.sweep(V + 0.6, 0.8); fx.fire(V + 1.0, 2.0); fx.ding(V + 1.4); }
+      else if (['blowout', 'total', 'mark', 'first', 'ot', 'bench'].includes(typ)) { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); }
+      else for (let b = V + 0.4; b < T + s.dur - 0.2; b += Math.PI / 5) fx.thump(b);
+    } else {
+      fx.levelUp(T + 0.02);
+      for (let k = 0; k < 3; k++) fx.count(T + (2 + k) * PXBEAT, false);
+      fx.finale(T + 5 * PXBEAT);
+    }
+    T += s.dur;
+  });
+}
+function pxTrSounds(fx, slides) {
+  const tr = pxTransitions(slides); let T = 0;
+  tr.forEach((type, i) => {
+    T += slides[i].dur; const t0 = T - PXTR_H;
+    if (type === 'iris') fx.iris(t0);
+    else if (type === 'static') fx.staticFx(t0);
+    else fx.whoosh(t0 + 0.05);
+  });
+}
+async function pixelAudio(slides, total) {
+  const ac = new OfflineAudioContext(1, Math.ceil(total * PXSR), PXSR);
+  const fx = pxSfx(ac);
+  pxSchedule(fx, slides); pxTrSounds(fx, slides);
+  const bar = 4 * 60 / 96, off = ((bar - slides[0].dur % bar) % bar); // la portada termina justo en un tiempo 1
+  const outro = slides[slides.length - 1].kind === 'outro' ? slides[slides.length - 1].dur : 0;
+  fx.music(total - outro, off); fx.applyDucks();
+  const pcm = (await ac.startRendering()).getChannelData(0);
+  // Volumen tipo redes (~-14 LUFS) con saturación suave para que los picos no recorten
+  for (let i = 0; i < pcm.length; i++) pcm[i] = Math.tanh(pcm[i] * 3) * 0.95;
+  return pcm;
+}
+
+async function pixelRenderVideo(rawSlides, onProgress) {
+  const slides = pxSlides(rawSlides);
+  try { await document.fonts.load("8px 'Press Start 2P'"); } catch (e) {}
+  const W = PX.w * PX.s, H = PX.h * PX.s, FPS = 30;
+  const big = document.createElement('canvas'); big.width = W; big.height = H;
+  const small = document.createElement('canvas'); small.width = PX.w; small.height = PX.h;
+  const total = slides.reduce((a, s) => a + s.dur, 0), frames = Math.round(total * FPS);
+  let pick = null, apick = null;
+  if (window.VideoEncoder) for (const [codec, mux] of [['avc1.640028', 'avc'], ['vp09.00.40.08', 'vp9'], ['av01.0.08M.08', 'av1']]) {
+    try { if ((await VideoEncoder.isConfigSupported({ codec, width: W, height: H, bitrate: 6e6, framerate: FPS })).supported) { pick = { codec, mux }; break; } } catch (e) {}
+  }
+  if (pick && window.AudioEncoder && window.OfflineAudioContext) for (const [codec, mux] of [['mp4a.40.2', 'aac'], ['opus', 'opus']]) {
+    try { if ((await AudioEncoder.isConfigSupported({ codec, sampleRate: PXSR, numberOfChannels: 1, bitrate: 128000 })).supported) { apick = { codec, mux }; break; } } catch (e) {}
+  }
+  if (!pick) { // Respaldo sin WebCodecs: se graba en tiempo real (sin audio)
+    const type = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find(x => window.MediaRecorder && MediaRecorder.isTypeSupported(x));
+    if (!type) throw new Error('Este navegador no puede generar video');
+    const rec = new MediaRecorder(big.captureStream(FPS), { mimeType: type, videoBitsPerSecond: 6e6 }), parts = [];
+    rec.ondataavailable = e => e.data.size && parts.push(e.data);
+    const done = new Promise(r => { rec.onstop = r; }); rec.start();
+    const t0 = performance.now();
+    await new Promise(r => { const tick = () => { const s = (performance.now() - t0) / 1000; pixelDrawAt(big, small, slides, Math.min(s, total)); if (onProgress) onProgress(s / total); if (s < total) requestAnimationFrame(tick); else r(); }; tick(); });
+    rec.stop(); await done;
+    return { blob: new Blob(parts, { type: type.split(';')[0] }), ext: type.includes('mp4') ? 'mp4' : 'webm', codec: 'recorder', audio: null };
+  }
+  const { Muxer, ArrayBufferTarget } = await curioLoadMuxer();
+  const muxer = new Muxer({ target: new ArrayBufferTarget(), video: { codec: pick.mux, width: W, height: H, frameRate: FPS },
+    ...(apick ? { audio: { codec: apick.mux, numberOfChannels: 1, sampleRate: PXSR } } : {}), fastStart: 'in-memory', firstTimestampBehavior: 'offset' });
+  let failed = null;
+  // Audio primero (es rápido): se sintetiza todo y se codifica en bloques
+  if (apick) {
+    const pcm = await pixelAudio(slides, total);
+    const aenc = new AudioEncoder({ output: (ch, m) => muxer.addAudioChunk(ch, m), error: e => { failed = e; } });
+    aenc.configure({ codec: apick.codec, sampleRate: PXSR, numberOfChannels: 1, bitrate: 128000 });
+    for (let i = 0; i < pcm.length; i += 4800) {
+      const part = pcm.slice(i, i + 4800);
+      const ad = new AudioData({ format: 'f32-planar', sampleRate: PXSR, numberOfFrames: part.length, numberOfChannels: 1, timestamp: Math.round(i * 1e6 / PXSR), data: part });
+      aenc.encode(ad); ad.close();
+    }
+    await aenc.flush();
+    if (failed) throw failed;
+  }
+  const enc = new VideoEncoder({ output: (ch, m) => muxer.addVideoChunk(ch, m), error: e => { failed = e; } });
+  enc.configure({ codec: pick.codec, width: W, height: H, bitrate: 6e6, framerate: FPS, ...(pick.mux === 'avc' ? { avc: { format: 'avc' } } : {}) });
+  for (let i = 0; i < frames; i++) {
+    if (failed) throw failed;
+    pixelDrawAt(big, small, slides, i / FPS);
+    const vf = new VideoFrame(big, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    enc.encode(vf, { keyFrame: i % 60 === 0 }); vf.close();
+    if (enc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 0));
+    if (onProgress && i % 15 === 0) onProgress(i / frames);
+  }
+  await enc.flush();
+  if (failed) throw failed;
+  muxer.finalize();
+  return { blob: new Blob([muxer.target.buffer], { type: 'video/mp4' }), ext: 'mp4', codec: pick.mux, audio: apick && apick.mux };
+}
+// Cuadro final de cada diapositiva como JPG (para "Bajar imágenes")
+async function pixelRenderImages(rawSlides) {
+  const slides = pxSlides(rawSlides), out = [];
+  try { await document.fonts.load("8px 'Press Start 2P'"); } catch (e) {}
+  const big = document.createElement('canvas'); big.width = PX.w * PX.s; big.height = PX.h * PX.s;
+  const small = document.createElement('canvas'); small.width = PX.w; small.height = PX.h;
+  let acc = 0;
+  for (const s of slides) {
+    pixelDrawAt(big, small, slides, acc + s.dur - 0.01); acc += s.dur;
+    out.push(await new Promise(r => big.toBlob(r, 'image/jpeg', 0.92)));
+  }
+  return out;
+}
+// Miniatura a tamaño nativo (180×320): se muestra con image-rendering: pixelated
+function pixelThumb(rawSlides, idx) {
+  const slides = pxSlides(rawSlides), c = document.createElement('canvas'); c.width = PX.w; c.height = PX.h;
+  pixelDrawSlide(c.getContext('2d'), slides[idx], slides[idx].dur - 0.01, pxStyle(slides));
+  return c;
 }
 
 // ── Modo demo: temporada 2024-25 desde games.json, SOLO en memoria ──
