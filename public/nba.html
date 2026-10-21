@@ -1009,6 +1009,7 @@
   .soc-thumb.px{image-rendering:pixelated;}
   .soc-style{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
   .soc-sep{width:1px;height:24px;background:var(--outline-var);margin:0 6px;}
+  .soc-music{height:36px;border:1px solid var(--hairline);border-radius:9999px;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;background:var(--canvas);color:var(--hairline);cursor:pointer;}
   .soc-del{margin-left:auto;border:none;background:none;cursor:pointer;font-size:14px;color:var(--outline);padding:2px 6px;}
   .soc-del:hover{color:var(--lose);}
   .soc-form{display:flex;flex-direction:column;gap:12px;border:1px solid var(--hairline);border-radius:16px;padding:16px;}
@@ -5732,7 +5733,8 @@ function openCurioSocial() {
   J = { ...J, quiet, items: [...J.items, ...extra] };
   if (quiet) sel = new Set([...strong, ...extra.slice(0, CURIO_SOCIAL.AUTO_MIN - strong.length).map((_, k) => n0 + k)]);
   if (!sel) { sel = curioSocialAuto(J.items); J.items.forEach((it, i) => { if (it.manual) sel.add(i); }); }
-  curioSocialState = { J, sel, video: null, style: curioSocialStyleGet(), suggestQuiet: quiet, baseItems, extraItems: extra, form: null };
+  curioSocialState = { J, sel, video: null, style: curioSocialStyleGet(), suggestQuiet: quiet, baseItems, extraItems: extra, form: null, music: null };
+  PXMUSIC = null;
   let ov = document.getElementById('cur-social');
   if (!ov) {
     ov = document.createElement('div');
@@ -5753,6 +5755,13 @@ function setCurioSocialStyle(v) {
   renderCurioSocial();
 }
 // Portada del video pixel: 'Dato principal' o 'Noche tranquila'. La página propone una (st.suggestQuiet) y se puede cambiar.
+// Música del video pixel: automática (rota con la fecha) o un tema fijo solo para este video
+function setCurioSocialMusic(v) {
+  const st = curioSocialState; if (!st) return;
+  st.music = v || null; PXMUSIC = st.music;
+  if (st.video) { URL.revokeObjectURL(st.video.url); st.video = null; }
+  renderCurioSocial();
+}
 function setCurioSocialCover(quiet) {
   const st = curioSocialState; if (!st || !!st.J.quiet === quiet) return;
   st.J.quiet = quiet;
@@ -5798,7 +5807,12 @@ function renderCurioSocial() {
       <button type="button" class="cur-preset ${st.style === 'normal' ? 'active' : ''}" onclick="setCurioSocialStyle('normal')">Normal</button>
       ${st.style === 'pixel' ? `<span class="soc-sep"></span><span class="soc-sub soc-lbl">Portada</span>
       <button type="button" class="cur-preset ${!J.quiet ? 'active' : ''}" onclick="setCurioSocialCover(false)">Dato principal${!st.suggestQuiet ? ' · sugerida' : ''}</button>
-      <button type="button" class="cur-preset ${J.quiet ? 'active' : ''}" onclick="setCurioSocialCover(true)">😴 Noche tranquila${st.suggestQuiet ? ' · sugerida' : ''}</button>` : ''}
+      <button type="button" class="cur-preset ${J.quiet ? 'active' : ''}" onclick="setCurioSocialCover(true)">😴 Noche tranquila${st.suggestQuiet ? ' · sugerida' : ''}</button>
+      <span class="soc-sep"></span><span class="soc-sub soc-lbl">Música</span>
+      <select class="soc-music" onchange="setCurioSocialMusic(this.value)">
+        <option value="" ${!st.music ? 'selected' : ''}>Automática (${pxThemeAuto(slides).name})</option>
+        ${PXTHEMES.map(th => `<option value="${th.id}" ${st.music === th.id ? 'selected' : ''}>${th.name}</option>`).join('')}
+      </select>` : ''}
     </div>
     <div class="soc-list">${rows}</div>
     ${st.form ? curioManualFormHtml(st) : `<div><button type="button" class="cur-preset" onclick="openCurioManualForm()">➕ Agregar dato</button></div>`}
@@ -6483,6 +6497,47 @@ function pixelDrawAt(big, small, slides, time) {
 }
 
 
+
+// ── Temas musicales (todos a 96 BPM para que el video siga cuadrado). Notas en MIDI (69 = La 440). ──
+// Cada tema: acordes por compás, bajo, arpegio y batería. Rotan según la fecha; se puede fijar uno.
+const mf = m => 440 * Math.pow(2, (m - 69) / 12);
+const PXTHEMES = [
+  { id: 'arcade', name: 'Arcade',
+    chords: [[57, 60, 64], [53, 57, 60], [48, 55, 60], [55, 59, 62]], roots: [45, 41, 36, 43],
+    bass: { steps: [0, 2, 4, 6, 8, 10, 12, 14], oct: [2, 6, 10, 14], wave: 'square', v: 0.07, len: 1.6 },
+    arp: { steps: 'all', pat: [0, 1, 2, 1], oct: 12, wave: 'square', v: 0.022, len: 0.7 },
+    drums: { kick: [0, 8, 10], snare: [4, 12], hats: [0, 2, 4, 6, 8, 10, 12, 14], hatV: 0.035 },
+    final: [60, 64, 67, 72], finalRoot: 48 },
+  { id: 'epico', name: 'Épico',
+    chords: [[62, 65, 69], [58, 62, 65], [57, 60, 65], [55, 60, 64]], roots: [38, 34, 41, 36],
+    bass: { steps: [0, 2, 4, 6, 8, 10, 12, 14], oct: [2, 6, 10, 14], wave: 'sawtooth', v: 0.05, len: 1.4 },
+    arp: { steps: 'all', pat: [0, 1, 2, 3], oct: 12, wave: 'square', v: 0.02, len: 0.8 },
+    drums: { kick: [0, 4, 8, 12, 14], snare: [4, 12], hats: [0, 2, 4, 6, 8, 10, 12, 14], hatV: 0.03, crash: 2 },
+    final: [62, 65, 69, 74], finalRoot: 38 },
+  { id: 'chill', name: 'Chill',
+    chords: [[60, 64, 67, 71], [57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 67]], roots: [36, 45, 41, 43],
+    bass: { steps: [0, 8], oct: [], wave: 'triangle', v: 0.11, len: 6 },
+    arp: { steps: [0, 2, 4, 6, 8, 10, 12, 14], pat: [0, 2, 1, 3], oct: 12, wave: 'triangle', v: 0.05, len: 1.6 },
+    drums: { kick: [0, 10], snare: [8], hats: [2, 6, 10, 14], hatV: 0.025, soft: true },
+    final: [60, 64, 67, 71], finalRoot: 36 },
+  { id: 'funky', name: 'Funky',
+    chords: [[64, 67, 71, 74], [57, 61, 64, 67], [64, 67, 71, 74], [57, 61, 64, 67]], roots: [40, 45, 40, 45],
+    bass: { steps: [0, 3, 6, 8, 10, 11, 14], oct: [3, 11], wave: 'square', v: 0.08, len: 0.9 },
+    arp: { stab: [2, 7, 10, 14], oct: 0, wave: 'square', v: 0.016, len: 0.6 },
+    drums: { kick: [0, 7, 10], snare: [4, 12], ghost: [15], hats: 'all', hatV: 0.03 },
+    final: [64, 67, 71, 74], finalRoot: 40 },
+];
+let PXMUSIC = null; // null = rota con la fecha; o el id de un tema fijo
+// Rotación por fecha (también en noches tranquilas); no va amarrada a la paleta de colores
+function pxThemeAuto(slides) {
+  const cover = slides.find(x => x.kind === 'cover') || {}, d = pxDay(cover);
+  return PXTHEMES[(d * 3 + 2 * Math.floor(d / PXTHEMES.length)) % PXTHEMES.length]; // nunca el mismo tema dos días seguidos
+}
+function pxTheme(slides) {
+  if (PXMUSIC) return PXTHEMES.find(x => x.id === PXMUSIC) || pxThemeAuto(slides);
+  return pxThemeAuto(slides);
+}
+
 // ── Sonido 8-bit: se sintetiza con Web Audio (sin archivos) en los mismos instantes que las animaciones ──
 const PXSR = 48000;
 function pxSfx(ac) {
@@ -6507,18 +6562,24 @@ function pxSfx(ac) {
   const duck = t => ducks.push(t);
   return {
     // Música de fondo: 96 BPM, Am–F–C–G. `off` corre el compás para que los datos entren en el tiempo 1.
-    music: (total, off) => {
-      const beat = 60 / 96, s16 = beat / 4, bar = beat * 4;
-      const CH = [[220, 261.6, 329.6], [174.6, 220, 261.6], [130.8, 196, 261.6], [196, 246.9, 293.7]];
-      const ROOT = [110, 87.3, 65.4, 98];
+    music: (total, off, th) => {
+      const beat = 60 / 96, s16 = beat / 4, bar = beat * 4, has = (list, st) => list === 'all' || (list || []).includes(st);
       for (let m = 0; ; m += s16) {
         const t = m - off; if (t >= total - 0.05) break; if (t < 0) continue;
-        const step = Math.round(m / s16) % 16, ci = Math.floor(m / bar + 1e-6) % 4, ch = CH[ci], fade = 1;
-        if (step % 2 === 0) tone(t, ROOT[ci] * (step % 4 === 2 ? 2 : 1), s16 * 1.6, { v: 0.07 * fade, bus: musicBus });
-        tone(t, ch[[0, 1, 2, 1][step % 4]] * 2, s16 * 0.7, { v: 0.022 * fade, bus: musicBus });
-        if (step === 0 || step === 8 || step === 10) tone(t, 150, 0.12, { type: 'sine', v: 0.24 * fade, f2: 45, bus: musicBus });
-        if (step === 4 || step === 12) noise(t, 0.12, { v: 0.12 * fade, f: 1800, q: 0.8, bus: musicBus });
-        if (step % 2 === 0) noise(t, 0.03, { v: 0.035 * fade, f: 7000, kind: 'highpass', a: 0.002, bus: musicBus });
+        const step = Math.round(m / s16) % 16, b = Math.floor(m / bar + 1e-6), ci = b % th.chords.length, ch = th.chords[ci], o = { bus: musicBus };
+        // bajo
+        if (has(th.bass.steps, step)) tone(t, mf(th.roots[ci] + (has(th.bass.oct, step) ? 12 : 0)), s16 * th.bass.len, { type: th.bass.wave, v: th.bass.v, ...o });
+        // arpegio (o acordes cortos "stabs")
+        const A = th.arp;
+        if (A.stab) { if (A.stab.includes(step)) ch.forEach(n => tone(t, mf(n + A.oct), s16 * A.len, { type: A.wave, v: A.v, ...o })); }
+        else if (has(A.steps, step)) { const k = A.steps === 'all' ? step : A.steps.indexOf(step), idx = A.pat[k % A.pat.length]; tone(t, mf((idx < ch.length ? ch[idx] : ch[0] + 12) + A.oct), s16 * A.len, { type: A.wave, v: A.v, ...o }); }
+        // batería
+        const D = th.drums, soft = D.soft ? 0.6 : 1;
+        if (D.kick.includes(step)) tone(t, 150, 0.12, { type: 'sine', v: 0.24 * soft, f2: 45, ...o });
+        if (D.snare.includes(step) || (D.fill && b % 4 === 3 && step >= 13)) noise(t, 0.12, { v: 0.12 * soft, f: 1800, q: 0.8, ...o });
+        if ((D.ghost || []).includes(step)) noise(t, 0.06, { v: 0.04, f: 1800, q: 0.8, ...o });
+        if (has(D.hats, step)) noise(t, 0.03, { v: D.hatV * (D.hats === 'all' && step % 2 ? 0.5 : 1), f: 7000, kind: 'highpass', a: 0.002, ...o });
+        if (D.crash && step === 0 && b % D.crash === 0) noise(t, 0.8, { v: 0.05, f: 5000, kind: 'highpass', a: 0.005, ...o });
       }
     },
     applyDucks: () => {
@@ -6548,7 +6609,7 @@ function pxSfx(ac) {
     whoosh: t => noise(t, 0.22, { v: 0.12, f: 400, f2: 3500, q: 3 }),
     levelUp: t => { duck(t); [392, 523, 659, 784, 1047].forEach((f, i) => tone(t + i * 0.07, f, 0.06, { v: 0.1 })); [523, 659, 784].forEach(f => tone(t + 0.4, f * 2, 0.5, { v: 0.06, type: 'square' })); },
     count: (t, last) => { duck(t); tone(t, last ? 1047 : 784, 0.12, { v: 0.09 }); },
-    finale: t => { duck(t); [261.6, 329.6, 392, 523].forEach(f => tone(t, f, 1.1, { type: 'triangle', v: 0.09, a: 0.01 })); tone(t, 130.8, 1.1, { v: 0.05, a: 0.01 }); },
+    finale: (t, th) => { duck(t); th.final.forEach(n => tone(t, mf(n), 1.1, { type: 'triangle', v: 0.09, a: 0.01 })); tone(t, mf(th.finalRoot), 1.1, { v: 0.05, a: 0.01 }); },
     buzzer: t => { duck(t); tone(t, 220, 0.75, { type: 'sawtooth', v: 0.1, a: 0.01 }); tone(t, 233, 0.75, { type: 'square', v: 0.06, a: 0.01 }); },
   };
 }
@@ -6596,7 +6657,7 @@ function pxSchedule(fx, slides) {
     } else {
       fx.levelUp(T + 0.02);
       for (let k = 0; k < 3; k++) fx.count(T + (2 + k) * PXBEAT, false);
-      fx.finale(T + 5 * PXBEAT);
+      fx.finale(T + 5 * PXBEAT, pxTheme(slides));
     }
     T += s.dur;
   });
@@ -6616,10 +6677,10 @@ async function pixelAudio(slides, total) {
   pxSchedule(fx, slides); pxTrSounds(fx, slides);
   const bar = 4 * 60 / 96, off = ((bar - slides[0].dur % bar) % bar); // la portada termina justo en un tiempo 1
   const outro = slides[slides.length - 1].kind === 'outro' ? slides[slides.length - 1].dur : 0;
-  fx.music(total - outro, off); fx.applyDucks();
+  fx.music(total - outro, off, pxTheme(slides)); fx.applyDucks();
   const pcm = (await ac.startRendering()).getChannelData(0);
   // Volumen tipo redes (~-14 LUFS) con saturación suave para que los picos no recorten
-  for (let i = 0; i < pcm.length; i++) pcm[i] = Math.tanh(pcm[i] * 3) * 0.95;
+  for (let i = 0; i < pcm.length; i++) pcm[i] = Math.tanh(pcm[i] * 3) * 0.89; // techo ~-1 dB para que el códec no recorte
   return pcm;
 }
 
