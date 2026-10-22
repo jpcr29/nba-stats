@@ -1016,11 +1016,11 @@
   .soc-form{display:flex;flex-direction:column;gap:12px;border:1px solid var(--hairline);border-radius:16px;padding:16px;}
   .soc-form-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;}
   .soc-f{display:flex;flex-direction:column;gap:4px;}
-  .soc-f--s{grid-column:span 2;} .soc-f--m{grid-column:span 2;} .soc-f--l{grid-column:span 3;}
+  .soc-f--s{grid-column:span 2;} .soc-f--m{grid-column:span 2;} .soc-f--l{grid-column:span 3;} .soc-f--h{grid-column:span 4;} .soc-f--c{grid-column:span 6;}
   .soc-f input,.soc-f select{width:100%;height:40px;border:1px solid var(--hairline);border-radius:10px;padding:0 10px;font-size:14px;background:var(--canvas);color:var(--hairline);}
   .soc-row-main{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer;}
   .soc-row-main input{width:18px;height:18px;-webkit-appearance:auto;appearance:auto;accent-color:var(--violet);}
-  @media (max-width:768px){ .soc-f--s,.soc-f--m,.soc-f--l{grid-column:span 6;} }
+  @media (max-width:768px){ .soc-f--s,.soc-f--m,.soc-f--l,.soc-f--h,.soc-f--c{grid-column:span 6;} }
   .soc-lbl{margin-top:0;text-transform:uppercase;letter-spacing:1px;}
   .soc-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
   .soc-actions .btn:disabled{opacity:0.4;cursor:not-allowed;}
@@ -5710,7 +5710,15 @@ async function curioRenderImages(slides) {
 // ─ Texto de la publicación ─
 function curioSocialCaption(J, slides) {
   const picks = slides[0].picks;
-  const lines = picks.map((it, i) => `${i + 1}. ${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}`);
+  // Cada línea lleva también el contexto (el comentario de los datos manuales, el "Top de la temporada", etc.):
+  // en el texto de la publicación sí cabe lo que en el video se resume
+  const lines = picks.map((it, i) => {
+    let c = (it.soc.ctx || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
+    if (c && /^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(c)) c = c[0].toLowerCase() + c.slice(1); // "…, top 2 de la temporada"
+    // Si el dato manual tiene jugador, la línea empieza por él: "Paul George: 38 puntos, …"
+    const who = it.player || curioShort(it.dot), head = it.player ? it.capHead : it.soc.head;
+    return `${i + 1}. ${who}: ${it.soc.big} ${head}${c ? ', ' + c : ''}`;
+  });
   // Máximo 5 hashtags (límite de Instagram): #NBA #NBAenEspañol, luego los equipos en el orden de los datos,
   // y si faltan, #baloncesto y #basketball
   const teamTags = [...new Set(picks.filter(it => !it.night).map(it => '#' + curioShort(it.dot).replace(/[^\p{L}\p{N}]/gu, '')))];
@@ -5796,7 +5804,7 @@ function renderCurioSocial() {
   const rows = J.items.map((it, i) => it.soc ? `<label class="soc-row">
       <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="toggleCurioSocialItem(${i})">
       <span class="soc-type">${it.manual ? '✍️ ' + curioEsc(it.label) : CURIO_JTYPES[it.type].label}</span>
-      <span class="soc-txt">${curioDot(it.dot)}<b>${curioShort(it.dot)}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.soc.head)}${it.manual ? `<button type="button" class="soc-del" title="Editar este dato" onclick="editCurioManual(${it.mid}, event)">✏️</button><button type="button" class="soc-del soc-del--x" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
+      <span class="soc-txt">${curioDot(it.dot)}<b>${curioEsc(it.player || curioShort(it.dot))}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.player ? it.capHead : it.soc.head)}${it.manual ? `<button type="button" class="soc-del" title="Editar este dato" onclick="editCurioManual(${it.mid}, event)">✏️</button><button type="button" class="soc-del soc-del--x" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
     </label>` : '').join('');
   const vid = st.video;
   ov.innerHTML = `<div class="profile-modal soc-modal">
@@ -6766,7 +6774,7 @@ function pixelThumb(rawSlides, idx) {
 
 // ── Datos manuales para "Para redes" (p. ej. un jugador que anotó 55) ──
 // Se guardan SOLO en este navegador, por fecha de la jornada; nunca en Firestore ni en los partidos.
-const CURIO_MANUAL = { label: 14, big: 6, head: 50, ctx: 50 };
+const CURIO_MANUAL = { label: 14, player: 30, big: 6, head: 50, ctx: 50 };
 const curioManualKey = date => 'curioManual:' + date;
 function curioManualLoad(date) { try { return JSON.parse(localStorage.getItem(curioManualKey(date)) || '[]'); } catch (e) { return []; } }
 function curioManualSave(date, list) { try { localStorage.setItem(curioManualKey(date), JSON.stringify(list)); } catch (e) {} }
@@ -6785,9 +6793,11 @@ function curioManualItem(m, dayGames) {
   return {
     type: 'manual', manual: true, mid: m.id, label: m.label || 'Dato', main: !!m.main,
     value: m.big, dot: liga ? CURIO_NIGHT : m.team, teamLabel: liga ? 'Toda la liga' : m.team,
-    night: liga, nightTeams: [], hook: `${m.big} ${m.head}${m.ctx ? '. ' + m.ctx : ''}`,
+    night: liga, nightTeams: [], hook: `${m.player ? m.player + ': ' : ''}${m.big} ${m.head}${m.ctx ? '. ' + m.ctx : ''}`,
+    // con jugador: en el video el titular es "puntos de Paul George"; en el texto, "Paul George: 38 puntos"
+    player: (m.player || '').trim(), capHead: m.head,
     score: m.main ? 99 : 2.6, teams: liga ? [] : [m.team],
-    soc: { big: m.big, head: m.head, ctx: m.ctx || '', foot },
+    soc: { big: m.big, head: m.player ? `${m.head} de ${m.player.trim()}` : m.head, ctx: m.ctx || '', foot },
   };
 }
 // Los principales van primero; los demás, entre los datos de la noche según su puntaje
@@ -6812,7 +6822,7 @@ function curioSocialRebuild(selectMid) {
 }
 
 // Formulario
-function openCurioManualForm() { const st = curioSocialState; if (!st) return; st.form = { team: (st.J.dayTeams || [])[0] || '', label: 'Jugador', big: '', head: '', ctx: '', main: true }; renderCurioSocial(); }
+function openCurioManualForm() { const st = curioSocialState; if (!st) return; st.form = { team: (st.J.dayTeams || [])[0] || '', label: 'Jugador', player: '', big: '', head: '', ctx: '', main: true }; renderCurioSocial(); }
 function closeCurioManualForm() { const st = curioSocialState; if (!st) return; st.form = null; renderCurioSocial(); }
 function curioManualInput(field, el) {
   const st = curioSocialState; if (!st || !st.form) return;
@@ -6826,7 +6836,7 @@ function saveCurioManual() {
   if (!big || !head) { toast('Falta el número grande o el titular', 'var(--lose)'); return; }
   const list = curioManualLoad(st.J.date), id = f.id || Date.now();
   if (f.main) list.forEach(m => { m.main = false; }); // un solo principal
-  const rec = { id, team: f.team, label: f.label.trim() || 'Dato', big, head, ctx: f.ctx.trim(), main: !!f.main };
+  const rec = { id, team: f.team, label: f.label.trim() || 'Dato', player: (f.player || '').trim(), big, head, ctx: f.ctx.trim(), main: !!f.main };
   const k = list.findIndex(m => m.id === id);
   if (k >= 0) list[k] = rec; else list.push(rec); // editar reemplaza en su lugar; si no, se agrega
   curioManualSave(st.J.date, list);
@@ -6838,7 +6848,7 @@ function editCurioManual(mid, ev) {
   if (ev) { ev.preventDefault(); ev.stopPropagation(); }
   const st = curioSocialState; if (!st) return;
   const m = curioManualLoad(st.J.date).find(x => x.id === mid); if (!m) return;
-  st.form = { id: m.id, team: m.team || '', label: m.label || '', big: m.big || '', head: m.head || '', ctx: m.ctx || '', main: !!m.main };
+  st.form = { id: m.id, team: m.team || '', label: m.label || '', player: m.player || '', big: m.big || '', head: m.head || '', ctx: m.ctx || '', main: !!m.main };
   renderCurioSocial();
 }
 function deleteCurioManual(mid, ev) {
@@ -6856,10 +6866,11 @@ function curioManualFormHtml(st) {
     <div class="soc-form-grid">
       <label class="soc-f soc-f--m"><span class="soc-sub">Equipo</span>
         <select onchange="curioManualInput('team', this)">${opts}<option value="" ${f.team === '' ? 'selected' : ''}>Toda la liga</option></select></label>
+      ${inp('player', 'Jugador (opcional)', 'm')}
       ${inp('label', 'Etiqueta', 's')}
       ${inp('big', 'Número grande', 's')}
-      ${inp('head', 'Titular (p. ej. "puntos de Luka Dončić")', 'l')}
-      ${inp('ctx', 'Contexto (opcional)', 'l')}
+      ${inp('head', 'Titular (p. ej. "puntos")', 'h')}
+      ${inp('ctx', 'Contexto (opcional)', 'c')}
     </div>
     <label class="soc-row-main"><input type="checkbox" ${f.main ? 'checked' : ''} onchange="curioManualInput('main', this)"> Dato principal (abre el video)</label>
     <div class="soc-actions">
