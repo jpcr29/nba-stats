@@ -5032,7 +5032,7 @@ function curioJornadaItems(src, after) {
 
   // Distribuciones de la temporada (incluida la jornada, para que dos partidos del mismo día
   // no digan ambos "el mayor de la temporada"), para medir rareza
-  const dist = { cb: [], q: [], margin: [], total: [], bench: [], pts: [] };
+  const dist = { cb: [], cbH: [], q: [], margin: [], total: [], bench: [], pts: [] };
   src.forEach(g => {
     const hasQ = curioHasQuarters(g);
     dist.margin.push(Math.abs((g.ptsL || 0) - (g.ptsA || 0)));
@@ -5045,6 +5045,8 @@ function curioJornadaItems(src, after) {
         const m3 = [1, 2, 3].reduce((a, i) => a + g[`q${i}${me}`] - g[`q${i}${op}`], 0);
         const won = g.winner ? g.winner === me : g['pts' + me] > g['pts' + op];
         if (won && m3 < 0) dist.cb.push(-m3);
+        const mH = [1, 2].reduce((a, i) => a + g[`q${i}${me}`] - g[`q${i}${op}`], 0);
+        if (won && mH < 0) dist.cbH.push(-mH); // remontadas desde el descanso, para su propio "Top"
       }
     });
   });
@@ -5096,13 +5098,17 @@ function curioJornadaItems(src, after) {
       if (won && hasQ) {
         const def3 = -[1, 2, 3].reduce((a, i) => a + g[`q${i}${me}`] - g[`q${i}${op}`], 0);
         const defH = -[1, 2].reduce((a, i) => a + g[`q${i}${me}`] - g[`q${i}${op}`], 0);
-        if (def3 >= CURIO_J.comeback) {
+        // Se muestra la desventaja MÁS GRANDE: al final del 3er cuarto o al descanso
+        // (p. ej. perdía por 24 al descanso y por 8 tras 3 cuartos → sale el −24)
+        const use3 = def3 >= CURIO_J.comeback, useH = defH >= CURIO_J.comebackHalf;
+        if (useH && (!use3 || defH > def3)) {
+          const r = rankHi(defH, dist.cbH);
+          add('comeback', '−' + defH, t, t, `${sh(t)} perdía por ${defH} al descanso ${ante(home, o)} y ganó ${pf}-${pa}.${rankTxt(r, 'la mayor remontada al descanso')}`, defH / 5 + bonus(r), [t, o],
+            { big: '−' + defH, head: 'al descanso… y lo ganó', ctx: rankTxt(r, 'la mayor remontada al descanso').trim() || `Remontada ${ante(home, o)}.`, foot: vsTxt });
+        } else if (use3) {
           const r = rankHi(def3, dist.cb);
           add('comeback', '−' + def3, t, t, `${sh(t)} perdía por ${def3} al terminar el 3er cuarto ${ante(home, o)} y ganó ${pf}-${pa}.${rankTxt(r, 'la mayor remontada')}`, def3 / 4 + bonus(r), [t, o],
             { big: '−' + def3, head: 'tras 3 cuartos… y lo ganó', ctx: rankTxt(r, 'la mayor remontada').trim() || `Remontada ${ante(home, o)}.`, foot: vsTxt });
-        } else if (defH >= CURIO_J.comebackHalf) {
-          add('comeback', '−' + defH, t, t, `${sh(t)} perdía por ${defH} al descanso ${ante(home, o)} y ganó ${pf}-${pa}.`, defH / 5, [t, o],
-            { big: '−' + defH, head: 'al descanso… y lo ganó', ctx: `Remontada ${ante(home, o)}.`, foot: vsTxt });
         }
       }
       // Cuarto explosivo (el mejor cuarto del equipo en el partido)
