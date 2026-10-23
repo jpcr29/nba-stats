@@ -5981,7 +5981,7 @@ function pviz(c, it, t, col, R = { x: PX.S.l, y: 190, W: PX.S.r - PX.S.l }) {
   const nums = (it.soc.foot.match(/(\d+)-(\d+)/) || []).slice(1).map(Number);
   const typ = it.type;
   if (it.manual) {
-    if (it.night || t < 0.6) return;
+    if (it.night || !it.player || t < 0.6) return; // la camiseta solo si el dato es de un jugador
     const cc = curioSocialColors(it.dot), num = /^\d{1,2}$/.test(it.soc.big) ? it.soc.big : null, pop = t < 0.75 ? -3 : 0;
     pjersey(c, Math.round(L + W / 2 - 18), y0 + pop, cc.bg, cc.accent, PXC.ink, num, 3);
     return;
@@ -6178,7 +6178,7 @@ function pxFooter(c, it, col, y) {
 // Alto real que ocupa el gráfico de cada tipo (para que el resto se acomode y no queden huecos)
 function pxVizH(it, W = PX.S.r - PX.S.l) {
   const typ = it.type;
-  if (it.manual) return it.night ? 0 : 42;
+  if (it.manual) return it.night || !it.player ? 0 : 42;
   if (it.night) return Math.ceil(it.nightTeams.length / Math.max(1, Math.floor(W / 28))) * 42 - 2;
   if (it.season) { const V = it.seasonViz, per = Math.floor((W + 2) / 10); return V.kind === 'bars' ? 26 : Math.min(3, Math.ceil((V.W + V.L) / per)) * 10 - 2; }
   if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
@@ -6655,7 +6655,7 @@ function pxSchedule(fx, slides) {
       const it = s.it, typ = it.type;
       fx.ding(T + 1.0);
       const V = T + PXV - 0.6; // tiempo cero del gráfico
-      if (it.manual) { if (!it.night) fx.hit(V + 0.6); }
+      if (it.manual) { if (!it.night && it.player) fx.hit(V + 0.6); }
       else if (it.season) { const SV = it.seasonViz; if (SV.kind === 'bars') { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); } else { const n = Math.min(SV.W + SV.L, 30); for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.0 * (i + 1) / n, i < SV.W ? Math.min(i, 13) : 0); } }
       else if (it.night) { const n = it.nightTeams.length; for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.4 * (i + 1) / n, 4 + i); fx.ding(V + 2.2); }
       else if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
