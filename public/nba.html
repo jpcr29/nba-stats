@@ -6132,7 +6132,7 @@ function pxLabel(c, it, x, y, col, align = 'left') {
     for (let k = 0; k < 6; k++) prect(c, ix + 2 + (k % 3) * 3, y + 6 + Math.floor(k / 3) * 3, 2, 2, col.bg);
   }
 }
-function pxNumber(c, it, x, y, t, col, { sizes = [32, 24], align = 'left', maxW = PX.S.r - PX.S.l } = {}) {
+function pxNumber(c, it, x, y, t, col, { sizes = [32, 24, 16], align = 'left', maxW = PX.S.r - PX.S.l } = {}) {
   const raw = pclean(it.soc.big), m = raw.match(/^([+-]?)(\d+)(.*)$/);
   const p = pclamp((pstep(t) - 0.2) / 0.8), shown = m ? m[1] + Math.round(+m[2] * p) + m[3] : raw;
   let sz = sizes[sizes.length - 1]; for (const s of sizes) { c.font = pf(s); if (c.measureText(raw).width <= maxW) { sz = s; break; } }
@@ -6194,7 +6194,7 @@ const pxVizTop = it => (it.type === 'comeback' ? 4 : it.type === 'quarter' ? 5 :
 // Centro horizontal = centro de la ZONA SEGURA (no del lienzo): la zona está corrida a la izquierda
 // para no quedar bajo los botones de TikTok/Reels, así que todo lo centrado usa esta referencia.
 const PXCX = (PX.S.l + PX.S.r) / 2;
-function pxNumSize(c, it, sizes = [32, 24], maxW = PX.S.r - PX.S.l) {
+function pxNumSize(c, it, sizes = [32, 24, 16], maxW = PX.S.r - PX.S.l) {
   const raw = pclean(it.soc.big); for (const s of sizes) { c.font = pf(s); if (c.measureText(raw).width <= maxW) return s; }
   return sizes[sizes.length - 1];
 }
@@ -6245,7 +6245,7 @@ function pxCardC(c, s, it, t, col) { // Marcador: el partido arriba en un tabler
   for (let i = 0; i < cw; i += 4) if ((Math.floor(t * 4) + i / 4) % 2) prect(c, S.l + i + 1, S.t - 1, 2, 1, col.accent);
   ptext(c, pwrap(c, team, cw - 70, 8, 1)[0], S.l + 5, S.t + 6, 8, '#ffffff'); ptext(c, score, S.r - 5, S.t + 6, 8, '#ffd23f', 'right');
   ptext(c, pwrap(c, rival, cw - 40, 8, 1)[0] || '', S.l + 5, S.t + 17, 8, '#bdbdbd'); ptext(c, `${s.n}/${s.of}`, S.r - 5, S.t + 17, 8, '#bdbdbd', 'right');
-  const sizes = [48, 32, 24], sz = pxNumSize(c, it, sizes), head = pwrap(c, pxHead(it), cw, 8, 3), ctx = pxCtx(it) ? pwrap(c, pxCtx(it), cw, 8, 2) : [];
+  const sizes = [48, 32, 24, 16], sz = pxNumSize(c, it, sizes), head = pwrap(c, pxHead(it), cw, 8, 3), ctx = pxCtx(it) ? pwrap(c, pxCtx(it), cw, 8, 2) : [];
   const vt = pxVizTop(it), vh = pxVizH(it);
   pxStack(82, 243, [
     { h: 14, gap: 8, draw: y => t > 0.1 && pxLabel(c, it, S.l, y, col) },
@@ -6387,7 +6387,9 @@ function pxCoverHook(c, s, t, P) {
     // líneas de velocidad
     for (let i = 0; i < 9; i++) { const yy = 60 + i * 22 + (Math.floor(t * 12) * 7 + i * 5) % 22; prect(c, 0, yy, 4 + (i * 37) % 8, 1, col.accent); prect(c, w - 4 - (i * 53) % 8, yy + 9, 12, 1, col.accent); }
     ptext(c, (top.label || CURIO_JTYPES[top.type].label).toUpperCase(), cx, 78, 8, col.accent, 'center');
-    const q = '¿' + pclean(top.soc.big) + '?'; let sz = 32; c.font = pf(32); if (c.measureText(q).width > cw) sz = 24;
+    // número del gancho: con "¿ ?" si cabe; si no, sin ellos y más pequeño (p. ej. un triple-doble 30/12/11)
+    let q = '¿' + pclean(top.soc.big) + '?', sz = 32; c.font = pf(32); if (c.measureText(q).width > cw) sz = 24;
+    c.font = pf(24); if (sz === 24 && c.measureText(q).width > cw) { q = pclean(top.soc.big); c.font = pf(24); sz = c.measureText(q).width > cw ? 16 : 24; }
     const shake = t < 0.25 ? Math.round(Math.sin(t * 90) * 2) : 0;
     ptext(c, q, cx + 1 + shake, 101, sz, PXC.ink, 'center'); ptext(c, q, cx + shake, 100, sz, col.accent, 'center');
     const hl = pwrap(c, pxHead(top), cw, 8, 3); if (t > B * 0.5) hl.forEach((l, i) => ptext(c, l, cx, 148 + i * 12, 8, col.text, 'center'));
@@ -6780,7 +6782,7 @@ function pixelThumb(rawSlides, idx) {
 
 // ── Datos manuales para "Para redes" (p. ej. un jugador que anotó 55) ──
 // Se guardan SOLO en este navegador, por fecha de la jornada; nunca en Firestore ni en los partidos.
-const CURIO_MANUAL = { label: 14, player: 30, big: 6, head: 50, ctx: 50 };
+const CURIO_MANUAL = { label: 14, player: 30, big: 8, head: 50, ctx: 50 };
 const curioManualKey = date => 'curioManual:' + date;
 function curioManualLoad(date) { try { return JSON.parse(localStorage.getItem(curioManualKey(date)) || '[]'); } catch (e) { return []; } }
 function curioManualSave(date, list) { try { localStorage.setItem(curioManualKey(date), JSON.stringify(list)); } catch (e) {} }
