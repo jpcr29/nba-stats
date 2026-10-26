@@ -5080,10 +5080,18 @@ function curioJornadaItems(src, after) {
     }
     if (enough) {
       const rh = rankHi(total, dist.total), rl = rankLo(total, dist.total);
-      if (rh <= CURIO_J.rankTop) add('total', String(total), W, `${sh(g.local)} vs ${sh(g.away)}`, `${score}: ${total} pts entre los dos.${rankTxt(rh, 'el partido con más puntos')}`, 1 + bonus(rh), [g.local, g.away],
-        { big: String(total), head: 'puntos en un solo partido', ctx: rankTxt(rh, 'el partido con más puntos').trim(), foot: score });
-      else if (rl <= CURIO_J.rankTop) add('total', String(total), W, `${sh(g.local)} vs ${sh(g.away)}`, `${score}: apenas ${total} pts entre los dos.${rankTxt(rl, 'el partido con menos puntos')}`, 1 + bonus(rl), [g.local, g.away],
-        { big: String(total), head: 'puntos entre los dos equipos', ctx: rankTxt(rl, 'el partido con menos puntos').trim(), foot: score });
+      // Marcador alto o bajo: el texto dice siempre de qué lado está ("el 2º con menos puntos", no solo "Top 2")
+      const totTxt = (r, more) => r === 1 ? ` Es el partido con ${more ? 'más' : 'menos'} puntos de la temporada.` : ` El ${r}º partido con ${more ? 'más' : 'menos'} puntos de la temporada.`;
+      const totSoc = (r, more) => r === 1 ? `El más ${more ? 'alto' : 'bajo'} de la temporada.` : `El ${r}º más ${more ? 'alto' : 'bajo'} del año.`;
+      if (rh <= CURIO_J.rankTop) {
+        add('total', String(total), W, `${sh(g.local)} vs ${sh(g.away)}`, `${score}: ${total} pts entre los dos.${totTxt(rh, true)}`, 1 + bonus(rh), [g.local, g.away],
+          { big: String(total), head: 'puntos en un solo partido', ctx: totSoc(rh, true), foot: score });
+        out[out.length - 1].label = 'Marcador alto';
+      } else if (rl <= CURIO_J.rankTop) {
+        add('total', String(total), W, `${sh(g.local)} vs ${sh(g.away)}`, `${score}: apenas ${total} pts entre los dos.${totTxt(rl, false)}`, 1 + bonus(rl), [g.local, g.away],
+          { big: String(total), head: 'puntos entre los dos equipos', ctx: totSoc(rl, false), foot: score });
+        out[out.length - 1].label = 'Marcador bajo';
+      }
     }
     if ((g.otL || 0) + (g.otA || 0) > 0)
       add('ot', 'OT', W, `${sh(g.local)} vs ${sh(g.away)}`, `${score} tras prórroga.`, 1, [g.local, g.away],
@@ -5246,7 +5254,7 @@ function renderCurioFeed() {
   const shown = curioFeedAll ? J.items : J.items.slice(0, CURIO_FEED_SHOW);
   const cards = shown.map(it => {
     const ty = CURIO_JTYPES[it.type];
-    const inner = `<div class="cur-fcard-top"><span class="cur-fcard-icon">${ty.icon}</span><span class="cur-fcard-cat">${ty.label}</span></div>
+    const inner = `<div class="cur-fcard-top"><span class="cur-fcard-icon">${ty.icon}</span><span class="cur-fcard-cat">${it.label || ty.label}</span></div>
       <div class="cur-fcard-val">${it.value}</div>
       <div class="cur-fcard-team">${it.night ? '' : curioDot(it.dot)}${it.teamLabel}</div>
       <div class="cur-fcard-hook">${it.hook}</div>`;
@@ -5809,7 +5817,7 @@ function renderCurioSocial() {
   const nPick = slides.length - 2, secs = curioSocialSecs(st, slides);
   const rows = J.items.map((it, i) => it.soc ? `<label class="soc-row">
       <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="toggleCurioSocialItem(${i})">
-      <span class="soc-type">${it.manual ? '✍️ ' + curioEsc(it.label) : CURIO_JTYPES[it.type].label}</span>
+      <span class="soc-type">${it.manual ? '✍️ ' + curioEsc(it.label) : (it.label || CURIO_JTYPES[it.type].label)}</span>
       <span class="soc-txt">${curioDot(it.dot)}<b>${curioEsc(it.player || curioShort(it.dot))}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.player ? it.capHead : it.soc.head)}${it.manual ? `<button type="button" class="soc-del" title="Editar este dato" onclick="editCurioManual(${it.mid}, event)">✏️</button><button type="button" class="soc-del soc-del--x" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
     </label>` : '').join('');
   const vid = st.video;
