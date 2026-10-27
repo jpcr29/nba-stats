@@ -6711,6 +6711,28 @@ async function pixelAudio(slides, total) {
   return pcm;
 }
 
+// Safari/iOS (y Chrome en iPhone, que usa el mismo motor) entrega la config de AAC como un ES_Descriptor completo
+// en vez del AudioSpecificConfig de 2 bytes; mp4-muxer lo envolvía otra vez y el audio quedaba ilegible (sin sonido).
+// Aquí se extrae el AudioSpecificConfig real (descriptor 0x05) si viene envuelto.
+function pxFixAudioMeta(m) {
+  const d = m && m.decoderConfig && m.decoderConfig.description; if (!d) return m;
+  const b = d instanceof ArrayBuffer ? new Uint8Array(d) : new Uint8Array(d.buffer, d.byteOffset, d.byteLength);
+  if (b[0] !== 0x03 && b[0] !== 0x04 && b[0] !== 0x05) return m; // ya es un AudioSpecificConfig normal
+  const len = p => { let n = 0, c; do { c = b[p.i++]; n = (n << 7) | (c & 0x7f); } while (c & 0x80 && p.i < b.length); return n; };
+  const walk = (start, end) => {
+    const p = { i: start };
+    while (p.i < end) {
+      const tag = b[p.i++], n = len(p), s = p.i;
+      if (tag === 0x05) return b.slice(s, s + n);
+      if (tag === 0x03) { let q = s + 2; const fl = b[q++]; if (fl & 0x80) q += 2; if (fl & 0x40) q += 1 + b[q]; if (fl & 0x20) q += 2; const r = walk(q, s + n); if (r) return r; }
+      if (tag === 0x04) { const r = walk(s + 13, s + n); if (r) return r; }
+      p.i = s + n;
+    }
+    return null;
+  };
+  const asc = walk(0, b.length);
+  return asc ? { ...m, decoderConfig: { ...m.decoderConfig, description: asc } } : m;
+}
 async function pixelRenderVideo(rawSlides, onProgress) {
   const slides = pxSlides(rawSlides);
   try { await document.fonts.load("8px 'Press Start 2P'"); } catch (e) {}
@@ -6743,7 +6765,7 @@ async function pixelRenderVideo(rawSlides, onProgress) {
   // Audio primero (es rápido): se sintetiza todo y se codifica en bloques
   if (apick) {
     const pcm = await pixelAudio(slides, total);
-    const aenc = new AudioEncoder({ output: (ch, m) => muxer.addAudioChunk(ch, m), error: e => { failed = e; } });
+    const aenc = new AudioEncoder({ output: (ch, m) => muxer.addAudioChunk(ch, pxFixAudioMeta(m)), error: e => { failed = e; } });
     aenc.configure({ codec: apick.codec, sampleRate: PXSR, numberOfChannels: 1, bitrate: 128000 });
     for (let i = 0; i < pcm.length; i += 4800) {
       const part = pcm.slice(i, i + 4800);
