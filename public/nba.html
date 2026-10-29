@@ -1008,6 +1008,9 @@
   .soc-thumb{width:90px;height:160px;border-radius:10px;border:1px solid var(--hairline);flex-shrink:0;}
   .soc-thumb.px{image-rendering:pixelated;}
   .soc-style{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .cur-feed-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .tb-warn{border:1px solid var(--lose);border-radius:16px;padding:10px 16px;font-size:13px;color:var(--lose);background:color-mix(in srgb,var(--lose) 6%,transparent);}
+  .tb-date{width:auto;height:36px;border-radius:9999px;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:12px;}
   .soc-sep{width:1px;height:24px;background:var(--outline-var);margin:0 6px;}
   .soc-music{width:auto;height:36px;border:1px solid var(--hairline);border-radius:9999px;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;background:var(--canvas);color:var(--hairline);cursor:pointer;}
   .soc-del{margin-left:auto;border:none;background:none;cursor:pointer;font-size:14px;color:var(--outline);padding:2px 6px;}
@@ -5333,7 +5336,8 @@ function renderCurioFeed() {
   el.innerHTML = `<div class="cur-feed-head">
       <div class="cur-feed-titlerow">
         <div class="cur-block-title">La jornada · ${fmtDate(J.date)}</div>
-        <button type="button" class="cur-demo-btn" onclick="openCurioSocial()">📲 Para redes</button>
+        <span class="cur-feed-btns"><button type="button" class="cur-demo-btn" onclick="openCurioSocial()">📲 Para redes</button>
+        <button type="button" class="cur-demo-btn" onclick="openTablaSemanal()">📊 Tabla semanal</button></span>
       </div>
       <div class="cur-block-note">Lo raro de los ${J.nGames} partido${J.nGames === 1 ? '' : 's'} del último día registrado, comparado con la temporada hasta ese día. Lo de toda la temporada está en Explorar.</div>
     </div>
@@ -6035,7 +6039,7 @@ const PXV = 1.4; // segundo en que arranca el gráfico de cada dato
 const PXDUR = { cover: 3.75, card: 5, outro: 3.75 }; // a 96 BPM (tiempo = 0,625 s): todo cae en un tiempo de la música
 const PXBEAT = 60 / 96;
 let PXCOVER = 2; // portada: 2 = gancho + elige tu equipo (la única en uso); 0 balón y 1 arcade quedan de respaldo
-const pxSlides = slides => slides.map(s => ({ ...s, dur: s.kind === 'cover' && PXCOVER === 2 ? 12 * PXBEAT : (PXDUR[s.kind] || s.dur) }));
+const pxSlides = slides => slides.map(s => ({ ...s, dur: s.kind === 'cover' && s.tabla ? 8 * PXBEAT : s.kind === 'cover' && PXCOVER === 2 ? 12 * PXBEAT : (PXDUR[s.kind] || s.dur) }));
 const pclamp = x => Math.max(0, Math.min(1, x));
 
 // Balón de 8×8
@@ -6555,11 +6559,14 @@ function pixelDrawSlide(c, s, t, st) {
   const { w, h } = PX;
   st = st || { pal: PXPAL[0], coverV: 0, shift: 0 };
   if (s.kind === 'card') {
-    const it = s.it, col = it.night || it.cup ? { bg: st.pal.bg, text: st.pal.fg, accent: st.pal.hi, dim: st.pal.dim } : curioSocialColors(it.dot);
+    const it = s.it, col = it.night || it.cup || it.tabla ? { bg: st.pal.bg, text: st.pal.fg, accent: st.pal.hi, dim: st.pal.dim } : curioSocialColors(it.dot);
     prect(c, 0, 0, w, h, col.bg);
-    if (it.cup) pxCardCupConf(c, s, it, t, col);
+    if (it.tabla) pxTablaCard(c, s, it, t, col);
+    else if (it.cup) pxCardCupConf(c, s, it, t, col);
     else [pxCardA, pxCardB, pxCardC][(s.n - 1 + st.shift) % 3](c, s, it, t, col);
-  } else if (s.kind === 'cover') [pxCoverBall, pxCoverArcade, pxCoverHook][PXCOVER](c, s, t, st.pal);
+  } else if (s.kind === 'cover' && s.tabla) pxTablaCover(c, s, t, st.pal);
+  else if (s.kind === 'cover') [pxCoverBall, pxCoverArcade, pxCoverHook][PXCOVER](c, s, t, st.pal);
+  else if (s.tabla) pxTablaOutro(c, s, t, st.pal);
   else pxOutro(c, s, t, st.pal);
 }
 
@@ -6630,7 +6637,7 @@ function pixelDrawAt(big, small, slides, time) {
   // (se dibuja ya en alta resolución), justo debajo de la zona segura y a la izquierda de los botones de la app
   const hd = (typeof CURIO_SOCIAL !== 'undefined' && CURIO_SOCIAL.HANDLE) || '', sl = slides[idx];
   if (hd && sl.kind === 'card' && b < 0) {
-    const col = sl.it.night || sl.it.cup ? { text: st.pal.fg } : curioSocialColors(sl.it.dot);
+    const col = sl.it.night || sl.it.cup || sl.it.tabla ? { text: st.pal.fg } : curioSocialColors(sl.it.dot);
     B.save(); B.globalAlpha = 0.55; B.font = "16px 'Press Start 2P'"; B.fillStyle = col.text; B.textAlign = 'right'; B.textBaseline = 'top';
     B.fillText(hd.startsWith('@') ? hd : '@' + hd, PX.S.r * PX.s, PX.S.b * PX.s + 22); B.restore();
   }
@@ -6757,7 +6764,8 @@ function pxSfx(ac) {
 function pxSchedule(fx, slides) {
   let T = 0;
   slides.forEach((s, k) => {
-    if (s.kind === 'cover' && PXCOVER === 2) {
+    if (s.kind === 'cover' && s.tabla) { fx.hit(T + 0.35); for (let k = 0; k < 4; k++) fx.blip(T + 0.7 + k * 0.15, 600 + k * 90); fx.ding(T + 1.4); }
+    else if (s.kind === 'cover' && PXCOVER === 2) {
       const B = PXBEAT, nT = pxHookTeams(s).length, hops = Math.max(nT, 3);
       if (s.quiet) { // noche tranquila: grillos / carga trabada / ronquido
         const v = pxQuietVariant(s);
@@ -6778,7 +6786,8 @@ function pxSchedule(fx, slides) {
       const it = s.it, typ = it.type;
       fx.ding(T + 1.0);
       const V = T + PXV - 0.6; // tiempo cero del gráfico
-      if (it.cup) { it.cupGroups.forEach((G, k) => G.rows.forEach((r, i) => fx.note(T + PXCONF.g0 + k * PXCONF.gStep + 0.1 + i * PXCONF.rStep, 11 - i * 2 + (k % 2)))); }
+      if (it.tabla) { it.rows.forEach((r, i) => fx.note(T + 0.3 + i * 0.1, i < 6 ? 12 - i : i < 10 ? 6 - (i - 6) : 1)); }
+      else if (it.cup) { it.cupGroups.forEach((G, k) => G.rows.forEach((r, i) => fx.note(T + PXCONF.g0 + k * PXCONF.gStep + 0.1 + i * PXCONF.rStep, 11 - i * 2 + (k % 2)))); }
       else if (it.manual) { if (!it.night && it.player) fx.hit(V + 0.6); }
       else if (it.season) { const SV = it.seasonViz; if (SV.kind === 'bars') { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); } else { const n = Math.min(SV.W + SV.L, 30); for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.0 * (i + 1) / n, i < SV.W ? Math.min(i, 13) : 0); } }
       else if (it.night) { const n = it.nightTeams.length; for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.4 * (i + 1) / n, 4 + i); fx.ding(V + 2.2); }
@@ -7376,6 +7385,250 @@ function curioCupItems(src, J) {
   });
   return [{ type: 'cupGroup', cup: true, cupParts: parts, label: 'NBA Cup', value: 'tablas', dot: parts[0].dot, teamLabel: 'NBA Cup', teams: [], score: 2.5,
     hook: 'Tablas de la NBA Cup', capText: 'Tablas Este y Oeste (los 6 grupos, 2 tarjetas)', soc: { big: '', head: 'Tablas de la NBA Cup', ctx: '', foot: 'NBA Cup' } }];
+}
+
+// ════════════════════════════════════════════════════
+//  TABLA SEMANAL (video aparte para redes, cada lunes)
+//  Se recalcula siempre desde tus partidos: la tabla hasta el domingo y la de 7 días antes.
+//  Desempate oficial de la NBA. La primera semana de la temporada sale sin flechas.
+// ════════════════════════════════════════════════════
+const TB_EAST = new Set(['Atlanta Hawks','Boston Celtics','Brooklyn Nets','Charlotte Hornets','Chicago Bulls','Cleveland Cavaliers','Detroit Pistons','Indiana Pacers','Miami Heat','Milwaukee Bucks','New York Knicks','Orlando Magic','Philadelphia 76ers','Toronto Raptors','Washington Wizards']);
+// Divisiones (para el desempate oficial)
+const TB_DIV = { Atlantic: ['Boston Celtics','Brooklyn Nets','New York Knicks','Philadelphia 76ers','Toronto Raptors'], Central: ['Chicago Bulls','Cleveland Cavaliers','Detroit Pistons','Indiana Pacers','Milwaukee Bucks'],
+  Southeast: ['Atlanta Hawks','Charlotte Hornets','Miami Heat','Orlando Magic','Washington Wizards'], Northwest: ['Denver Nuggets','Minnesota Timberwolves','Oklahoma City Thunder','Portland Trail Blazers','Utah Jazz'],
+  Pacific: ['Golden State Warriors','Los Angeles Clippers','Los Angeles Lakers','Phoenix Suns','Sacramento Kings'], Southwest: ['Dallas Mavericks','Houston Rockets','Memphis Grizzlies','New Orleans Pelicans','San Antonio Spurs'] };
+const TB_DIVOF = {}; Object.entries(TB_DIV).forEach(([d, ts]) => ts.forEach(t => { TB_DIVOF[t] = d; }));
+const tbConf = t => (TB_EAST.has(t) ? 'Este' : 'Oeste');
+const TB_WHY = { h2h: 'enfrentamientos directos', div: 'campeón de división', divRec: 'récord en la división', conf: 'récord en la conferencia', elig: 'récord vs top 10 de su conferencia', eligOpp: 'récord vs top 10 de la otra conferencia', pd: 'diferencia de puntos', draw: 'sorteo' };
+// Tabla con el desempate oficial de la NBA (reglamento, sección L.2): 2 equipos y 3 o más
+function tbRank(src, upTo) {
+  const gs = src.filter(g => g.date <= upTo && g.cup !== 'final'), R = {};
+  const rec = t => R[t] || (R[t] = { team: t, w: 0, l: 0, d: 0, games: [] });
+  gs.forEach(g => { const a = rec(g.local), b = rec(g.away), wl = g.ptsL > g.ptsA;
+    a.games.push({ opp: g.away, win: wl }); b.games.push({ opp: g.local, win: !wl });
+    if (wl) { a.w++; b.l++; } else { b.w++; a.l++; } a.d += g.ptsL - g.ptsA; b.d += g.ptsA - g.ptsL; });
+  const pct = r => (r.w + r.l ? r.w / (r.w + r.l) : 0);
+  const vs = (r, set) => { let w = 0, n = 0; r.games.forEach(x => { if (set.has(x.opp)) { n++; if (x.win) w++; } }); return n ? w / n : null; };
+  const all = Object.values(R);
+  // "Elegibles": los 10 mejores récords de cada conferencia, más los empatados con el 10º
+  const elig = {};
+  ['Este', 'Oeste'].forEach(cf => { const c = all.filter(r => tbConf(r.team) === cf).sort((a, b) => pct(b) - pct(a)); const cut = c[Math.min(9, c.length - 1)]; elig[cf] = new Set(c.filter(r => pct(r) >= pct(cut)).map(r => r.team)); });
+  const confSet = cf => new Set(all.filter(r => tbConf(r.team) === cf).map(r => r.team));
+  const divSet = t => new Set(TB_DIV[TB_DIVOF[t]].filter(x => x !== t));
+  let divWin = new Set();
+  function breakTie(tied, useDiv) {
+    if (tied.length < 2) return tied;
+    const two = tied.length === 2, set = new Set(tied.map(r => r.team)), sameDiv = tied.every(r => TB_DIVOF[r.team] === TB_DIVOF[tied[0].team]);
+    const other = t => (tbConf(t) === 'Este' ? 'Oeste' : 'Este');
+    const crit = [];
+    const h2h = ['h2h', r => vs(r, new Set([...set].filter(x => x !== r.team)))];
+    const div = ['div', r => (divWin.has(r.team) ? 1 : 0)];
+    if (two) { crit.push(h2h); if (useDiv) crit.push(div); } else { if (useDiv) crit.push(div); crit.push(h2h); }
+    if (sameDiv) crit.push(['divRec', r => vs(r, divSet(r.team))]);
+    crit.push(['conf', r => vs(r, confSet(tbConf(r.team)))], ['elig', r => vs(r, elig[tbConf(r.team)])]);
+    if (two) crit.push(['eligOpp', r => vs(r, elig[other(r.team)])]);
+    crit.push(['pd', r => r.d]);
+    for (const [key, f] of crit) {
+      const v = new Map(tied.map(r => [r, f(r)]));
+      if ([...v.values()].some(x => x == null)) continue; // sin partidos que comparar: el criterio no separa
+      const vals = [...new Set(v.values())].sort((a, b) => b - a);
+      if (vals.length === 1) continue;
+      // Se separa al menos un equipo: los que siguen empatados vuelven a empezar (2 o 3+ según cuántos queden)
+      return vals.flatMap(x => { const g = tied.filter(r => v.get(r) === x); if (g.length === 1) { g[0].why = g[0].why || key; return g; } return breakTie(g, useDiv); });
+    }
+    return [...tied].sort((a, b) => a.team.localeCompare(b.team)).map(r => { r.why = 'draw'; return r; });
+  }
+  const order = (rows, useDiv) => { const ks = [...new Set(rows.map(pct))].sort((a, b) => b - a); return ks.flatMap(k => { const g = rows.filter(r => pct(r) === k); g.forEach(r => { r.why = null; }); return breakTie(g, useDiv); }); };
+  // 1º los líderes de división (desempatados sin el criterio de "campeón de división")
+  Object.values(TB_DIV).forEach(ts => { const rows = ts.map(t => R[t]).filter(Boolean); if (rows.length) divWin.add(order(rows, false)[0].team); });
+  const out = {};
+  ['Este', 'Oeste'].forEach(cf => { out[cf] = order(all.filter(r => tbConf(r.team) === cf), true).map((r, i) => ({ team: r.team, w: r.w, l: r.l, d: r.d, why: r.why, pos: i + 1 })); });
+  return out;
+}
+// Temporada a la que pertenece una fecha: desde el primer partido después del último parón de más de 60 días
+function tbSeasonStart(src, upTo) {
+  const ds = [...new Set(src.filter(g => g.date <= upTo).map(g => g.date))].sort();
+  if (!ds.length) return null;
+  for (let i = ds.length - 1; i > 0; i--) if ((Date.parse(ds[i]) - Date.parse(ds[i - 1])) / 864e5 > 60) return ds[i];
+  return ds[0];
+}
+const tbMondayOf = iso => { const d = new Date(iso + 'T12:00:00Z'), k = (d.getUTCDay() + 6) % 7; return curioAddDays(iso, -k); };
+function tbWeek(src, monday) {
+  const sun = curioAddDays(monday, -1), prevSun = curioAddDays(monday, -8), start = tbSeasonStart(src, sun);
+  if (!start) return null;
+  const season = src.filter(g => g.date >= start && g.cup !== 'final');
+  // Primera tabla: el primer lunes con al menos una semana completa de temporada (2026-27: lunes 2/11)
+  const first = tbMondayOf(curioAddDays(start, 7)) < curioAddDays(start, 7) ? curioAddDays(tbMondayOf(curioAddDays(start, 7)), 7) : tbMondayOf(curioAddDays(start, 7));
+  const arrows = monday > first;
+  const now = tbRank(season, sun), prev = arrows ? tbRank(season, prevSun) : null;
+  const week = Math.floor((Date.parse(monday) - Date.parse(start)) / (7 * 864e5)) + 1;
+  // Partidos del calendario hasta el domingo que no están registrados (solo con tus datos, no en el demo)
+  const missing = curioDemo ? [] : (SCHEDULE || []).filter(f => f.date >= start && f.date <= sun && !season.some(g => g.date === f.date && ((g.local === f.local && g.away === f.away) || (g.local === f.away && g.away === f.local))));
+  return { monday, sun, start, first, arrows, week, missing, before: monday < first,
+    conf: ['Este', 'Oeste'].map(cf => ({ cf, rows: (now[cf] || []).map(r => { const p = prev && prev[cf].find(x => x.team === r.team); return { ...r, mv: p ? p.pos - r.pos : 0 }; }) })) };
+}
+function tbSlides(W) {
+  const date = fmtDate(W.monday), mode = W.arrows ? 'mv' : 'none';
+  return [
+    { kind: 'cover', tabla: true, date, week: W.week, monday: W.monday, picks: [], dur: 5 },
+    ...W.conf.map((C, k) => ({ kind: 'card', date, it: { type: 'tabla', tabla: true, cf: C.cf, rows: C.rows, mode, dot: C.rows[0] ? C.rows[0].team : 'Boston Celtics', soc: { big: '', head: '', ctx: '', foot: '' } }, n: k + 1, of: 2, dur: 5 })),
+    { kind: 'outro', tabla: true, n: 2, dur: 3.75 },
+  ];
+}
+function tbCaption(W) {
+  const sh = curioShort, top = C => C.rows.slice(0, 3).map(r => `${r.pos}. ${sh(r.team)} ${r.w}-${r.l}`).join(' · ');
+  const lines = W.conf.map(C => `${C.cf}: ${top(C)}`);
+  if (W.arrows) {
+    const all = W.conf.flatMap(C => C.rows), up = [...all].sort((a, b) => b.mv - a.mv)[0], dn = [...all].sort((a, b) => a.mv - b.mv)[0];
+    const parts = [];
+    if (up && up.mv > 0) parts.push(`⬆️ Más subió: ${sh(up.team)} (+${up.mv})`);
+    if (dn && dn.mv < 0) parts.push(`⬇️ Más bajó: ${sh(dn.team)} (${dn.mv})`);
+    if (parts.length) lines.push(parts.join(' · '));
+  }
+  const leaders = W.conf.map(C => C.rows[0]).filter(Boolean).map(r => '#' + sh(r.team).replace(/[^\p{L}\p{N}]/gu, ''));
+  const tags = ['#NBA', '#NBAenEspañol', ...leaders, '#baloncesto', '#basketball'].slice(0, 5);
+  return `La tabla NBA · Semana ${W.week} · ${fmtDate(W.monday)} 📊\n\n${lines.join('\n')}\n\n¿Quién sube la próxima semana?\n\n${tags.join(' ')}`;
+}
+
+// ── Ventana "Tabla semanal" ──
+let tbState = null;
+function openTablaSemanal() {
+  const src = curioSource(); if (!src.length) { toast('No hay partidos en la base', 'var(--lose)'); return; }
+  const last = src.reduce((m, g) => (g.date > m ? g.date : m), '');
+  // Por defecto: el lunes más reciente (en el demo, el de la última fecha cargada)
+  const today = curioDemo ? curioAddDays(last, 1) : new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  tbState = { monday: tbMondayOf(today), video: null, music: null };
+  PXMUSIC = null;
+  let ov = document.getElementById('cur-tabla');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'cur-tabla'; ov.className = 'profile-overlay'; ov.addEventListener('click', e => { if (e.target === ov) closeTablaSemanal(); }); document.body.appendChild(ov); }
+  ov.style.display = 'flex';
+  renderTablaSemanal();
+}
+function closeTablaSemanal() { const ov = document.getElementById('cur-tabla'); if (ov) ov.style.display = 'none'; if (tbState && tbState.video) URL.revokeObjectURL(tbState.video.url); tbState = null; }
+function tbReset() { if (tbState.video) { URL.revokeObjectURL(tbState.video.url); tbState.video = null; } }
+function setTablaMonday(v) { if (!tbState || !v) return; tbState.monday = tbMondayOf(v); tbReset(); renderTablaSemanal(); }
+function setTablaMusic(v) { if (!tbState) return; tbState.music = v || null; PXMUSIC = tbState.music; tbReset(); renderTablaSemanal(); }
+function tbStatus(t) { const el = document.getElementById('tb-status'); if (el) el.textContent = t; }
+function renderTablaSemanal() {
+  const st = tbState, ov = document.getElementById('cur-tabla'); if (!st || !ov) return;
+  const W = tbWeek(curioSource(), st.monday), vid = st.video;
+  const ok = W && !W.before && W.conf.every(C => C.rows.length);
+  const slides = ok ? tbSlides(W) : null, secs = slides ? pxSlides(slides).reduce((a, s) => a + s.dur, 0) : 0;
+  const miss = ok && W.missing.length ? `<div class="tb-warn">⚠️ ${W.missing.length === 1 ? 'Falta 1 partido' : `Faltan ${W.missing.length} partidos`} del calendario hasta el domingo ${fmtDate(W.sun)}: la tabla saldría mal. ${W.missing.slice(0, 4).map(f => `${curioEsc(curioShort(f.away))} @ ${curioEsc(curioShort(f.local))} (${fmtDate(f.date)})`).join(', ')}${W.missing.length > 4 ? '…' : ''}</div>` : '';
+  const info = !W ? 'No hay partidos hasta esa fecha.' : W.before ? `La primera tabla de esta temporada es la del lunes ${fmtDate(W.first)}.`
+    : `Semana ${W.week} · partidos hasta el domingo ${fmtDate(W.sun)} · ${W.arrows ? '▲▼ comparado con el domingo ' + fmtDate(curioAddDays(W.sun, -7)) : 'primera tabla de la temporada: sin flechas'}`;
+  ov.innerHTML = `<div class="profile-modal soc-modal">
+    <div class="soc-head">
+      <div><div class="profile-modal-title">Tabla semanal</div><div class="soc-sub">${info}</div></div>
+      <button type="button" class="del-btn" onclick="closeTablaSemanal()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="soc-style">
+      <span class="soc-sub">Lunes</span><input type="date" class="tb-date" value="${st.monday}" onchange="setTablaMonday(this.value)">
+      <span class="soc-sep"></span><span class="soc-sub">Música</span>
+      <select class="soc-music" onchange="setTablaMusic(this.value)">
+        <option value="" ${!st.music ? 'selected' : ''}>Automática${slides ? ` (${pxThemeAuto(slides).name})` : ''}</option>
+        ${PXTHEMES.map(th => `<option value="${th.id}" ${st.music === th.id ? 'selected' : ''}>${th.name}</option>`).join('')}
+      </select>
+    </div>
+    ${miss}
+    <div class="soc-strip" id="tb-strip"></div>
+    <div class="soc-actions">
+      <button type="button" class="btn btn-primary" onclick="tbMakeVideo()" ${ok ? '' : 'disabled'}>🎬 Generar video (${Math.round(secs)} s)</button>
+      <span class="soc-status" id="tb-status"></span>
+    </div>
+    ${vid ? `<div class="soc-result">
+      <video src="${vid.url}" controls playsinline></video>
+      <div class="soc-result-side">
+        <div class="soc-sub">${vid.name} · ${(vid.blob.size / 1048576).toFixed(1)} MB${vid.codec === 'avc' || vid.codec === 'recorder' ? '' : ` · códec ${vid.codec.toUpperCase()} (tu navegador no trae H.264: Instagram podría rechazarlo)`}${!vid.audio ? ' · sin audio (tu navegador no pudo codificarlo)' : ''}</div>
+        ${curioCanShare(vid) ? `<button type="button" class="btn btn-primary" onclick="tbShare()">📲 Compartir</button>` : ''}
+        <button type="button" class="btn btn-secondary" onclick="curioDownloadBlob(tbState.video.blob, tbState.video.name)">⬇️ Descargar</button>
+      </div>
+    </div>` : ''}
+    ${ok ? `<div class="soc-cap">
+      <div class="soc-sub">Texto para la publicación</div>
+      <textarea id="tb-caption" readonly rows="7">${curioEsc(tbCaption(W))}</textarea>
+      <button type="button" class="btn btn-secondary" onclick="tbCopy()">Copiar texto</button>
+    </div>` : ''}
+  </div>`;
+  if (slides) tbThumbs(slides);
+}
+async function tbThumbs(slides) {
+  const strip = document.getElementById('tb-strip'); if (!strip) return;
+  try { await document.fonts.load("8px 'Press Start 2P'"); } catch (e) {}
+  strip.innerHTML = '';
+  slides.forEach((s, i) => { const c = pixelThumb(slides, i); c.className = 'soc-thumb px'; strip.appendChild(c); });
+}
+async function tbMakeVideo() {
+  const st = tbState; if (!st) return;
+  const W = tbWeek(curioSource(), st.monday), slides = tbSlides(W);
+  try {
+    tbStatus('Generando video… 0%');
+    const r = await pixelRenderVideo(slides, p => tbStatus(`Generando video… ${Math.min(99, Math.round(p * 100))}%`));
+    if (!tbState) return;
+    tbReset();
+    tbState.video = { ...r, url: URL.createObjectURL(r.blob), name: `nba-tabla-semana-${W.week}-${W.monday}.${r.ext}` };
+    renderTablaSemanal();
+  } catch (e) { console.error('[tabla semanal] Error generando el video:', e); tbStatus('No se pudo generar el video: ' + (e && e.message ? e.message : e)); }
+}
+async function tbShare() {
+  const v = tbState && tbState.video; if (!v) return;
+  try { await navigator.share({ files: [new File([v.blob], v.name, { type: v.blob.type })], text: document.getElementById('tb-caption').value }); }
+  catch (e) { if (e && e.name !== 'AbortError') tbStatus('No se pudo compartir; usa Descargar.'); }
+}
+async function tbCopy() {
+  const ta = document.getElementById('tb-caption'); if (!ta) return;
+  try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); }
+  toast('Texto copiado ✓');
+}
+
+// ── Dibujo pixel de la tabla semanal ──
+function ptri(c, x, y, up, col) { for (let i = 0; i < 4; i++) prect(c, x + (up ? 3 - i : i), y + (up ? i + 1 : i + 1), up ? 1 + i * 2 : 7 - i * 2, 1, col); }
+function pxTablaCard(c, s, it, t, col) {
+  const { S } = PX, dim = pxMix(col.text, col.bg, 0.55), wc = pxWildCol(col);
+  const best = (a, b) => (curioContrast(a, col.bg) >= curioContrast(b, col.bg) ? a : b), upC = best('#3cffd0', '#005c3a'), dnC = best('#ff5a5a', '#7a0010');
+  c.font = pf(8); const lab = 'LA TABLA', lw = c.measureText(lab).width + 8;
+  if (t > 0.1) { pbox(c, S.l, S.t, lw, 14, col.accent, PXC.ink); ptext(c, lab, S.l + 4, S.t + 3, 8, col.bg);
+    const cf = it.cf.toUpperCase(); ptext(c, cf, S.r + 1, S.t + 4, 8, PXC.ink, 'right'); ptext(c, cf, S.r, S.t + 3, 8, col.accent, 'right'); }
+  const X = { pos: S.l, sq: S.l + 19, ab: S.l + 28, wl: S.l + 62, mv: S.r }, hy = S.t + 19;
+  if (t > 0.2) { ptext(c, 'G-P', X.wl, hy, 8, dim); if (it.mode !== 'none') { ptri(c, X.mv - 17, hy, true, upC); ptri(c, X.mv - 7, hy, false, dnC); } }
+  let y = hy + 12;
+  it.rows.forEach((r, i) => {
+    if (i === 6 || i === 10) { if (t > 0.3 + i * 0.1) for (let x = S.l; x < S.r; x += 4) prect(c, x, y - 2, 2, 1, dim); y += 2; }
+    if (t < 0.3 + i * 0.1) { y += 10; return; }
+    const zone = i < 6 ? 0 : i < 10 ? 1 : 2, tc = zone === 0 ? col.text : zone === 1 ? wc : dim, cc = curioSocialColors(r.team);
+    ptext(c, String(r.pos), X.pos + (r.pos < 10 ? 8 : 0), y, 8, i === 0 ? col.accent : tc);
+    prect(c, X.sq, y, 6, 7, cc.bg);
+    ptext(c, pxAbbr(r.team), X.ab, y, 8, i === 0 ? col.accent : tc);
+    ptext(c, `${r.w}-${r.l}`, X.wl, y, 8, i === 0 ? col.accent : tc);
+    if (it.mode === 'none') {}
+    else if (r.mv) { const up = r.mv > 0, mc = up ? upC : dnC; ptext(c, String(Math.abs(r.mv)), X.mv, y, 8, mc, 'right'); c.font = pf(8); ptri(c, X.mv - c.measureText(String(Math.abs(r.mv))).width - 9, y, up, mc); }
+    else ptext(c, '-', X.mv, y, 8, dim, 'right');
+    y += 10;
+  });
+  if (t > 2) { ptext(c, '1-6 PLAYOFFS', S.l, y + 3, 8, col.text); ptext(c, '7-10 PLAY-IN', S.l, y + 13, 8, wc); }
+}
+function pxTablaCover(c, s, t, P) {
+  const { S } = PX, col = { bg: P.bg, text: P.fg, accent: P.hi };
+  prect(c, 0, 0, PX.w, PX.h, P.bg);
+  for (let i = 0; i < 30; i++) { const x = Math.floor(pxRand(i) * 180), y = Math.floor(pxRand(i + 50) * 320); if (Math.floor(t * 4 + i) % 5) prect(c, x, y, 1, 1, P.star); }
+  if (t > 0.15) { c.font = pf(8); const lw = c.measureText('NBA').width + 8; pbox(c, PXCX - lw / 2, 70, lw, 14, P.hi, PXC.ink); ptext(c, 'NBA', PXCX, 73, 8, P.bg, 'center'); }
+  if (t > 0.35) { ptext(c, 'LA TABLA', PXCX + 1, 99, 16, PXC.ink, 'center'); ptext(c, 'LA TABLA', PXCX, 98, 16, P.fg, 'center'); }
+  if (t > 0.7) { ptext(c, 'SEMANA', PXCX, 128, 8, P.dim, 'center'); const n = String(Math.round(s.week * pclamp((t - 0.7) / 0.6))); ptext(c, n, PXCX + 2, 142, 48, PXC.ink, 'center'); ptext(c, n, PXCX, 140, 48, P.hi, 'center'); }
+  if (t > 1.6) ptext(c, fmtDate(s.monday), PXCX, 200, 8, P.fg, 'center');
+  if (t > 2.2 && Math.floor(t * 2) % 2 === 0) ptext(c, '¿TU EQUIPO SUBE?', PXCX, 222, 8, P.hi, 'center');
+  pxHandle(c, PXCX, 250, P.dim, 'center');
+}
+function pxTablaOutro(c, s, t, P) {
+  const { w, h, S } = PX, cx = PXCX;
+  prect(c, 0, 0, w, h, P.bg);
+  const g = pclamp(pstep(t) / 0.5);
+  ptext(c, 'GAME OVER'.slice(0, Math.round(g * 9)), cx, 70, 16, P.hi, 'center');
+  if (t > 0.7) { ptext(c, '¿Quién sube la', cx, 102, 8, P.fg, 'center'); ptext(c, 'próxima semana?', cx, 114, 8, P.fg, 'center'); }
+  if (t > 1.0) { ptext(c, 'Cuéntalo en los', cx, 134, 8, P.dim, 'center'); ptext(c, 'comentarios', cx, 146, 8, P.dim, 'center'); }
+  const B = PXBEAT, k = Math.floor((t - 2 * B) / B);
+  if (t >= 2 * B) { ptext(c, 'CONTINUE?', cx, 172, 8, P.fg, 'center'); if (k < 3) ptext(c, String(3 - k), cx, 186, 16, P.hi, 'center'); }
+  if (t > 1.0) pxHandle(c, cx, 216, P.hi, 'center');
+  pball(c, S.r - 16, 230 - Math.round(Math.abs(Math.sin((t / B) * Math.PI)) * 18), 2);
 }
 
 // ── Modo demo: temporada 2024-25 desde games.json, SOLO en memoria ──
