@@ -1057,6 +1057,41 @@
     .teams-row { grid-template-columns: 1fr; }
     .vs-badge { margin: 0 auto; }
   }
+  /* ─── NBA CUP ─── */
+  .cup-flag{grid-column:1/-1;border:1px solid var(--hairline);border-radius:16px;padding:12px 18px;background:color-mix(in srgb,var(--tile-yellow) 45%,transparent);}
+  .cup-flag label{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-weight:700;cursor:pointer;}
+  .cup-flag input[type=checkbox]{width:18px;height:18px;padding:0;margin:0;-webkit-appearance:auto;appearance:auto;border-radius:4px;accent-color:var(--violet);flex:none;}
+  .cup-flag-ph{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--hairline);border-radius:9999px;padding:3px 10px;background:var(--canvas);}
+  .cup-flag-note{font-size:12px;font-weight:500;color:var(--secondary-tx);}
+  .cup-conf{margin-bottom:32px;}
+  .cup-conf-title{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:900;letter-spacing:-0.5px;margin-bottom:14px;}
+  .cup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+  .cup-card{border:1px solid var(--hairline);border-radius:1.5rem;padding:18px 18px 14px;background:var(--canvas);}
+  .cup-card--wc{background:var(--surface-low);}
+  .cup-card-head{display:flex;justify-content:space-between;align-items:baseline;font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:900;margin-bottom:8px;}
+  .cup-card-meta{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--outline);letter-spacing:1px;text-transform:uppercase;}
+  .cup-table{font-size:13px;}
+  .cup-table thead th{background:none;padding:6px 6px;border-bottom:1px solid var(--hairline);cursor:default;font-size:10px;letter-spacing:1px;}
+  .cup-table td{padding:7px 5px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .cup-table td:nth-child(2){font-family:'Hanken Grotesk',sans-serif;font-size:14px;font-weight:700;}
+  .cup-pos{color:var(--outline);width:18px;}
+  .cup-lider{background:color-mix(in srgb,var(--tile-yellow) 55%,transparent);}
+  .cup-comodin{background:color-mix(in srgb,var(--tile-blue) 55%,transparent);}
+  .cup-tag{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--hairline);border-radius:9999px;padding:1px 6px;margin-left:4px;vertical-align:1px;}
+  .cup-tag--wc{background:var(--canvas);}
+  .cup-tb{color:var(--violet);font-weight:900;margin-left:3px;cursor:help;}
+  .cup-foot{font-size:12px;color:var(--secondary-tx);margin-top:8px;}
+  .cup-bracket{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;align-items:start;}
+  .cup-br-h{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--outline);margin-bottom:8px;}
+  .cup-match{border:1px solid var(--hairline);border-radius:14px;padding:8px 12px;margin-bottom:10px;background:var(--canvas);}
+  .cup-match--tbd{color:var(--outline);font-size:13px;border-style:dashed;}
+  .cup-match--final{background:color-mix(in srgb,var(--tile-yellow) 45%,transparent);}
+  .cup-side{display:flex;align-items:center;gap:6px;font-weight:600;padding:3px 0;}
+  .cup-side b{margin-left:auto;font-family:'JetBrains Mono',monospace;}
+  .cup-side--win{font-weight:900;}
+  .cup-seed{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);width:12px;}
+  .cup-match-date{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);margin-top:4px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .cup-champ{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:900;}
 </style>
 </head>
 <body>
@@ -1082,6 +1117,7 @@
       <button onclick="showSection('apuestas')" id="nav-s-apuestas">📈 Apuestas</button>
     <button onclick="showSection('equipos')" id="nav-s-equipos">Por Equipo</button>
     <button onclick="showSection('curiosidades')" id="nav-s-curiosidades">🔍 Curiosidades</button>
+    <button onclick="showSection('copa')" id="nav-s-copa">🏆 Copa</button>
   </nav>
 </header>
 
@@ -1110,7 +1146,7 @@
 
     <div class="form-group">
       <label>Fecha</label>
-      <input type="date" id="f-date" onchange="renderBetsCard()">
+      <input type="date" id="f-date" onchange="renderBetsCard();cupFormSync()">
     </div>
 
     <div class="form-group" style="visibility:hidden;"></div>
@@ -1118,13 +1154,17 @@
     <div class="teams-row">
       <div class="form-group">
         <label>Equipo Local</label>
-        <select id="f-local" onchange="renderBetsCard()"></select>
+        <select id="f-local" onchange="renderBetsCard();cupFormSync()"></select>
       </div>
       <div class="vs-badge">VS</div>
       <div class="form-group">
         <label>Equipo Visitante</label>
-        <select id="f-away" onchange="renderBetsCard()"></select>
+        <select id="f-away" onchange="renderBetsCard();cupFormSync()"></select>
       </div>
+    </div>
+
+    <div class="cup-flag" id="cup-flag" style="display:none;">
+      <label><input type="checkbox" id="f-cup" onchange="cupFormLabel()"><span id="cup-flag-txt"></span></label>
     </div>
 
     <hr class="form-sep">
@@ -1675,6 +1715,16 @@
   <div id="cur-panel"></div>
 </section>
 
+<!-- ═══ NBA CUP ═══ -->
+<section id="s-copa" class="section">
+  <div class="page-header">
+    <div class="page-title">NBA Cup 2026</div>
+    <div class="cur-meta" id="cup-meta"></div>
+  </div>
+  <div class="cur-lede">Fase de grupos del 30 oct al 27 nov: avanzan los 6 líderes y el mejor 2º de cada conferencia. Con prórroga, la diferencia cuenta 0 y los puntos de la prórroga no suman. Los partidos se marcan solos al guardarlos (puedes corregir la casilla).</div>
+  <div id="cup-body"></div>
+</section>
+
 </main>
 
 <div class="toast" id="toast"></div>
@@ -1776,6 +1826,7 @@ async function loadGamesFromFirestore(uid) {
       bets = Array.isArray(snap.data().bets) ? snap.data().bets
            : Array.isArray(snap.data().pendingBets) ? snap.data().pendingBets // migración desde el esquema anterior
            : [];
+      cupFinal = snap.data().cupFinal || null; // Final de la NBA Cup: aparte, no cuenta para el modelo
     } else {
       games = JSON.parse(JSON.stringify(SEED_DATA));
       bets = [];
@@ -1866,7 +1917,7 @@ let editingBetId = null; // id de la apuesta que se está editando en el formula
 
 function save() {
   if (!currentUid) return;
-  db.collection('nba_data').doc(currentUid).set({ games, bets }).catch(e => console.error('Error guardando en Firestore:', e));
+  db.collection('nba_data').doc(currentUid).set({ games, bets, cupFinal }).catch(e => console.error('Error guardando en Firestore:', e));
 }
 
 function showSection(id) {
@@ -1881,6 +1932,7 @@ function showSection(id) {
   if(id==='backtest') initBacktest();
   if(id==='apuestas') renderApuestas();
   if(id==='curiosidades') renderCuriosidades();
+  if(id==='copa') renderCopa();
 }
 
 function toast(msg, color='var(--green)') {
@@ -2038,6 +2090,7 @@ function openFixtureForm(fixtureJson) {
   const existing = findGameForFixture(f);
   clearForm();
   if (existing) fillFormFromGame(existing);
+  cupFormSync();
 
   const banner = document.getElementById('entry-fixture-banner');
   banner.style.display = '';
@@ -2330,6 +2383,13 @@ function saveGame() {
     winner: ptsL > ptsA ? 'L' : 'A'
   };
 
+  // NBA Cup: la Final se guarda aparte (no entra en `games`, así no toca el modelo)
+  const cupV = cupFormValue();
+  if (cupV === 'final') {
+    saveCupFinal(game);
+  } else {
+  if (cupV !== undefined) game.cup = cupV;
+
   // Evita duplicados: si ya existe un partido con la misma fecha y los mismos
   // dos equipos (en cualquier orden), se actualiza ese registro en vez de
   // crear uno nuevo. Esto protege tanto al modo calendario como al manual.
@@ -2360,6 +2420,7 @@ function saveGame() {
     save();
     toast('Partido guardado correctamente ✓');
   }
+  }
 
   clearForm();
   // El partido ya tiene resultado — refresca la tarjeta de apuestas para que
@@ -2384,6 +2445,7 @@ function clearForm() {
   });
   document.getElementById('f-otL').value = '0';
   document.getElementById('f-otA').value = '0';
+  cupFormSync();
 }
 
 function deleteGame(id) {
@@ -5016,6 +5078,8 @@ const CURIO_JTYPES = {
   seasonBench:  { label: 'Temporada', short: 'La temporada', icon: '📅', tone: 'plain' },
   seasonCb:     { label: 'Temporada', short: 'La temporada', icon: '📅', tone: 'plain' },
   seasonStreak: { label: 'Temporada', short: 'La temporada', icon: '📅', tone: 'plain' },
+  // NBA Cup: tabla del grupo (solo en "Para redes", en noches de Copa)
+  cupGroup:     { label: 'NBA Cup', short: 'NBA Cup', icon: '🏆', tone: 'plain' },
 };
 let curioFeedAll = false;
 
@@ -5470,20 +5534,21 @@ function curioSocialAuto(items) {
   const sel = new Set(), teams = new Set(), types = new Set();
   const fits = it => it.score >= CURIO_SOCIAL.AUTO_SCORE || sel.size < CURIO_SOCIAL.AUTO_MIN;
   items.forEach((it, i) => {
-    if (!it.soc || sel.size >= CURIO_SOCIAL.AUTO_MAX || !fits(it)) return;
+    if (!it.soc || it.cup || sel.size >= CURIO_SOCIAL.AUTO_MAX || !fits(it)) return; // la tabla de la Copa se marca a mano
     const kind = it.type.replace(/[WL]$/, '');
     if (it.teams.some(t => teams.has(t)) || types.has(kind)) return;
     sel.add(i); it.teams.forEach(t => teams.add(t)); types.add(kind);
   });
   // Si la variedad dejó menos de AUTO_MIN, se completa con los siguientes más llamativos
-  items.forEach((it, i) => { if (it.soc && sel.size < CURIO_SOCIAL.AUTO_MIN) sel.add(i); });
+  items.forEach((it, i) => { if (it.soc && !it.cup && sel.size < CURIO_SOCIAL.AUTO_MIN) sel.add(i); });
   // En el orden de la jornada (más llamativo primero)
   return new Set([...sel].sort((a, b) => a - b));
 }
 
 // Diapositivas del video: portada, un hallazgo por tarjeta, cierre
 function curioSocialSlides(J, sel) {
-  const picks = J.items.filter((it, i) => sel.has(i) && it.soc);
+  // La opción de tablas de la NBA Cup pone dos tarjetas (Este y Oeste)
+  const picks = J.items.filter((it, i) => sel.has(i) && it.soc).flatMap(it => it.cupParts || [it]);
   const date = fmtDate(J.date);
   const slides = [{ kind: 'cover', date, picks, quiet: !!J.quiet, dur: CURIO_SOCIAL.DUR.cover }];
   picks.forEach((it, i) => slides.push({ kind: 'card', date, it, n: i + 1, of: picks.length, dur: CURIO_SOCIAL.DUR.card }));
@@ -5727,6 +5792,7 @@ function curioSocialCaption(J, slides) {
   // Cada línea lleva también el contexto (el comentario de los datos manuales, el "Top de la temporada", etc.):
   // en el texto de la publicación sí cabe lo que en el video se resume
   const lines = picks.map((it, i) => {
+    if (it.cup) return `${i + 1}. 🏆 NBA Cup, ${it.capText}`;
     let c = (it.soc.ctx || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
     if (c && /^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(c)) c = c[0].toLowerCase() + c.slice(1); // "…, top 2 de la temporada"
     // Si el dato manual tiene jugador, la línea empieza por él: "Paul George: 38 puntos, …"
@@ -5736,7 +5802,7 @@ function curioSocialCaption(J, slides) {
   // Máximo 5 hashtags (límite de Instagram): #NBA #NBAenEspañol, luego los equipos en el orden de los datos,
   // y si faltan, #baloncesto y #basketball
   const teamTags = [...new Set(picks.filter(it => !it.night).map(it => '#' + curioShort(it.dot).replace(/[^\p{L}\p{N}]/gu, '')))];
-  const tags = ['#NBA', '#NBAenEspañol', ...teamTags, '#baloncesto', '#basketball'].slice(0, 5);
+  const tags = ['#NBA', '#NBAenEspañol', ...(picks.some(it => it.cup) ? ['#NBACup'] : []), ...teamTags, '#baloncesto', '#basketball'].slice(0, 5);
   const intro = J.quiet ? `Noche tranquila en la NBA · ${fmtDate(J.date)} 😴 …pero igual hay datos 🏀` : `La jornada NBA · ${fmtDate(J.date)} 🏀`;
   return `${intro}\n\n${lines.join('\n')}\n\n¿Cuál no viste venir?\n\n${tags.join(' ')}`;
 }
@@ -5754,11 +5820,13 @@ function openCurioSocial() {
   // Noche tranquila (menos de AUTO_MIN datos llamativos): se marcan solos los que falten.
   const strong = J.items.map((it, i) => (it.soc && it.score >= CURIO_SOCIAL.AUTO_SCORE ? i : -1)).filter(i => i >= 0);
   const extra = curioSeasonFacts(curioSource(), J);
-  const n0 = J.items.length, quiet = !!extra.length && strong.length < CURIO_SOCIAL.AUTO_MIN;
-  J = { ...J, quiet, items: [...J.items, ...extra] };
+  // NBA Cup: la tabla de cada grupo que jugó esa noche, como opción para marcar a mano
+  const cupIt = curioCupItems(curioSource(), J);
+  const n0 = J.items.length + cupIt.length, quiet = !!extra.length && strong.length < CURIO_SOCIAL.AUTO_MIN;
+  J = { ...J, quiet, items: [...J.items, ...cupIt, ...extra] };
   if (quiet) sel = new Set([...strong, ...extra.slice(0, CURIO_SOCIAL.AUTO_MIN - strong.length).map((_, k) => n0 + k)]);
   if (!sel) { sel = curioSocialAuto(J.items); J.items.forEach((it, i) => { if (it.manual) sel.add(i); }); }
-  curioSocialState = { J, sel, video: null, style: curioSocialStyleGet(), suggestQuiet: quiet, baseItems, extraItems: extra, form: null, music: null };
+  curioSocialState = { J, sel, video: null, style: curioSocialStyleGet(), suggestQuiet: quiet, baseItems, extraItems: [...cupIt, ...extra], form: null, music: null };
   PXMUSIC = null;
   let ov = document.getElementById('cur-social');
   if (!ov) {
@@ -5818,7 +5886,7 @@ function renderCurioSocial() {
   const rows = J.items.map((it, i) => it.soc ? `<label class="soc-row">
       <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="toggleCurioSocialItem(${i})">
       <span class="soc-type">${it.manual ? '✍️ ' + curioEsc(it.label) : (it.label || CURIO_JTYPES[it.type].label)}</span>
-      <span class="soc-txt">${curioDot(it.dot)}<b>${curioEsc(it.player || curioShort(it.dot))}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.player ? it.capHead : it.soc.head)}${it.manual ? `<button type="button" class="soc-del" title="Editar este dato" onclick="editCurioManual(${it.mid}, event)">✏️</button><button type="button" class="soc-del soc-del--x" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
+      <span class="soc-txt">${it.cup ? `🏆 ${curioEsc(it.capText)}` : `${curioDot(it.dot)}<b>${curioEsc(it.player || curioShort(it.dot))}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.player ? it.capHead : it.soc.head)}`}${it.manual ? `<button type="button" class="soc-del" title="Editar este dato" onclick="editCurioManual(${it.mid}, event)">✏️</button><button type="button" class="soc-del soc-del--x" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
     </label>` : '').join('');
   const vid = st.video;
   ov.innerHTML = `<div class="profile-modal soc-modal">
@@ -6439,13 +6507,58 @@ function pxCoverHook(c, s, t, P) {
   } else pxHandle(c, cx, 235, P.fg, 'center');
 }
 
+// NBA Cup: tabla del grupo (posición, equipo, G-P, diferencia); las filas entran una a una
+const CUP_TROPHY = ['X.XXXXX.X', 'XXXXXXXXX', '.XXXXXXX.', '..XXXXX..', '...XXX...', '....X....', '...XXX...', '..XXXXX..'];
+function ptrophy(c, x, y, col) {
+  CUP_TROPHY.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => prect(c, x + i + dx, y + j + dy, 1, 1, PXC.ink)); }));
+  CUP_TROPHY.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') prect(c, x + i, y + j, 1, 1, col); }));
+}
+// Tarjeta por conferencia: sus 3 grupos uno debajo del otro (casilla con la letra), líder y comodín resaltados
+const PXCONF = { g0: 0.4, gStep: 0.9, rStep: 0.12 };
+function pxMix(a, b, k) { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b);
+  return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, '0')).join(''); }
+function pxWildCol(col) {
+  const cands = ['#ffd23f', '#3cffd0', '#ff3dbb', '#7cc4ff', '#ffe066', '#ffffff'];
+  const ok = cands.filter(x => x !== col.accent.toLowerCase() && curioContrast(x, col.accent) > 1.25 && curioContrast(x, col.text) > 1.25);
+  return ok.sort((a, b) => curioContrast(b, col.bg) - curioContrast(a, col.bg))[0] || col.text;
+}
+function pxCardCupConf(c, s, it, t, col) {
+  const { S } = PX, cw = S.r - S.l, dim = pxMix(col.text, col.bg, 0.55), wc = pxWildCol(col);
+  c.font = pf(8); const lab = 'NBA CUP', lw = c.measureText(lab).width + 8;
+  if (t > 0.1) { pbox(c, S.l, S.t, lw, 14, col.accent, PXC.ink); ptext(c, lab, S.l + 4, S.t + 3, 8, col.bg); ptrophy(c, S.l + lw + 6, S.t + 3, col.accent);
+    const cf = it.cupConf.toUpperCase(); ptext(c, cf, S.r + 1, S.t + 4, 8, PXC.ink, 'right'); ptext(c, cf, S.r, S.t + 3, 8, col.accent, 'right'); }
+  const X = { box: S.l, pos: S.l + 14, sq: S.l + 24, ab: S.l + 33, wl: S.l + 75 }, hy = S.t + 17;
+  if (t > 0.2) { ptext(c, 'G-P', X.wl, hy, 8, dim); ptext(c, 'DIF', S.r, hy, 8, dim, 'right'); }
+  let y = hy + 12;
+  it.cupGroups.forEach((G, k) => {
+    const tg = PXCONF.g0 + k * PXCONF.gStep, gh = 5 * 10 - 3;
+    if (t > tg) { // casilla con la letra del grupo
+      pframe(c, X.box, y - 1, 11, gh + 1, col.accent); ptext(c, G.name.split(' ')[1], X.box + 2, y + Math.round(gh / 2) - 4, 8, col.accent);
+    }
+    G.rows.forEach((r, i) => {
+      if (t < tg + 0.1 + i * PXCONF.rStep) return;
+      const ry = y + i * 10, lead = i === 0, wild = r.status === 'comodin', tc = lead ? col.accent : wild ? wc : r.played ? col.text : dim, cc = curioSocialColors(r.team);
+      ptext(c, String(i + 1), X.pos, ry, 8, tc);
+      prect(c, X.sq, ry, 6, 7, cc.bg);
+      ptext(c, pxAbbr(r.team), X.ab, ry, 8, tc);
+      ptext(c, `${r.w}-${r.l}`, X.wl, ry, 8, tc);
+      ptext(c, r.gp ? (r.diff > 0 ? '+' : '') + r.diff : '-', S.r, ry, 8, tc, 'right');
+      if (wild) ptext(c, 'C', S.l + 103, ry, 8, wc);
+    });
+    y += 5 * 10 + 2;
+  });
+  const tEnd = PXCONF.g0 + 3 * PXCONF.gStep;
+  if (t > tEnd) { ptext(c, 'EL 1º AVANZA', S.l, 227, 8, col.accent); ptext(c, '+ MEJOR 2º (C)', S.l, 237, 8, wc); }
+}
+
 function pixelDrawSlide(c, s, t, st) {
   const { w, h } = PX;
   st = st || { pal: PXPAL[0], coverV: 0, shift: 0 };
   if (s.kind === 'card') {
-    const it = s.it, col = it.night ? { bg: st.pal.bg, text: st.pal.fg, accent: st.pal.hi } : curioSocialColors(it.dot);
+    const it = s.it, col = it.night || it.cup ? { bg: st.pal.bg, text: st.pal.fg, accent: st.pal.hi, dim: st.pal.dim } : curioSocialColors(it.dot);
     prect(c, 0, 0, w, h, col.bg);
-    [pxCardA, pxCardB, pxCardC][(s.n - 1 + st.shift) % 3](c, s, it, t, col);
+    if (it.cup) pxCardCupConf(c, s, it, t, col);
+    else [pxCardA, pxCardB, pxCardC][(s.n - 1 + st.shift) % 3](c, s, it, t, col);
   } else if (s.kind === 'cover') [pxCoverBall, pxCoverArcade, pxCoverHook][PXCOVER](c, s, t, st.pal);
   else pxOutro(c, s, t, st.pal);
 }
@@ -6517,7 +6630,7 @@ function pixelDrawAt(big, small, slides, time) {
   // (se dibuja ya en alta resolución), justo debajo de la zona segura y a la izquierda de los botones de la app
   const hd = (typeof CURIO_SOCIAL !== 'undefined' && CURIO_SOCIAL.HANDLE) || '', sl = slides[idx];
   if (hd && sl.kind === 'card' && b < 0) {
-    const col = sl.it.night ? { text: st.pal.fg } : curioSocialColors(sl.it.dot);
+    const col = sl.it.night || sl.it.cup ? { text: st.pal.fg } : curioSocialColors(sl.it.dot);
     B.save(); B.globalAlpha = 0.55; B.font = "16px 'Press Start 2P'"; B.fillStyle = col.text; B.textAlign = 'right'; B.textBaseline = 'top';
     B.fillText(hd.startsWith('@') ? hd : '@' + hd, PX.S.r * PX.s, PX.S.b * PX.s + 22); B.restore();
   }
@@ -6665,7 +6778,8 @@ function pxSchedule(fx, slides) {
       const it = s.it, typ = it.type;
       fx.ding(T + 1.0);
       const V = T + PXV - 0.6; // tiempo cero del gráfico
-      if (it.manual) { if (!it.night && it.player) fx.hit(V + 0.6); }
+      if (it.cup) { it.cupGroups.forEach((G, k) => G.rows.forEach((r, i) => fx.note(T + PXCONF.g0 + k * PXCONF.gStep + 0.1 + i * PXCONF.rStep, 11 - i * 2 + (k % 2)))); }
+      else if (it.manual) { if (!it.night && it.player) fx.hit(V + 0.6); }
       else if (it.season) { const SV = it.seasonViz; if (SV.kind === 'bars') { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); } else { const n = Math.min(SV.W + SV.L, 30); for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.0 * (i + 1) / n, i < SV.W ? Math.min(i, 13) : 0); } }
       else if (it.night) { const n = it.nightTeams.length; for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.4 * (i + 1) / n, 4 + i); fx.ding(V + 2.2); }
       else if (['cut', 'drought', 'streakW', 'streakL'].includes(typ)) {
@@ -6984,6 +7098,284 @@ function curioSeasonFacts(src, J) {
   cands.forEach(c => { if (!teams.has(c.team) && !topics.has(c.topic)) { out.push(c.it); teams.add(c.team); topics.add(c.topic); } });
   cands.forEach(c => { if (!out.includes(c.it)) out.push(c.it); });
   return out.slice(0, CURIO_SEASON.maxOptions);
+}
+
+// ════════════════════════════════════════════════════
+//  NBA CUP 2026
+//  Fase de grupos: 30 oct – 27 nov (4 partidos por equipo, solo en "noches de Copa").
+//  Avanzan los 6 líderes de grupo + el mejor 2º de cada conferencia (comodín).
+//  Cuartos y semis cuentan para la temporada (van en `games` como siempre).
+//  La Final NO cuenta: se guarda aparte (cupFinal) y nunca entra en Predicción, rachas ni récords.
+// ════════════════════════════════════════════════════
+const CUP = {
+  title: 'NBA Cup 2026',
+  groupFrom: '2026-10-30', groupTo: '2026-11-27',
+  // Noches de Copa: los viernes del 30 oct al 27 nov + martes 24 y miércoles 25 nov. Los demás días son partidos normales.
+  nights: ['2026-10-30', '2026-11-06', '2026-11-13', '2026-11-20', '2026-11-24', '2026-11-25', '2026-11-27'],
+  qf: ['2026-12-04', '2026-12-05'], sf: ['2026-12-08', '2026-12-09'], final: '2026-12-11',
+  prevFrom: '2025-10-01', prevTo: '2026-04-12', // temporada regular 2025-26: 4º desempate
+  groups: {
+    'Este A':  ['Detroit Pistons', 'Toronto Raptors', 'Orlando Magic', 'Milwaukee Bucks', 'Brooklyn Nets'],
+    'Este B':  ['New York Knicks', 'Cleveland Cavaliers', 'Philadelphia 76ers', 'Miami Heat', 'Indiana Pacers'],
+    'Este C':  ['Boston Celtics', 'Atlanta Hawks', 'Charlotte Hornets', 'Chicago Bulls', 'Washington Wizards'],
+    'Oeste A': ['Denver Nuggets', 'Houston Rockets', 'Phoenix Suns', 'Dallas Mavericks', 'Utah Jazz'],
+    'Oeste B': ['Oklahoma City Thunder', 'Minnesota Timberwolves', 'Los Angeles Clippers', 'New Orleans Pelicans', 'Memphis Grizzlies'],
+    'Oeste C': ['San Antonio Spurs', 'Los Angeles Lakers', 'Portland Trail Blazers', 'Golden State Warriors', 'Sacramento Kings'],
+  },
+};
+const CUP_TEAM = {};
+Object.entries(CUP.groups).forEach(([gr, ts]) => ts.forEach(t => { CUP_TEAM[t] = gr; }));
+const cupConf = gr => gr.split(' ')[0];                         // 'Este' | 'Oeste'
+const CUP_PHASE_TXT = { group: 'Fase de grupos', qf: 'Cuartos de final', sf: 'Semifinal', final: 'Final' };
+let cupFinal = null; // { date, local, away, ptsL, ptsA, ... } — guardado aparte en Firestore
+
+function cupPhase(date) {
+  if (!date) return null;
+  if (CUP.nights.includes(date)) return 'group';
+  if (CUP.qf.includes(date)) return 'qf';
+  if (CUP.sf.includes(date)) return 'sf';
+  if (date === CUP.final) return 'final';
+  return null;
+}
+const cupSameGroup = (a, b) => !!CUP_TEAM[a] && CUP_TEAM[a] === CUP_TEAM[b];
+// ¿Lo marcaría la página sola? Grupos: mismo grupo. Cuartos/semis: los dos en el cuadro de la misma conferencia.
+function cupAuto(date, local, away) {
+  const ph = cupPhase(date);
+  if (!ph || !local || !away || local === away) return false;
+  if (ph === 'group') return cupSameGroup(local, away);
+  if (ph === 'final') return !!CUP_TEAM[local] && !!CUP_TEAM[away] && cupConf(CUP_TEAM[local]) !== cupConf(CUP_TEAM[away]);
+  const S = cupStandings(games), adv = new Set(S.seeds.Este.concat(S.seeds.Oeste).map(r => r.team));
+  return adv.has(local) && adv.has(away) && cupConf(CUP_TEAM[local]) === cupConf(CUP_TEAM[away]);
+}
+// Un partido cuenta para la fase de grupos si se marcó así; los guardados sin marca (antes de esta
+// función) se detectan solos. Si desmarcaste la casilla queda cup:false y no cuenta.
+function cupIsGroupGame(g) {
+  if (g.cup === 'group') return true;
+  if (g.cup !== undefined) return false;
+  return cupPhase(g.date) === 'group' && cupSameGroup(g.local, g.away);
+}
+
+// ── Tablas ──
+// Diferencia de puntos: los partidos con prórroga cuentan 0. Puntos de grupo: sin los de la prórroga.
+function cupGameLine(g) {
+  const ot = (+g.otL || 0) + (+g.otA || 0) > 0;
+  return { ot, dL: ot ? 0 : g.ptsL - g.ptsA, pL: g.ptsL - (+g.otL || 0), pA: g.ptsA - (+g.otA || 0), wL: g.ptsL > g.ptsA };
+}
+function cupPrevPct(src) {
+  const rec = {};
+  src.filter(g => g.date >= CUP.prevFrom && g.date <= CUP.prevTo).forEach(g => {
+    [[g.local, g.ptsL > g.ptsA], [g.away, g.ptsA > g.ptsL]].forEach(([t, w]) => { const r = rec[t] || (rec[t] = { w: 0, n: 0 }); r.n++; if (w) r.w++; });
+  });
+  return t => (rec[t] && rec[t].n ? rec[t].w / rec[t].n : null);
+}
+const CUP_TB_TXT = { h2h: 'enfrentamiento directo', diff: 'diferencia de puntos', pts: 'puntos anotados', prev: 'récord 2025-26', draw: 'sorteo (sin resolver aún)' };
+// Desempate oficial: entre los empatados, se aplica el primer criterio que los separa; los subgrupos
+// que siguen empatados vuelven a empezar desde el criterio 1 (como hace la NBA).
+function cupBreak(tied, gamesIn, useH2H) {
+  if (tied.length < 2) return tied;
+  const set = new Set(tied.map(r => r.team)), crit = [];
+  if (useH2H) crit.push(['h2h', r => {
+    let w = 0, n = 0;
+    gamesIn.forEach(g => { if (set.has(g.local) && set.has(g.away) && (g.local === r.team || g.away === r.team)) { n++; if ((g.ptsL > g.ptsA) === (g.local === r.team)) w++; } });
+    return n ? w / n : 0.5;
+  }]);
+  crit.push(['diff', r => r.diff], ['pts', r => r.pts], ['prev', r => (r.prev == null ? -1 : r.prev)]);
+  for (const [key, val] of crit) {
+    const vals = [...new Set(tied.map(val))].sort((a, b) => b - a);
+    if (vals.length === 1) continue;
+    return vals.flatMap(v => {
+      const b = tied.filter(r => val(r) === v);
+      if (b.length === 1) { b[0].tb = b[0].tb || key; return b; }
+      return cupBreak(b, gamesIn, useH2H);
+    });
+  }
+  return [...tied].sort((a, b) => a.team.localeCompare(b.team)).map(r => ({ ...r, tb: 'draw' }));
+}
+// Ordena por % de victorias (0-0 cuenta como ,500) y desempata a cada bloque empatado
+// (a mitad de la fase, con distinta cantidad de partidos: a igual %, primero el que tiene más victorias)
+function cupRank(rows, gamesIn, useH2H) {
+  const pct = r => (r.gp ? r.w / r.gp : 0.5), key = r => `${pct(r)}|${r.w}|${r.l}`;
+  const keys = [...new Set(rows.map(key))].map(k => rows.find(r => key(r) === k))
+    .sort((a, b) => pct(b) - pct(a) || b.w - a.w || a.l - b.l).map(key);
+  return keys.flatMap(k => {
+    const b = rows.filter(r => key(r) === k).map(r => ({ ...r, tb: null }));
+    const out = b.length > 1 ? cupBreak(b, gamesIn, useH2H) : b;
+    if (b.length === 1 || b.every(r => !r.gp)) out.forEach(r => { r.tb = null; }); // nada que desempatar todavía
+    out.forEach(r => { if (!out.some(o => o !== r && o.w === r.w && o.l === r.l)) r.tb = null; }); // el * solo con el mismo G-P
+    return out;
+  });
+}
+function cupStandings(src, upTo) {
+  const pool = upTo ? src.filter(g => g.date <= upTo) : src;
+  const gg = pool.filter(cupIsGroupGame), prev = cupPrevPct(src);
+  const groups = {}, played = {};
+  Object.entries(CUP.groups).forEach(([gr, teams]) => {
+    const gs = gg.filter(g => CUP_TEAM[g.local] === gr);
+    played[gr] = gs.length;
+    const rows = teams.map(team => ({ team, gp: 0, w: 0, l: 0, diff: 0, pts: 0, prev: prev(team) }));
+    const R = t => rows.find(r => r.team === t);
+    gs.forEach(g => {
+      const L = cupGameLine(g), a = R(g.local), b = R(g.away);
+      a.gp++; b.gp++; a.diff += L.dL; b.diff -= L.dL; a.pts += L.pL; b.pts += L.pA;
+      if (L.wL) { a.w++; b.l++; } else { b.w++; a.l++; }
+    });
+    groups[gr] = cupRank(rows, gs, true).map((r, i) => ({ ...r, pos: i + 1, group: gr }));
+  });
+  // Comodín: el mejor 2º de cada conferencia (sin enfrentamiento directo)
+  const wild = {}, seeds = {}, done = {};
+  ['Este', 'Oeste'].forEach(cf => {
+    const grs = Object.keys(CUP.groups).filter(gr => cupConf(gr) === cf);
+    done[cf] = grs.every(gr => played[gr] >= 10);
+    wild[cf] = cupRank(grs.map(gr => groups[gr][1]), [], false);
+    const winners = cupRank(grs.map(gr => groups[gr][0]), [], false);
+    seeds[cf] = [...winners, wild[cf][0]].map((r, i) => ({ ...r, seed: i + 1 }));
+  });
+  Object.values(groups).forEach(rows => rows.forEach(r => {
+    const cf = cupConf(r.group);
+    r.status = r.pos === 1 ? 'lider' : r.team === seeds[cf][3].team ? 'comodin' : '';
+  }));
+  return { groups, played, wild, seeds, done, total: gg.length };
+}
+
+// ── Eliminatorias: resultados de cuartos y semis (en games) y la Final (aparte) ──
+function cupKoGame(src, a, b, phase) {
+  const dates = phase === 'qf' ? CUP.qf : CUP.sf;
+  return src.find(g => g.cup !== false && dates.includes(g.date) && ((g.local === a && g.away === b) || (g.local === b && g.away === a))) || null;
+}
+const cupWinner = g => (g ? (g.ptsL > g.ptsA ? g.local : g.away) : null);
+function cupBracket(src, S) {
+  const out = {};
+  ['Este', 'Oeste'].forEach(cf => {
+    const s = S.seeds[cf], qf = [[s[0], s[3]], [s[1], s[2]]].map(([h, a]) => ({ home: h.team, away: a.team, hs: h.seed, as: a.seed, g: cupKoGame(src, h.team, a.team, 'qf') }));
+    const w = qf.map(m => cupWinner(m.g));
+    const sf = { home: w[0], away: w[1], g: w[0] && w[1] ? cupKoGame(src, w[0], w[1], 'sf') : null };
+    out[cf] = { qf, sf, champ: cupWinner(sf.g) };
+  });
+  out.final = cupFinal;
+  return out;
+}
+
+// ── Formulario "Registrar Resultado": casilla de Copa ──
+function cupFormSync(existing) {
+  const box = document.getElementById('cup-flag'); if (!box) return;
+  const date = v('f-date'), local = v('f-local'), away = v('f-away'), ph = cupPhase(date);
+  if (!ph) { box.style.display = 'none'; document.getElementById('f-cup').checked = false; return; }
+  if (existing === undefined) existing = ph === 'final' ? cupFinalFind(date, local, away) : games.find(g => g.date === date && ((g.local === local && g.away === away) || (g.local === away && g.away === local)));
+  const auto = cupAuto(date, local, away);
+  const on = existing && ph !== 'final' ? (existing.cup === undefined ? auto : !!existing.cup) : (existing && ph === 'final' ? true : auto);
+  document.getElementById('f-cup').checked = on;
+  box.style.display = '';
+  cupFormLabel();
+}
+function cupFinalFind(date, local, away) {
+  const f = cupFinal; if (!f || f.date !== date) return null;
+  return (f.local === local && f.away === away) || (f.local === away && f.away === local) ? f : null;
+}
+function cupFormLabel() {
+  const date = v('f-date'), local = v('f-local'), away = v('f-away'), ph = cupPhase(date);
+  const el = document.getElementById('cup-flag-txt'); if (!el || !ph) return;
+  const on = document.getElementById('f-cup').checked, gr = cupSameGroup(local, away) ? ` · Grupo ${CUP_TEAM[local]}` : '';
+  const auto = cupAuto(date, local, away);
+  const note = ph === 'final' ? (on ? ' · no cuenta para Predicción, rachas ni récords: se guarda solo en la Copa' : '')
+    : ph === 'group' && on && !auto ? ' · ojo: no son del mismo grupo' : ph === 'group' && !on && auto ? ' · desmarcado: no contará en la tabla del grupo' : '';
+  el.innerHTML = `🏆 Partido de NBA Cup <span class="cup-flag-ph">${CUP_PHASE_TXT[ph]}${ph === 'group' ? gr : ''}</span><span class="cup-flag-note">${note}</span>`;
+}
+// Valor de game.cup al guardar (undefined = fuera de las fechas de la Copa)
+function cupFormValue() {
+  const ph = cupPhase(v('f-date')), box = document.getElementById('cup-flag');
+  if (!ph || !box || box.style.display === 'none') return undefined;
+  return document.getElementById('f-cup').checked ? ph : false;
+}
+function saveCupFinal(game) {
+  cupFinal = { ...game, cup: 'final' };
+  save();
+  toast('Final de la NBA Cup guardada ✓ (no cuenta para el modelo)');
+}
+function deleteCupFinal() {
+  if (!cupFinal || !confirm('¿Borrar el resultado de la Final de la NBA Cup?')) return;
+  cupFinal = null; save(); renderCopa(); toast('Final eliminada', 'var(--red)');
+}
+
+// ── Sección "Copa" ──
+const cupSign = n => (n > 0 ? '+' : '') + n;
+function cupGroupCard(rows, gr, played) {
+  const body = rows.map(r => `<tr class="${r.status ? 'cup-' + r.status : ''}">
+      <td class="cup-pos">${r.pos}</td>
+      <td>${curioDot(r.team)}${curioEsc(curioShort(r.team))}${r.status === 'lider' ? '' : r.status === 'comodin' ? ' <span class="cup-tag cup-tag--wc">comodín</span>' : ''}${r.tb ? `<span class="cup-tb" title="Desempate: ${CUP_TB_TXT[r.tb]}">*</span>` : ''}</td>
+      <td>${r.w}-${r.l}</td><td>${r.gp ? cupSign(r.diff) : '–'}</td><td>${r.gp ? r.pts : '–'}</td><td>${4 - r.gp}</td></tr>`).join('');
+  const tbs = [...new Set(rows.filter(r => r.tb).map(r => CUP_TB_TXT[r.tb]))];
+  return `<div class="cup-card">
+    <div class="cup-card-head"><span>Grupo ${gr.split(' ')[1]}</span><span class="cup-card-meta">${played}/10 partidos</span></div>
+    <table class="cup-table"><thead><tr><th>#</th><th>Equipo</th><th>G-P</th><th>Dif</th><th>PF</th><th title="Partidos de grupo que le quedan">Faltan</th></tr></thead><tbody>${body}</tbody></table>
+    ${tbs.length ? `<div class="cup-foot">* Desempate por ${tbs.join(', ')}</div>` : ''}
+  </div>`;
+}
+function cupWildCard(rows, cf, done) {
+  const body = rows.map((r, i) => `<tr class="${i === 0 ? 'cup-comodin' : ''}"><td class="cup-pos">${i + 1}</td><td>${curioDot(r.team)}${curioEsc(curioShort(r.team))} <span class="cup-card-meta">${r.group.split(' ')[1]}</span></td>
+      <td>${r.w}-${r.l}</td><td>${r.gp ? cupSign(r.diff) : '–'}</td><td>${r.gp ? r.pts : '–'}</td></tr>`).join('');
+  return `<div class="cup-card cup-card--wc">
+    <div class="cup-card-head"><span>Comodín ${cf}</span><span class="cup-card-meta">${done ? 'definido' : 'mejor 2º'}</span></div>
+    <table class="cup-table"><thead><tr><th>#</th><th>2º de grupo</th><th>G-P</th><th>Dif</th><th>PF</th></tr></thead><tbody>${body}</tbody></table>
+  </div>`;
+}
+function cupMatch(m, phase) {
+  if (!m.home || !m.away) return `<div class="cup-match cup-match--tbd">Por definir</div>`;
+  const g = m.g, side = (t, s) => {
+    const pts = g ? (g.local === t ? g.ptsL : g.ptsA) : '', win = g && cupWinner(g) === t;
+    return `<div class="cup-side${win ? ' cup-side--win' : ''}">${s ? `<span class="cup-seed">${s}</span>` : ''}${curioDot(t)}${curioEsc(curioShort(t))}<b>${pts}</b></div>`;
+  };
+  return `<div class="cup-match">${side(m.home, m.hs)}${side(m.away, m.as)}<div class="cup-match-date">${g ? fmtDate(g.date) : phase === 'qf' ? '4–5 dic' : '8–9 dic'}</div></div>`;
+}
+function renderCopa() {
+  const el = document.getElementById('cup-body'); if (!el) return;
+  const S = cupStandings(games), B = cupBracket(games, S), allDone = S.done.Este && S.done.Oeste;
+  const today = new Date().toISOString().slice(0, 10);
+  const stage = cupFinal ? 'Terminada' : today > CUP.groupTo || allDone ? 'Eliminatorias' : today >= CUP.groupFrom ? 'Fase de grupos' : 'Empieza el 30 oct';
+  document.getElementById('cup-meta').innerHTML = `<span>${stage}</span><span>${S.total}/60 partidos de grupo</span>`;
+  const conf = cf => `<div class="cup-conf">
+      <div class="cup-conf-title">${cf === 'Este' ? 'Conferencia Este' : 'Conferencia Oeste'}</div>
+      <div class="cup-grid">${Object.keys(CUP.groups).filter(gr => cupConf(gr) === cf).map(gr => cupGroupCard(S.groups[gr], gr, S.played[gr])).join('')}${cupWildCard(S.wild[cf], cf, S.done[cf])}</div>
+    </div>`;
+  const F = B.final, fw = F ? cupWinner(F) : null;
+  const finalHtml = F ? `<div class="cup-match cup-match--final">
+        <div class="cup-side${fw === F.local ? ' cup-side--win' : ''}">${curioDot(F.local)}${curioEsc(curioShort(F.local))}<b>${F.ptsL}</b></div>
+        <div class="cup-side${fw === F.away ? ' cup-side--win' : ''}">${curioDot(F.away)}${curioEsc(curioShort(F.away))}<b>${F.ptsA}</b></div>
+        <div class="cup-match-date">11 dic · Indianápolis <button type="button" class="del-btn" title="Borrar la Final" onclick="deleteCupFinal()">✕</button></div></div>
+        <div class="cup-champ">🏆 Campeón: ${curioEsc(fw)}</div>`
+    : `<div class="cup-match cup-match--tbd">${B.Este.champ && B.Oeste.champ ? `${curioEsc(curioShort(B.Este.champ))} vs ${curioEsc(curioShort(B.Oeste.champ))}` : 'Por definir'} · 11 dic</div>
+       <div class="cup-foot">Regístrala en Ingresar Partido con la fecha 11/12 y la casilla de Copa: queda aquí y no entra al modelo.</div>`;
+  const bracket = `<div class="cup-conf">
+      <div class="cup-conf-title">Cuadro ${allDone ? '' : '<span class="cup-card-meta">· si la fase de grupos terminara hoy</span>'}</div>
+      <div class="cup-bracket">
+        ${['Este', 'Oeste'].map(cf => `<div class="cup-br-col"><div class="cup-br-h">Cuartos · ${cf}</div>${B[cf].qf.map(m => cupMatch(m, 'qf')).join('')}</div>
+          <div class="cup-br-col"><div class="cup-br-h">Semifinal · ${cf}</div>${cupMatch(B[cf].sf, 'sf')}</div>`).join('')}
+        <div class="cup-br-col"><div class="cup-br-h">Final</div>${finalHtml}</div>
+      </div>
+    </div>`;
+  el.innerHTML = conf('Este') + conf('Oeste') + bracket;
+}
+
+// ── "Para redes": tablas de la Copa en las noches de Copa ──
+// Una sola opción que pone dos tarjetas: Conferencia Este y Oeste, cada una con sus 3 grupos.
+// Los equipos que no jugaron esa noche salen apagados; el líder y el comodín, resaltados.
+function curioCupItems(src, J) {
+  const day = src.filter(g => g.date === J.date && cupIsGroupGame(g));
+  if (!day.length) return [];
+  const S = cupStandings(src, J.date), sh = curioShort, played = new Set(day.flatMap(g => [g.local, g.away]));
+  const parts = ['Este', 'Oeste'].map(cf => {
+    const names = Object.keys(CUP.groups).filter(gr => cupConf(gr) === cf);
+    const cupGroups = names.map(gr => ({ name: gr, rows: S.groups[gr].map(r => ({ team: r.team, w: r.w, l: r.l, diff: r.diff, gp: r.gp, status: r.status, played: played.has(r.team) })) }));
+    const leaders = cupGroups.map(G => G.rows[0]), wc = S.seeds[cf][3];
+    return {
+      type: 'cupGroup', cup: true, cupConf: cf, cupGroups, label: 'NBA Cup', value: cf, dot: leaders[0].team, teamLabel: `NBA Cup · Conferencia ${cf}`,
+      teams: [...played].filter(t => cupConf(CUP_TEAM[t]) === cf), score: 2.5,
+      hook: `NBA Cup, ${cf}: lideran ${leaders.map(r => sh(r.team)).join(', ')}`,
+      capText: `${cf}: ${cupGroups.map((G, k) => `Grupo ${G.name.split(' ')[1]} ${sh(leaders[k].team)} ${leaders[k].w}-${leaders[k].l}`).join(', ')} · comodín ${sh(wc.team)} ${wc.w}-${wc.l}`,
+      soc: { big: cf.toUpperCase(), head: `Líderes de la NBA Cup: ${leaders.map(r => `${sh(r.team)} (${r.w}-${r.l})`).join(', ')}`, ctx: `Comodín: ${sh(wc.team)} (${wc.w}-${wc.l}).`, foot: `NBA Cup · Conferencia ${cf}` },
+    };
+  });
+  return [{ type: 'cupGroup', cup: true, cupParts: parts, label: 'NBA Cup', value: 'tablas', dot: parts[0].dot, teamLabel: 'NBA Cup', teams: [], score: 2.5,
+    hook: 'Tablas de la NBA Cup', capText: 'Tablas Este y Oeste (los 6 grupos, 2 tarjetas)', soc: { big: '', head: 'Tablas de la NBA Cup', ctx: '', foot: 'NBA Cup' } }];
 }
 
 // ── Modo demo: temporada 2024-25 desde games.json, SOLO en memoria ──
