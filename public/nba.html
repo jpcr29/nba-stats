@@ -5552,10 +5552,12 @@ function curioSocialAuto(items) {
 // Diapositivas del video: portada, un hallazgo por tarjeta, cierre
 function curioSocialSlides(J, sel) {
   // La opción de tablas de la NBA Cup pone dos tarjetas (Este y Oeste)
-  const picks = J.items.filter((it, i) => sel.has(i) && it.soc).flatMap(it => it.cupParts || [it]);
+  // (siempre al final: la portada y la numeración son de los datos)
+  const chosen = J.items.filter((it, i) => sel.has(i) && it.soc), picks = [...chosen.filter(it => !it.cup), ...chosen.filter(it => it.cup).flatMap(it => it.cupParts || [it])];
   const date = fmtDate(J.date);
   const slides = [{ kind: 'cover', date, picks, quiet: !!J.quiet, dur: CURIO_SOCIAL.DUR.cover }];
-  picks.forEach((it, i) => slides.push({ kind: 'card', date, it, n: i + 1, of: picks.length, dur: CURIO_SOCIAL.DUR.card }));
+  const nDatos = picks.filter(it => !it.cup).length; // las tablas de la Copa van al final y no entran en el 1/N
+  picks.forEach((it, i) => slides.push({ kind: 'card', date, it, n: i + 1, of: nDatos, dur: CURIO_SOCIAL.DUR.card }));
   slides.push({ kind: 'outro', n: picks.length, dur: CURIO_SOCIAL.DUR.outro });
   return slides;
 }
@@ -5615,7 +5617,7 @@ function curioDrawSlide(ctx, s, t) {
     // Marca de la serie + número de tarjeta (para "comenta el 1, 2 o 3")
     ctx.font = curioFont(600, 34, 'mono');
     curioText(ctx, [`LA JORNADA · ${s.date}`], SAFE.l, SAFE.t, 40, c.text, at(0) * 0.85);
-    ctx.textAlign = 'right'; curioText(ctx, [`${s.n}/${s.of}`], SAFE.r, SAFE.t, 40, c.text, at(0) * 0.85); ctx.textAlign = 'left';
+    ctx.textAlign = 'right'; if (!it.cup) curioText(ctx, [`${s.n}/${s.of}`], SAFE.r, SAFE.t, 40, c.text, at(0) * 0.85); ctx.textAlign = 'left';
     // Etiqueta
     const e1 = at(0.05);
     ctx.font = curioFont(600, 38, 'mono');
@@ -5796,7 +5798,7 @@ function curioSocialCaption(J, slides) {
   // Cada línea lleva también el contexto (el comentario de los datos manuales, el "Top de la temporada", etc.):
   // en el texto de la publicación sí cabe lo que en el video se resume
   const lines = picks.map((it, i) => {
-    if (it.cup) return `${i + 1}. 🏆 NBA Cup, ${it.capText}`;
+    if (it.cup) return `🏆 NBA Cup, ${it.capText}`; // las tablas no llevan número: no son un dato
     let c = (it.soc.ctx || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
     if (c && /^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(c)) c = c[0].toLowerCase() + c.slice(1); // "…, top 2 de la temporada"
     // Si el dato manual tiene jugador, la línea empieza por él: "Paul George: 38 puntos, …"
@@ -5886,7 +5888,8 @@ function renderCurioSocial() {
   if (!st || !ov) return;
   const { J } = st;
   const slides = curioSocialSlides(J, st.sel);
-  const nPick = slides.length - 2, secs = curioSocialSecs(st, slides);
+  // hallazgos = datos marcados; las tablas de la Copa no son un hallazgo (van aparte en el texto)
+  const nPick = J.items.filter((it, i) => st.sel.has(i) && it.soc && !it.cup).length, nCup = J.items.some((it, i) => st.sel.has(i) && it.cup), secs = curioSocialSecs(st, slides);
   const rows = J.items.map((it, i) => it.soc ? `<label class="soc-row">
       <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="toggleCurioSocialItem(${i})">
       <span class="soc-type">${it.manual ? '✍️ ' + curioEsc(it.label) : (it.label || CURIO_JTYPES[it.type].label)}</span>
@@ -5917,7 +5920,7 @@ function renderCurioSocial() {
     <div class="soc-actions">
       <button type="button" class="btn btn-primary" onclick="curioSocialMakeVideo()" ${nPick ? '' : 'disabled'}>🎬 Generar video (${Math.round(secs)} s)</button>
       <button type="button" class="btn btn-secondary" onclick="curioSocialImages()" ${nPick ? '' : 'disabled'}>🖼️ Bajar imágenes</button>
-      <span class="soc-status" id="soc-status">${nPick ? `${nPick} hallazgo${nPick === 1 ? '' : 's'} + portada y cierre` : 'Marca al menos un hallazgo'}</span>
+      <span class="soc-status" id="soc-status">${nPick ? `${nPick} hallazgo${nPick === 1 ? '' : 's'}${nCup ? ' + tablas de la Copa' : ''} + portada y cierre` : 'Marca al menos un hallazgo'}</span>
     </div>
     ${vid ? `<div class="soc-result">
       <video src="${vid.url}" controls playsinline></video>
@@ -6421,7 +6424,8 @@ function pjersey(c, x, y, body, trim, outline, num, k = 3) {
 function pxHookTeams(s) { // equipos en el orden de los datos, sin repetir
   const seen = new Set(), out = [];
   // un dato de la noche cuenta como una sola casilla (un balón); máximo 6 casillas (2 filas)
-  s.picks.forEach((it, i) => { if (!seen.has(it.dot)) { seen.add(it.dot); out.push({ team: it.dot, n: i + 1, tag: it.manual ? 'NBA' : 'NOCHE' }); } });
+  // las tablas de la NBA Cup no llevan camiseta: son tablas, no datos de un equipo
+  s.picks.forEach((it, i) => { if (it.cup) return; if (!seen.has(it.dot)) { seen.add(it.dot); out.push({ team: it.dot, n: i + 1, tag: it.manual ? 'NBA' : 'NOCHE' }); } });
   return out.slice(0, 6);
 }
 
@@ -6457,7 +6461,7 @@ function pxQuietHook(c, s, t, P) {
 }
 
 function pxCoverHook(c, s, t, P) {
-  const { w, h, S } = PX, cx = PXCX, cw = S.r - S.l, B = PXBEAT, top = s.picks[0];
+  const { w, h, S } = PX, cx = PXCX, cw = S.r - S.l, B = PXBEAT, top = s.picks.find(it => !it.cup);
   if (t < 4 * B && s.quiet) { pxQuietHook(c, s, t, P); return; }
   if (t < 4 * B && top) {
     // 1) Gancho: el dato más fuerte en los colores de su equipo, con flash en cada tiempo
@@ -6504,7 +6508,7 @@ function pxCoverHook(c, s, t, P) {
   }
   // 3) "N DATOS QUE NO VISTE"
   if (t >= 9 * B) {
-    const n = s.picks.length, by = 212;
+    const n = s.picks.filter(it => !it.cup).length, by = 212; // las tablas de la Copa no cuentan como datos
     pbox(c, S.l, by, cw, 30, P.hi, P.star);
     ptext(c, `${n} DATOS`, cx, by + 4, 16, P.bg, 'center');
     ptext(c, s.quiet ? 'IGUAL HAY' : 'QUE NO VISTE', cx, by + 21, 8, P.bg, 'center');
