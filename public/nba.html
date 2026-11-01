@@ -6421,11 +6421,11 @@ function pjersey(c, x, y, body, trim, outline, num, k = 3) {
   JERSEY.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') prect(c, x + i * k, y + j * k, k, k, ch === 'T' ? trim : body); }));
   if (num != null) ptext(c, String(num), x + 6 * k, y + 5 * k, 16, trim, 'center');
 }
-function pxHookTeams(s) { // equipos en el orden de los datos, sin repetir
-  const seen = new Set(), out = [];
-  // un dato de la noche cuenta como una sola casilla (un balón); máximo 6 casillas (2 filas)
-  // las tablas de la NBA Cup no llevan camiseta: son tablas, no datos de un equipo
-  s.picks.forEach((it, i) => { if (it.cup) return; if (!seen.has(it.dot)) { seen.add(it.dot); out.push({ team: it.dot, n: i + 1, tag: it.manual ? 'NBA' : 'NOCHE' }); } });
+function pxHookTeams(s) { // una casilla por dato, en su orden: así el número de cada camiseta es el de su tarjeta
+  // si un equipo tiene dos datos, sale dos veces (con sus dos números); un dato de la noche es un balón;
+  // máximo 6 casillas (2 filas). Las tablas de la NBA Cup no llevan camiseta: son tablas, no datos de un equipo
+  const out = [];
+  s.picks.forEach((it, i) => { if (it.cup) return; out.push({ team: it.dot, n: i + 1, tag: it.manual ? 'NBA' : 'NOCHE' }); });
   return out.slice(0, 6);
 }
 
