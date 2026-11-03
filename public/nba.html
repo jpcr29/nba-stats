@@ -1009,6 +1009,11 @@
   .soc-thumb.px{image-rendering:pixelated;}
   .soc-style{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
   .cur-feed-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .soc-hint{border:1px solid var(--hairline);border-radius:16px;padding:12px 16px;background:color-mix(in srgb,var(--tile-yellow) 40%,transparent);font-size:14px;display:flex;flex-direction:column;gap:10px;}
+  .soc-hint-btns{display:flex;gap:8px;flex-wrap:wrap;}
+  .soc-group{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--violet);padding:12px 16px 4px;border-top:1px solid var(--hairline);}
+  .soc-group:first-child{border-top:none;}
+  .soc-empty{font-size:13px;color:var(--secondary-tx);padding:4px 16px 12px;}
   .tb-warn{border:1px solid var(--lose);border-radius:16px;padding:10px 16px;font-size:13px;color:var(--lose);background:color-mix(in srgb,var(--lose) 6%,transparent);}
   .tb-date{width:auto;height:36px;border-radius:9999px;padding:0 14px;font-family:'JetBrains Mono',monospace;font-size:12px;}
   .soc-sep{width:1px;height:24px;background:var(--outline-var);margin:0 6px;}
@@ -5083,6 +5088,9 @@ const CURIO_JTYPES = {
   seasonStreak: { label: 'Temporada', short: 'La temporada', icon: '📅', tone: 'plain' },
   // NBA Cup: tabla del grupo (solo en "Para redes", en noches de Copa)
   cupGroup:     { label: 'NBA Cup', short: 'NBA Cup', icon: '🏆', tone: 'plain' },
+  // "Hoy se juega": días sin jornada que contar
+  previa:       { label: 'Hoy se juega', short: 'Hoy', icon: '🗓️', tone: 'plain' },
+  liga:         { label: 'La liga', short: 'La liga', icon: '📋', tone: 'plain' },
 };
 let curioFeedAll = false;
 
@@ -5337,7 +5345,8 @@ function renderCurioFeed() {
       <div class="cur-feed-titlerow">
         <div class="cur-block-title">La jornada · ${fmtDate(J.date)}</div>
         <span class="cur-feed-btns"><button type="button" class="cur-demo-btn" onclick="openCurioSocial()">📲 Para redes</button>
-        <button type="button" class="cur-demo-btn" onclick="openTablaSemanal()">📊 Tabla semanal</button></span>
+        <button type="button" class="cur-demo-btn" onclick="openTablaSemanal()">📊 Tabla semanal</button>
+        <button type="button" class="cur-demo-btn" onclick="openPrevia()">🗓️ Hoy se juega</button></span>
       </div>
       <div class="cur-block-note">Lo raro de los ${J.nGames} partido${J.nGames === 1 ? '' : 's'} del último día registrado, comparado con la temporada hasta ese día. Lo de toda la temporada está en Explorar.</div>
     </div>
@@ -5553,9 +5562,11 @@ function curioSocialAuto(items) {
 function curioSocialSlides(J, sel) {
   // La opción de tablas de la NBA Cup pone dos tarjetas (Este y Oeste)
   // (siempre al final: la portada y la numeración son de los datos)
-  const chosen = J.items.filter((it, i) => sel.has(i) && it.soc), picks = [...chosen.filter(it => !it.cup), ...chosen.filter(it => it.cup).flatMap(it => it.cupParts || [it])];
+  const chosen = J.items.filter((it, i) => sel.has(i) && it.soc), picks = [...chosen.filter(it => !it.cup && !it.tonight), ...chosen.filter(it => it.tonight), ...chosen.filter(it => it.cup).flatMap(it => it.cupParts || [it])]; // "Esta noche" cierra los datos
   const date = fmtDate(J.date);
-  const slides = [{ kind: 'cover', date, picks, quiet: !!J.quiet, dur: CURIO_SOCIAL.DUR.cover }];
+  // Noche de Copa: hubo partidos de la NBA Cup ese día (grupos, cuartos o semis) → portada con "TOURNAMENT MODE" y paleta dorada
+  const copa = curioSource().some(g => g.date === J.date && (cupIsGroupGame(g) || g.cup === 'qf' || g.cup === 'sf'));
+  const slides = [{ kind: 'cover', date, iso: J.date, picks, quiet: !!J.quiet, copa, dur: CURIO_SOCIAL.DUR.cover }];
   const nDatos = picks.filter(it => !it.cup).length; // las tablas de la Copa van al final y no entran en el 1/N
   picks.forEach((it, i) => slides.push({ kind: 'card', date, it, n: i + 1, of: nDatos, dur: CURIO_SOCIAL.DUR.card }));
   slides.push({ kind: 'outro', n: picks.length, dur: CURIO_SOCIAL.DUR.outro });
@@ -5799,6 +5810,7 @@ function curioSocialCaption(J, slides) {
   // en el texto de la publicación sí cabe lo que en el video se resume
   const lines = picks.map((it, i) => {
     if (it.cup) return `🏆 NBA Cup, ${it.capText}`; // las tablas no llevan número: no son un dato
+    if (it.tonight) return `${i + 1}. 🗓️ Esta noche · ${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}`;
     let c = (it.soc.ctx || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
     if (c && /^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(c)) c = c[0].toLowerCase() + c.slice(1); // "…, top 2 de la temporada"
     // Si el dato manual tiene jugador, la línea empieza por él: "Paul George: 38 puntos, …"
@@ -5832,8 +5844,15 @@ function openCurioSocial() {
   J = { ...J, quiet, items: [...J.items, ...cupIt, ...extra] };
   if (quiet) sel = new Set([...strong, ...extra.slice(0, CURIO_SOCIAL.AUTO_MIN - strong.length).map((_, k) => n0 + k)]);
   if (!sel) { sel = curioSocialAuto(J.items); J.items.forEach((it, i) => { if (it.manual) sel.add(i); }); }
-  curioSocialState = { J, sel, video: null, style: curioSocialStyleGet(), suggestQuiet: quiet, baseItems, extraItems: [...cupIt, ...extra], form: null, music: null };
-  PXMUSIC = null;
+  // Esta noche: la cartelera del día siguiente. Si anoche hubo pocos datos fuertes y hoy hay partidos
+  // interesantes, se sugiere sumar "Esta noche" al video o pasar a "Hoy se juega"
+  const tonightDate = curioAddDays(J.date, 1);
+  let tonight = [];
+  try { tonight = previaItems(curioSource().filter(g => g.date <= J.date), tonightDate).map(it => ({ ...it, tonight: true, label: 'Esta noche' })); } catch (e) { tonight = []; }
+  const tonightStrong = tonight.filter(it => it.score >= PREVIA.strong).length;
+  curioSocialState = { J, sel, video: null, style: curioSocialStyleGet(), suggestQuiet: quiet, baseItems, extraItems: [...cupIt, ...extra], form: null, music: null,
+    tonightItems: tonight, tonightDate, tonightStrong, nStrong: strong.length, weak: strong.length < CURIO_SOCIAL.AUTO_MIN && tonightStrong >= 2, tonightAdded: false };
+  PXMUSIC = null; PXHOOK = null;
   let ov = document.getElementById('cur-social');
   if (!ov) {
     ov = document.createElement('div');
@@ -5855,6 +5874,22 @@ function setCurioSocialStyle(v) {
 }
 // Portada del video pixel: 'Dato principal' o 'Noche tranquila'. La página propone una (st.suggestQuiet) y se puede cambiar.
 // Música del video pixel: automática (rota con la fecha) o un tema fijo solo para este video
+function addCurioTonight() { // suma la cartelera de hoy al video de la jornada y marca las 2 mejores
+  const st = curioSocialState; if (!st || st.tonightAdded) return;
+  st.tonightAdded = true; st.extraItems = [...st.tonightItems, ...st.extraItems];
+  curioSocialRebuild();
+  // las 2 mejores, sin repetir un equipo que ya sale en los datos marcados (p. ej. su misma racha)
+  const used = new Set(st.J.items.filter((it, i) => st.sel.has(i) && !it.cup).map(it => it.dot));
+  st.J.items.map((it, i) => (it.tonight && !used.has(it.dot) ? i : -1)).filter(i => i >= 0).slice(0, 2).forEach(i => st.sel.add(i));
+  renderCurioSocial();
+}
+function openPreviaFromSocial() { const d = curioSocialState && curioSocialState.tonightDate; closeCurioSocial(); openPrevia(); if (d) previaSetDate(d); }
+function setCurioSocialHook(v) { // animación del inicio de la portada: solo para este video
+  const st = curioSocialState; if (!st) return;
+  st.hook = v || null; PXHOOK = st.hook;
+  if (st.video) { URL.revokeObjectURL(st.video.url); st.video = null; }
+  renderCurioSocial();
+}
 function setCurioSocialMusic(v) {
   const st = curioSocialState; if (!st) return;
   st.music = v || null; PXMUSIC = st.music;
@@ -5890,11 +5925,12 @@ function renderCurioSocial() {
   const slides = curioSocialSlides(J, st.sel);
   // hallazgos = datos marcados; las tablas de la Copa no son un hallazgo (van aparte en el texto)
   const nPick = J.items.filter((it, i) => st.sel.has(i) && it.soc && !it.cup).length, nCup = J.items.some((it, i) => st.sel.has(i) && it.cup), secs = curioSocialSecs(st, slides);
-  const rows = J.items.map((it, i) => it.soc ? `<label class="soc-row">
+  const firstSeason = J.items.findIndex(it => it.season && it.soc), firstTonight = J.items.findIndex(it => it.tonight);
+  const rows = J.items.map((it, i) => (i === firstSeason ? '<div class="soc-group">📅 Datos de temporada (opcionales)</div>' : '') + (i === firstTonight ? `<div class="soc-group">🗓️ Esta noche · ${fmtDate(st.tonightDate)}</div>` : '') + (it.soc ? `<label class="soc-row">
       <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="toggleCurioSocialItem(${i})">
       <span class="soc-type">${it.manual ? '✍️ ' + curioEsc(it.label) : (it.label || CURIO_JTYPES[it.type].label)}</span>
       <span class="soc-txt">${it.cup ? `🏆 ${curioEsc(it.capText)}` : `${curioDot(it.dot)}<b>${curioEsc(it.player || curioShort(it.dot))}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.player ? it.capHead : it.soc.head)}`}${it.manual ? `<button type="button" class="soc-del" title="Editar este dato" onclick="editCurioManual(${it.mid}, event)">✏️</button><button type="button" class="soc-del soc-del--x" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
-    </label>` : '').join('');
+    </label>` : '')).join('') + (firstSeason < 0 ? '<div class="soc-group">📅 Datos de temporada (opcionales)</div><div class="soc-empty">Todavía no hay datos de temporada para los equipos de anoche: aparecen cuando llevan 10 partidos y están entre los 5 mejores o peores de la liga en algo.</div>' : '');
   const vid = st.video;
   ov.innerHTML = `<div class="profile-modal soc-modal">
     <div class="soc-head">
@@ -5908,12 +5944,22 @@ function renderCurioSocial() {
       ${st.style === 'pixel' ? `<span class="soc-sep"></span><span class="soc-sub soc-lbl">Portada</span>
       <button type="button" class="cur-preset ${!J.quiet ? 'active' : ''}" onclick="setCurioSocialCover(false)">Dato principal${!st.suggestQuiet ? ' · sugerida' : ''}</button>
       <button type="button" class="cur-preset ${J.quiet ? 'active' : ''}" onclick="setCurioSocialCover(true)">😴 Noche tranquila${st.suggestQuiet ? ' · sugerida' : ''}</button>
+      ${!J.quiet && slides[0].picks.some(it => !it.cup) ? `<span class="soc-sep"></span><span class="soc-sub soc-lbl">Inicio</span>
+      <select class="soc-music" title="Animación del inicio de la portada" onchange="setCurioSocialHook(this.value)">
+        <option value="" ${!st.hook ? 'selected' : ''}>Automática (${PXHOOKS.find(x => x.id === pxHookAutoId(slides[0])).name})</option>
+        ${PXHOOKS.map(x => `<option value="${x.id}" ${st.hook === x.id ? 'selected' : ''}>${x.name}</option>`).join('')}
+      </select>` : ''}
       <span class="soc-sep"></span><span class="soc-sub soc-lbl">Música</span>
       <select class="soc-music" onchange="setCurioSocialMusic(this.value)">
         <option value="" ${!st.music ? 'selected' : ''}>Automática (${pxThemeAuto(slides).name})</option>
         ${PXTHEMES.map(th => `<option value="${th.id}" ${st.music === th.id ? 'selected' : ''}>${th.name}</option>`).join('')}
       </select>` : ''}
     </div>
+    ${st.weak && !st.tonightAdded ? `<div class="soc-hint">
+      <div>💡 Anoche hubo ${st.nStrong ? `solo ${st.nStrong} dato${st.nStrong === 1 ? '' : 's'} fuerte${st.nStrong === 1 ? '' : 's'}` : 'pocos datos fuertes'}. La cartelera de hoy (${fmtDate(st.tonightDate)}) tiene ${st.tonightStrong} partidos interesantes.</div>
+      <div class="soc-hint-btns"><button type="button" class="cur-preset" onclick="addCurioTonight()">➕ Agregar "Esta noche" a este video</button>
+      <button type="button" class="cur-preset" onclick="openPreviaFromSocial()">🗓️ Abrir Hoy se juega</button></div>
+    </div>` : ''}
     <div class="soc-list">${rows}</div>
     ${st.form ? curioManualFormHtml(st) : `<div><button type="button" class="cur-preset" onclick="openCurioManualForm()">➕ Agregar dato</button></div>`}
     <div class="soc-strip" id="soc-strip"></div>
@@ -6042,7 +6088,7 @@ const PXV = 1.4; // segundo en que arranca el gráfico de cada dato
 const PXDUR = { cover: 3.75, card: 5, outro: 3.75 }; // a 96 BPM (tiempo = 0,625 s): todo cae en un tiempo de la música
 const PXBEAT = 60 / 96;
 let PXCOVER = 2; // portada: 2 = gancho + elige tu equipo (la única en uso); 0 balón y 1 arcade quedan de respaldo
-const pxSlides = slides => slides.map(s => ({ ...s, dur: s.kind === 'cover' && s.tabla ? 8 * PXBEAT : s.kind === 'cover' && PXCOVER === 2 ? 12 * PXBEAT : (PXDUR[s.kind] || s.dur) }));
+const pxSlides = slides => slides.map(s => ({ ...s, dur: s.kind === 'cover' && s.previa ? (s.zero ? 12 : 8) * PXBEAT : s.kind === 'cover' && s.tabla ? 8 * PXBEAT : s.kind === 'cover' && PXCOVER === 2 ? (s.copa ? 18 : 12) * PXBEAT : (PXDUR[s.kind] || s.dur) }));
 const pclamp = x => Math.max(0, Math.min(1, x));
 
 // Balón de 8×8
@@ -6200,9 +6246,10 @@ function pxDay(s) { // "19/11/24" → número de día; días seguidos alternan p
   const m = String(s.date || '').match(/(\d+)\/(\d+)\/(\d+)/); if (!m) return 0;
   return Math.round(Date.UTC(2000 + +m[3], +m[2] - 1, +m[1]) / 864e5);
 }
+const PXPAL_COPA = { name: 'copa', bg: '#0d0a02', fg: '#fff4d6', hi: '#f5c542', dim: '#a08a4c', star: '#5a4a1e' };
 function pxStyle(slides) {
   const cover = slides.find(x => x.kind === 'cover') || {}, d = pxDay(cover);
-  return { pal: PXPAL[d % PXPAL.length], coverV: Math.floor(d / PXPAL.length) % 2, shift: d % 3 }; // ciclo de 8 días con todas las combinaciones
+  return { pal: cover.special ? cover.special.pal : cover.copa ? PXPAL_COPA : PXPAL[d % PXPAL.length], coverV: Math.floor(d / PXPAL.length) % 2, shift: d % 3 }; // ciclo de 8 días con todas las combinaciones
 }
 
 // Piezas de las tarjetas
@@ -6235,7 +6282,7 @@ function pxType(c, lines, x, y, lh, t, t0, dur, colr, align = 'left') {
 }
 function pxFoot(it) {
   if (it.night) return { team: 'NBA', score: '', rival: 'Toda la liga' }; // los equipos ya salen en el gráfico
-  if (it.season) return { team: curioShort(it.dot), score: (it.soc.foot.match(/\d+-\d+/) || [''])[0], rival: 'temporada' };
+  if (it.season || it.liga) return { team: curioShort(it.dot), score: (it.soc.foot.match(/\d+-\d+/) || [''])[0], rival: 'temporada' };
   const team = curioShort(it.dot), f = it.soc.foot;
   // Pie tipo marcador ("Local 104-133 Visita"): se pasa al punto de vista del equipo del dato
   const m = f.match(/^(.+?) (\d+)-(\d+) (.+)$/);
@@ -6294,7 +6341,7 @@ const pxHeadH = n => n ? (n - 1) * 12 + 8 : 0, pxCtxH = n => n ? (n - 1) * 11 + 
 
 function pxCardA(c, s, it, t, col) { // Clásico: alineado a la izquierda, de arriba abajo
   const { S } = PX, cw = S.r - S.l;
-  ptext(c, 'LA JORNADA', S.l, S.t, 8, col.text); ptext(c, `${s.n}/${s.of}`, S.r, S.t, 8, col.text, 'right');
+  ptext(c, s.previaVideo || (s.it && s.it.previa) ? 'HOY' : 'LA JORNADA', S.l, S.t, 8, col.text); ptext(c, `${s.n}/${s.of}`, S.r, S.t, 8, col.text, 'right');
   const sz = pxNumSize(c, it), head = pwrap(c, pxHead(it), cw, 8, 3), ctx = pxCtx(it) ? pwrap(c, pxCtx(it), cw, 8, 3) : [];
   const vt = pxVizTop(it), vh = pxVizH(it);
   pxStack(56, 216, [
@@ -6435,7 +6482,7 @@ function pxQuietVariant(s) { return pxDay(s) % 3; }
 function pxQuietHook(c, s, t, P) {
   const { w, h, S } = PX, cx = PXCX, cw = S.r - S.l, B = PXBEAT, v = pxQuietVariant(s);
   prect(c, 0, 0, w, h, P.bg);
-  ptext(c, `NBA · ${s.date}`, cx, S.t, 8, P.dim, 'center');
+  pxCoverTag(c, s, cx, S.t, P.dim);
   if (v === 0) { // planta rodadora por la cancha vacía + grillos
     prect(c, 0, 206, w, 1, P.dim); for (let x = 0; x < w; x += 12) prect(c, x, 207, 6, 1, P.star);
     if (t > 0.2) ptext(c, 'ANOCHE…', cx, 76, 16, P.fg, 'center');
@@ -6460,10 +6507,106 @@ function pxQuietHook(c, s, t, P) {
   pxHandle(c, cx, 235, P.fg, 'center');
 }
 
+// ── Noche de Copa: "TOURNAMENT MODE" (4 tiempos) antes de la portada de siempre ──
+function pxBigTrophy(c, x, y, k, col) {
+  CUP_TROPHY.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') prect(c, x + i * k + 1, y + j * k + 1, k, k, PXC.ink); }));
+  CUP_TROPHY.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') prect(c, x + i * k, y + j * k, k, k, col); }));
+  prect(c, x + 2 * k, y + k, k, k, '#fff4d6'); // brillo
+}
+function pxCoverTag(c, s, x, y, col) { // "NBA · fecha" arriba; en noche de Copa, con un trofeo delante
+  if (!s.copa) { ptext(c, `NBA · ${s.date}`, x, y, 8, col, 'center'); return; }
+  const txt = `NBA · ${s.date}`; c.font = pf(8); const w = c.measureText(txt).width, x0 = Math.round(x - (w + 13) / 2);
+  ptrophy(c, x0, y, PXPAL_COPA.hi); ptext(c, txt, x0 + 13, y, 8, col);
+}
+// Todo cae en tiempos de la música (96 BPM): el trofeo aterriza en el 1º, cada grupo en medio tiempo, el título en el 5º
+const PXCOPA = { beats: 6, drop: 0.1, land: PXBEAT, g0: 2 * PXBEAT, gStep: PXBEAT / 2, title: 5 * PXBEAT };
+function pxCopaIntro(c, s, t, P) {
+  const { w, h, S } = PX, cx = PXCX;
+  prect(c, 0, 0, w, h, P.bg);
+  for (let i = 0; i < 28; i++) { const x = Math.floor(pxRand(i) * w), y = Math.floor(pxRand(i + 70) * h); if ((Math.floor(t * 6) + i) % 4) prect(c, x, y, 1, 1, P.star); }
+  // trofeo que cae y rebota
+  const k = 4, tw = 9 * k, d = pclamp((t - PXCOPA.drop) / (PXCOPA.land - PXCOPA.drop)), bounce = d < 1 ? 0 : Math.round(Math.abs(Math.sin((t - PXCOPA.land) * 8)) * 5 * Math.max(0, 1 - (t - PXCOPA.land) * 1.5));
+  const ty = Math.round(-40 + (S.t + 6 + 40) * d) - bounce;
+  if (t > PXCOPA.drop) pxBigTrophy(c, Math.round(cx - tw / 2), ty, k, P.hi);
+  if (t > PXCOPA.land && Math.floor((t - PXCOPA.land) / (PXBEAT / 2)) % 2 === 0) ptext(c, 'TOURNAMENT MODE', cx, 92, 8, P.fg, 'center');
+  // los 6 grupos se encienden uno a uno
+  ['ESTE', 'OESTE'].forEach((cf, r) => {
+    const y = 108 + r * 22;
+    if (t > PXCOPA.g0 - 0.1) ptext(c, cf, S.l, y + 4, 8, P.dim);
+    ['A', 'B', 'C'].forEach((g, j) => {
+      const on = t > PXCOPA.g0 + (r * 3 + j) * PXCOPA.gStep, x = S.l + 48 + j * 31;
+      if (t < PXCOPA.g0 - 0.1) return;
+      if (on) { pbox(c, x, y, 27, 16, P.hi, PXC.ink); ptext(c, g, x + 14, y + 4, 8, P.bg, 'center'); }
+      else { pframe(c, x, y, 27, 16, P.dim); ptext(c, g, x + 14, y + 4, 8, P.dim, 'center'); }
+    });
+  });
+  if (t > PXCOPA.title) {
+    const sh = t < PXCOPA.title + 0.15 ? Math.round(Math.sin(t * 90) * 2) : 0;
+    ptext(c, 'NOCHE DE', cx + 1 + sh, 161, 16, PXC.ink, 'center'); ptext(c, 'NOCHE DE', cx + sh, 160, 16, P.hi, 'center');
+    ptext(c, 'COPA', cx + 1 + sh, 179, 16, PXC.ink, 'center'); ptext(c, 'COPA', cx + sh, 178, 16, P.hi, 'center');
+    ptext(c, s.date, cx, 202, 8, P.fg, 'center');
+  }
+  pxHandle(c, cx, 235, P.dim, 'center');
+}
+
+// ── Variantes del gancho de la portada (rotan por fecha; la estructura de la portada no cambia) ──
+const PXHOOKS = [
+  { id: 'clasico', name: 'Clásica' },
+  { id: 'slot', name: 'Tragamonedas' },
+  { id: 'start', name: 'Press Start' },
+];
+let PXHOOK = null; // null = rota con la fecha; o el id de una variante fija solo para este video
+const pxHookAutoId = s => { const d = pxDay(s); return PXHOOKS[(d * 2 + 1) % PXHOOKS.length].id; }; // nunca la misma dos días seguidos
+const pxHookVariant = (s, top) => PXHOOK || pxHookAutoId(s);
+// Tragamonedas: un rodillo por carácter del número; se detienen uno a uno
+function pxHookSlot(c, s, top, t, P) {
+  const { w, h, S } = PX, cx = PXCX, cw = S.r - S.l, B = PXBEAT, col = curioSocialColors(top.dot);
+  prect(c, 0, 0, w, h, col.bg);
+  ptext(c, (top.label || CURIO_JTYPES[top.type].label).toUpperCase(), cx, 70, 8, col.accent, 'center');
+  const raw = [...pclean(top.soc.big)].slice(0, 6), padL = Math.max(0, Math.ceil((3 - raw.length) / 2)), padR = Math.max(0, 3 - raw.length - padL);
+  const chars = [...Array(padL).fill('●'), ...raw, ...Array(padR).fill('●')], n = chars.length, rw = Math.min(26, Math.floor((cw - 20) / n)), mx = cx - (n * rw) / 2, my = 92, rh = 34;
+  // máquina
+  pbox(c, mx - 8, my - 8, n * rw + 16, rh + 16, PXC.ink, col.accent); pframe(c, mx - 8, my - 8, n * rw + 16, rh + 16, col.accent);
+  prect(c, mx + n * rw + 10, my - 4, 3, 22, col.accent); const pull = t < 0.35; prect(c, mx + n * rw + 7, pull ? my + 14 : my - 10, 9, 9, PXC.red); // palanca
+  chars.forEach((ch, i) => {
+    const x = mx + i * rw, stop = 0.5 + i * (1.5 / Math.max(1, n)), dig = /\d/.test(ch) || ch === '●';
+    prect(c, x + 1, my, rw - 2, rh, '#fff4d6');
+    let shown = ch;
+    if (t < stop && dig) shown = String(Math.floor(pstep(t, 24) * 37 + i * 7) % 10);
+    const off = t < stop && dig ? (Math.floor(t * 48) % 2) * 3 : 0;
+    if (ch === '●') { if (t < stop) { if (Math.floor(t * 24 + i) % 2) pball(c, x + rw / 2 - 8, my + 9 + off, 2); else ptext(c, String(Math.floor(t * 31 + i) % 10), x + rw / 2, my + 9 + off, 16, PXC.ink, 'center'); } else pball(c, x + rw / 2 - 8, my + 9, 2); }
+    else { c.font = pf(16); ptext(c, shown, x + rw / 2, my + 9 + off, 16, PXC.ink, 'center'); }
+    if (t >= stop && t < stop + 0.12) pframe(c, x + 1, my, rw - 2, rh, PXC.red);
+  });
+  const done = 0.5 + 1.5 + 0.1;
+  if (t > done) { const hl = pwrap(c, pxHead(top), cw, 8, 3); hl.forEach((l, i) => ptext(c, l, cx, 150 + i * 12, 8, col.text, 'center')); }
+  const tn = curioShort(top.dot).toUpperCase(); c.font = pf(16); if (t > 2.6 * B + 0.4) ptext(c, tn, cx, 210, c.measureText(tn).width <= cw ? 16 : 8, col.text, 'center');
+  pxCoverTag(c, s, cx, S.t, col.text); pxHandle(c, cx, 235, col.text, 'center');
+}
+// Press Start: pantalla de título; el dato es el "récord a batir"
+function pxHookStart(c, s, top, t, P) {
+  const { w, h, S } = PX, cx = PXCX, cw = S.r - S.l, B = PXBEAT, col = curioSocialColors(top.dot);
+  prect(c, 0, 0, w, h, col.bg);
+  pframe(c, S.l - 6, S.t + 14, cw + 12, 196, col.accent); pframe(c, S.l - 4, S.t + 16, cw + 8, 192, col.accent);
+  for (let i = 0; i < 5; i++) prect(c, S.l - 4, 66 + i * 4, cw + 8, 2, col.accent); // franjas de juego viejo
+  ptext(c, (top.label || CURIO_JTYPES[top.type].label).toUpperCase(), cx, 94, 8, col.text, 'center');
+  ptext(c, 'HIGH SCORE', cx, 108, 8, col.accent, 'center');
+  const big = pclean(top.soc.big); let sz = 48; for (const z of [48, 32, 24, 16]) { c.font = pf(z); sz = z; if (c.measureText(big).width <= cw) break; }
+  const show = t > 0.4 ? (t < 1.2 && Math.floor(t * 10) % 2 ? '' : big) : '';
+  ptext(c, show, cx + 2, 124, sz, PXC.ink, 'center'); ptext(c, show, cx, 122, sz, '#ffffff', 'center');
+  if (t > 1.2) pwrap(c, pxHead(top), cw, 8, 2).forEach((l, i) => ptext(c, l, cx, 124 + sz + 10 + i * 12, 8, col.text, 'center'));
+  if (t > 1.8) ptext(c, `1P: ${curioShort(top.dot).toUpperCase()}`, cx, 196, 8, col.text, 'center');
+  if (t > 0.3 && Math.floor(t / (B / 2)) % 2 === 0) ptext(c, 'PRESS START', cx, 214, 8, col.accent, 'center');
+  pxCoverTag(c, s, cx, S.t, col.text); pxHandle(c, cx, 235, col.text, 'center');
+}
+
 function pxCoverHook(c, s, t, P) {
   const { w, h, S } = PX, cx = PXCX, cw = S.r - S.l, B = PXBEAT, top = s.picks.find(it => !it.cup);
   if (t < 4 * B && s.quiet) { pxQuietHook(c, s, t, P); return; }
   if (t < 4 * B && top) {
+    const hv = pxHookVariant(s, top);
+    if (hv === 'slot') { pxHookSlot(c, s, top, t, P); return; }
+    if (hv === 'start') { pxHookStart(c, s, top, t, P); return; }
     // 1) Gancho: el dato más fuerte en los colores de su equipo, con flash en cada tiempo
     const col = top.night ? { bg: P.bg, text: P.fg, accent: P.hi } : curioSocialColors(top.dot);
     prect(c, 0, 0, w, h, col.bg);
@@ -6479,14 +6622,14 @@ function pxCoverHook(c, s, t, P) {
     const hl = pwrap(c, pxHead(top), cw, 8, 3); if (t > B * 0.5) hl.forEach((l, i) => ptext(c, l, cx, 148 + i * 12, 8, col.text, 'center'));
     if (t > 1.5 * B && pxCtx(top)) pwrap(c, pxCtx(top), cw, 8, 2).forEach((l, i) => ptext(c, l, cx, 156 + hl.length * 12 + i * 11, 8, col.accent, 'center'));
     const tn = curioShort(top.dot).toUpperCase(); c.font = pf(16); if (t > 2.5 * B) ptext(c, tn, cx, 210, c.measureText(tn).width <= cw ? 16 : 8, col.text, 'center');
-    ptext(c, `NBA · ${s.date}`, cx, S.t, 8, col.text, 'center');
+    pxCoverTag(c, s, cx, S.t, col.text);
     pxHandle(c, cx, 235, col.text, 'center');
     return;
   }
   // 2) Selección de equipos
   prect(c, 0, 0, w, h, P.bg);
   for (let i = 0; i < 24; i++) { const x = (i * 37) % w, y = 8 + (i * 53) % 34; if ((Math.floor(t * 4) + i) % 3) prect(c, x, y, 1, 1, P.star); }
-  ptext(c, `NBA · ${s.date}`, cx, S.t, 8, P.dim, 'center');
+  pxCoverTag(c, s, cx, S.t, P.dim);
   ptext(c, 'ELIGE TU', cx, 58, 16, P.fg, 'center'); ptext(c, 'EQUIPO', cx, 76, 16, P.hi, 'center');
   const teams = pxHookTeams(s), per = 3, slot = 46, t2 = t - 4 * B, rowH = 56, y0 = 100, tc = teams.length * B / 2;
   teams.forEach((tm, i) => {
@@ -6495,7 +6638,7 @@ function pxCoverHook(c, s, t, P) {
     const y = y0 + row * rowH, col = curioSocialColors(tm.team);
     const pop = t2 - i * B / 2 < 0.08 ? -3 : 0;
     if (tm.team === CURIO_NIGHT) { pball(c, Math.round(x0 + slot / 2 - 16), y + 6 + pop, 4); ptext(c, String(tm.n), x0 + slot / 2, y + 16, 16, '#ffffff', 'center'); }
-    else pjersey(c, Math.round(x0 + (slot - 36) / 2), y + pop, col.bg, col.accent, P.bg === '#ffffff' ? PXC.ink : P.dim, tm.n);
+    else pjersey(c, Math.round(x0 + (slot - 36) / 2), y + pop, col.bg, col.accent, s.copa ? P.hi : P.bg === '#ffffff' ? PXC.ink : P.dim, tm.n);
     ptext(c, tm.team === CURIO_NIGHT ? tm.tag : pxAbbr(tm.team), x0 + slot / 2, y + 44, 8, P.fg, 'center');
   });
   // Cursor: recorre las camisetas a medio tiempo y se queda en la del dato 1
@@ -6569,8 +6712,11 @@ function pixelDrawSlide(c, s, t, st) {
     else if (it.cup) pxCardCupConf(c, s, it, t, col);
     else [pxCardA, pxCardB, pxCardC][(s.n - 1 + st.shift) % 3](c, s, it, t, col);
   } else if (s.kind === 'cover' && s.tabla) pxTablaCover(c, s, t, st.pal);
+  else if (s.kind === 'cover' && s.previa) pxPreviaCover(c, s, t, st.pal);
+  else if (s.kind === 'cover' && s.copa && PXCOVER === 2) { if (t < PXCOPA.beats * PXBEAT) pxCopaIntro(c, s, t, st.pal); else pxCoverHook(c, s, t - PXCOPA.beats * PXBEAT, st.pal); }
   else if (s.kind === 'cover') [pxCoverBall, pxCoverArcade, pxCoverHook][PXCOVER](c, s, t, st.pal);
   else if (s.tabla) pxTablaOutro(c, s, t, st.pal);
+  else if (s.previa) pxPreviaOutro(c, s, t, st.pal);
   else pxOutro(c, s, t, st.pal);
 }
 
@@ -6769,19 +6915,32 @@ function pxSchedule(fx, slides) {
   let T = 0;
   slides.forEach((s, k) => {
     if (s.kind === 'cover' && s.tabla) { fx.hit(T + 0.35); for (let k = 0; k < 4; k++) fx.blip(T + 0.7 + k * 0.15, 600 + k * 90); fx.ding(T + 1.4); }
+    else if (s.kind === 'cover' && s.previa) {
+      const B = PXBEAT, t1 = s.zero ? 4 * B : 0;
+      if (s.zero) { for (let k = 0; k < 4; k++) fx.chirp(T + 0.4 + k * B); fx.error(T + 0.7); fx.hit(T + t1); }
+      const u = T + t1 + (s.zero ? 0.6 : 0);
+      fx.jingle(u + 0.2); for (let i = 0; i < Math.min(s.nToday, 15); i++) fx.blip(u + 0.6 + i * 0.08, 600 + i * 30); fx.hit(u + 1.6);
+    }
     else if (s.kind === 'cover' && PXCOVER === 2) {
-      const B = PXBEAT, nT = pxHookTeams(s).length, hops = Math.max(nT, 3);
+      const B = PXBEAT, nT = pxHookTeams(s).length, hops = Math.max(nT, 3), T0 = T;
+      if (s.copa) { fx.hit(T0 + PXCOPA.land); for (let g = 0; g < 6; g++) fx.note(T0 + PXCOPA.g0 + g * PXCOPA.gStep, 5 + g); fx.jingle(T0 + PXCOPA.title); T += PXCOPA.beats * B; }
       if (s.quiet) { // noche tranquila: grillos / carga trabada / ronquido
         const v = pxQuietVariant(s);
         if (v === 0) for (let k = 0; k < 4; k++) { fx.chirp(T + 0.3 + k * B); fx.thump(T + 0.2 + k * B * 0.9); }
         else if (v === 1) { for (let k = 0; k < 6; k++) fx.blip(T + 0.2 + k * B * 0.25, 600 + k * 40); fx.error(T + 1.6 * B); }
         else { fx.snore(T + 0.4); fx.snore(T + 0.4 + 2 * B); }
-      } else { fx.hit(T); fx.blip(T + 0.5 * B, 700); fx.blip(T + 1.5 * B, 780); fx.blip(T + 2.5 * B, 880); } // gancho
+      } else { // gancho: sonidos según la variante
+        const top = s.picks.find(it => !it.cup), hv = top ? pxHookVariant(s, top) : 'clasico';
+        if (hv === 'slot') { const n = Math.min(6, [...pclean(top.soc.big)].length); for (let k = 0; k < 28; k++) fx.tick(T + 0.4 + k * 0.06, (k % 7) / 7); for (let i = 0; i < n; i++) fx.blip(T + 0.5 + i * 1.5 / n, 900); fx.ding(T + 2.1); }
+        else if (hv === 'start') { fx.levelUp(T + 0.35); fx.blip(T + 1.2, 880); for (let k = 0; k < 4; k++) fx.blip(T + 0.3 + k * B, 440); }
+        else { fx.hit(T); fx.blip(T + 0.5 * B, 700); fx.blip(T + 1.5 * B, 780); fx.blip(T + 2.5 * B, 880); }
+      }
       for (let i = 0; i < nT; i++) fx.note(T + 4 * B + i * B / 2, 7 + i);                       // camisetas
       const tc = T + 4 * B + nT * B / 2, h2 = hops + 1;
       for (let k = 0; k < h2; k++) fx.blip(tc + k * B / 4, 880);                                  // cursor
       fx.ding(tc + h2 * B / 4);
       fx.hit(T + 9 * B);                                                                          // N DATOS
+      T = T0;
     } else if (s.kind === 'cover') {
       fx.launch(T + 0.05); fx.swish(T + 1.25); fx.crowd(T + 1.2, 2.2);
       fx.thump(T + 1.55); fx.thump(T + 1.9);
@@ -6806,7 +6965,7 @@ function pxSchedule(fx, slides) {
       } else if (typ === 'upset') { fx.sweep(V + 0.6, 0.8); fx.jingle(V + 1.6); }
       else if (typ === 'comeback') { fx.sweep(V + 0.6, 1.4); fx.jingle(V + 2.0); }
       else if (typ === 'quarter') { fx.sweep(V + 0.6, 0.8); fx.fire(V + 1.0, 2.0); fx.ding(V + 1.4); }
-      else if (['blowout', 'total', 'mark', 'first', 'ot', 'bench'].includes(typ)) { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); }
+      else if (['blowout', 'total', 'mark', 'first', 'ot', 'bench', 'previa', 'liga'].includes(typ)) { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); }
       else for (let b = V + 0.4; b < T + s.dur - 0.2; b += Math.PI / 5) fx.thump(b);
     } else {
       fx.levelUp(T + 0.02);
@@ -7633,6 +7792,295 @@ function pxTablaOutro(c, s, t, P) {
   if (t >= 2 * B) { ptext(c, 'CONTINUE?', cx, 172, 8, P.fg, 'center'); if (k < 3) ptext(c, String(3 - k), cx, 186, 16, P.hi, 'center'); }
   if (t > 1.0) pxHandle(c, cx, 216, P.hi, 'center');
   pball(c, S.r - 16, 230 - Math.round(Math.abs(Math.sin((t / B) * Math.PI)) * 18), 2);
+}
+
+// ════════════════════════════════════════════════════
+//  "HOY SE JUEGA": video para los días sin jornada que contar
+//  (anoche no hubo partidos, Navidad, fechas especiales…).
+//  Tarjetas de la cartelera de hoy (modelo, rachas en juego, duelos de arriba)
+//  + datos de toda la liga para completar.
+// ════════════════════════════════════════════════════
+const PREVIA = {
+  // Fechas especiales: título y paleta propios en la portada
+  special: { '12-25': { title: 'NAVIDAD', snow: true, pal: { name: 'navidad', bg: '#0b2a1a', fg: '#fff6e8', hi: '#ff4d4d', dim: '#8fb59a', star: '#e8f4ff' } } },
+  maxPrevia: 3, autoTotal: 4,
+  strong: 5, // puntaje desde el que un partido de la cartelera cuenta como "interesante" (duelo de arriba, racha de 5+, casi 50-50)
+};
+const tbConfOf = t => (TB_EAST.has(t) ? 'Este' : 'Oeste');
+// Partidos de un día: del calendario; en el modo demo, los partidos reales de 2024-25 de ese día
+function previaFixtures(date) {
+  if (curioDemo) return (curioDemoGames || []).filter(g => g.date === date).map(g => ({ date, local: g.local, away: g.away }));
+  return (SCHEDULE || []).filter(f => f.date === date);
+}
+
+// Racha activa de un equipo hasta una fecha: { w: true/false, n }
+function previaStreak(src, team, upTo) {
+  const gs = src.filter(g => g.date <= upTo && (g.local === team || g.away === team)).sort((a, b) => (a.date < b.date ? 1 : -1));
+  if (!gs.length) return { w: true, n: 0 };
+  const won = g => (g.local === team) === (g.ptsL > g.ptsA), w0 = won(gs[0]); let n = 0;
+  for (const g of gs) { if (won(g) !== w0) break; n++; }
+  return { w: w0, n };
+}
+
+// Cartelera de hoy: un dato por partido (el más llamativo) y se ofrecen los mejores
+function previaItems(src, date) {
+  const fixtures = previaFixtures(date);
+  if (!fixtures.length) return [];
+  const prevDay = curioAddDays(date, -1), sh = curioShort, season = src.filter(g => g.date >= (tbSeasonStart(src, prevDay) || '0'));
+  const R = tbRank(season, prevDay), pos = t => { const r = (R[tbConfOf(t)] || []).find(x => x.team === t); return r ? r : null; };
+  const out = [];
+  fixtures.forEach(f => {
+    const L = f.local, A = f.away, cands = [];
+    const pL = pos(L), pA = pos(A);
+    // 1) Duelo de arriba: los dos entre los 3 primeros de su conferencia
+    if (pL && pA && pL.pos <= 3 && pA.pos <= 3 && tbConfOf(L) === tbConfOf(A)) {
+      const [a, b] = pL.pos < pA.pos ? [pL, pA] : [pA, pL];
+      cands.push({ s: 9, dot: a.team, big: `${a.pos}º vs ${b.pos}º`, head: `del ${tbConfOf(L)} se ven hoy`, ctx: `${sh(a.team)} (${a.w}-${a.l}) ante ${sh(b.team)} (${b.w}-${b.l}).` });
+    }
+    // 2) Racha en juego (4 o más)
+    [L, A].forEach(t => {
+      const st = previaStreak(season, t, prevDay), rival = t === L ? A : L;
+      if (st.n >= 4) cands.push({ s: 5 + st.n / 2, dot: t, big: String(st.n), head: st.w ? `victorias seguidas de ${sh(t)}: va por la ${st.n + 1}ª` : `derrotas seguidas de ${sh(t)}: ¿se corta hoy?`, ctx: `Hoy ${t === L ? 'en casa ante' : 'de visita ante'} ${sh(rival)}.` });
+    });
+    // 3) Lo que dice el modelo: el más parejo o el favorito más claro
+    let pr = null; try { pr = predictWinProb(L, A, date, src); } catch (e) {}
+    if (pr) {
+      const fav = pr.probL >= pr.probA ? L : A, p = Math.max(pr.probL, pr.probA), other = fav === L ? A : L;
+      if (p <= 0.55) cands.push({ s: 4 + (0.55 - p) * 40, dot: fav, kind: 'parejo', big: `${Math.round(p * 100)}%`, head: `le da el modelo a ${sh(fav)} ante ${sh(other)}`, ctx: 'Moneda al aire.' });
+      if (p >= 0.78) cands.push({ s: 3 + (p - 0.78) * 20, dot: fav, kind: 'fav', big: `${Math.round(p * 100)}%`, head: `le da el modelo a ${sh(fav)} ante ${sh(other)}`, ctx: 'El favorito más claro de hoy.' });
+    }
+    if (!cands.length) return;
+    const c = cands.sort((a, b) => b.s - a.s)[0], rival = c.dot === L ? A : L;
+    out.push({ type: 'previa', previa: true, kind: c.kind, label: 'Hoy se juega', value: c.big, dot: c.dot, teamLabel: c.dot, teams: [L, A], score: c.s,
+      hook: `${c.big} ${c.head}`, soc: { big: c.big, head: c.head, ctx: c.ctx, foot: `${c.dot === L ? 'vs' : '@'} ${sh(rival)} · hoy` } });
+  });
+  // un solo "moneda al aire" y un solo "favorito" (los mejores)
+  const seen = new Set();
+  return out.sort((a, b) => b.score - a.score).filter(it => { if (!it.kind) return true; if (seen.has(it.kind)) return false; seen.add(it.kind); return true; });
+}
+
+// Datos de toda la liga (cualquier día): mejor/peor récord, rachas activas, ataque, defensa
+function previaLeagueItems(src, upTo) {
+  const start = tbSeasonStart(src, upTo); if (!start) return [];
+  const season = src.filter(g => g.date >= start && g.date <= upTo), sh = curioShort, T = {};
+  season.forEach(g => [[g.local, g.ptsL, g.ptsA], [g.away, g.ptsA, g.ptsL]].forEach(([t, a, b]) => { const r = T[t] || (T[t] = { team: t, gp: 0, w: 0, pf: 0, pa: 0 }); r.gp++; r.pf += a; r.pa += b; if (a > b) r.w++; }));
+  const all = Object.values(T).filter(r => r.gp >= 3); if (all.length < 20) return [];
+  const early = Math.min(...all.map(r => r.gp)) < 10 ? ' En el arranque de temporada.' : '';
+  const rec = r => `${r.w}-${r.gp - r.w}`, pct = r => r.w / r.gp, by = (f, d = -1) => [...all].sort((a, b) => d * (f(a) - f(b)))[0];
+  const out = [], push = (r, big, head, ctx, s) => out.push({ type: 'liga', liga: true, label: 'La liga', value: big, dot: r.team, teamLabel: r.team, teams: [r.team], score: s, hook: `${sh(r.team)}: ${big} ${head}`, soc: { big, head, ctx, foot: `${rec(r)} · temporada` }, capCtx: (ctx + early).trim() });
+  const best = by(pct), unbeaten = all.filter(r => r.w === r.gp);
+  if (unbeaten.length === 1) push(best, rec(best), `${sh(best.team)}, el único invicto`, '', 6);
+  else push(best, rec(best), `${sh(best.team)}, el mejor récord de la liga`, '', 4);
+  const winless = all.filter(r => r.w === 0);
+  if (winless.length) { const r = by(x => x.gp); push(r, rec(r), `${sh(r.team)} todavía no gana`, winless.length === 1 ? 'El único sin victorias.' : '', 5.5); }
+  const streaks = all.map(r => ({ r, ...previaStreak(season, r.team, upTo) }));
+  const sw = streaks.filter(x => x.w).sort((a, b) => b.n - a.n)[0], sl = streaks.filter(x => !x.w).sort((a, b) => b.n - a.n)[0];
+  if (sw && sw.n >= 4 && sw.r.w !== sw.r.gp) push(sw.r, String(sw.n), `victorias seguidas de ${sh(sw.r.team)}`, 'La racha activa más larga.', 4 + sw.n / 3);
+  if (sl && sl.n >= 4 && sl.r.w !== 0) push(sl.r, String(sl.n), `derrotas seguidas de ${sh(sl.r.team)}`, 'La peor racha activa.', 3.5 + sl.n / 3);
+  const off = by(r => r.pf / r.gp), def = by(r => r.pa / r.gp, 1);
+  push(off, (off.pf / off.gp).toFixed(1), `puntos por partido de ${sh(off.team)}`, 'El mejor ataque.', 3);
+  push(def, (def.pa / def.gp).toFixed(1), `puntos recibidos por partido: ${sh(def.team)}`, 'La mejor defensa.', 2.8);
+  return out.sort((a, b) => b.score - a.score);
+}
+
+function previaSlides(date, picks, noGamesLastNight) {
+  const d = fmtDate(date), sp = PREVIA.special[date.slice(5)] || null;
+  const nToday = previaFixtures(date).length;
+  const slides = [{ kind: 'cover', previa: true, date: d, iso: date, picks, special: sp, zero: !!noGamesLastNight, nToday, dur: 5 }];
+  picks.forEach((it, i) => slides.push({ kind: 'card', previaVideo: true, date: d, it, n: i + 1, of: picks.length, dur: 5 }));
+  slides.push({ kind: 'outro', previa: true, n: picks.length, dur: 3.75 });
+  return slides;
+}
+
+// ── Portada: "ANOCHE 0 PARTIDOS" (si no hubo) → "HOY SE JUEGA" (o el título de la fecha especial) ──
+function pxPreviaCover(c, s, t, P) {
+  const { w, h, S } = PX, cx = PXCX, B = PXBEAT, sp = s.special, Q = sp ? sp.pal : P;
+  const t1 = s.zero ? 4 * B : 0; // primera parte: 4 tiempos
+  prect(c, 0, 0, w, h, Q.bg);
+  if (sp && sp.snow) for (let i = 0; i < 40; i++) { const x = Math.floor(pxRand(i) * w), y = Math.floor((pxRand(i + 9) * h + t * (12 + (i % 5) * 6)) % h); prect(c, x, y, i % 3 ? 1 : 2, i % 3 ? 1 : 2, Q.star); }
+  else for (let i = 0; i < 24; i++) { const x = (i * 37) % w, y = 8 + (i * 53) % 300; if ((Math.floor(t * 4) + i) % 3) prect(c, x, y, 1, 1, Q.star); }
+  if (t < t1) {
+    // Marcador apagado: ANOCHE / 0 / PARTIDOS, el 0 parpadea como un foco dañado
+    pbox(c, S.l + 10, 80, S.r - S.l - 20, 96, PXC.ink, Q.dim); pframe(c, S.l + 10, 80, S.r - S.l - 20, 96, Q.dim);
+    ptext(c, 'ANOCHE', cx, 90, 8, Q.dim, 'center');
+    const on = !(Math.floor(t * 7) % 5 === 0 && t > 0.6);
+    if (t > 0.3) ptext(c, '0', cx, 106, 48, on ? Q.hi : Q.dim, 'center');
+    if (t > 0.6) ptext(c, 'PARTIDOS', cx, 160, 8, Q.fg, 'center');
+    // planta rodadora
+    const tx = Math.round(-20 + pclamp((t - 0.8) / 1.6) * (w + 40)), ty = 214 - Math.round(Math.abs(Math.sin(t * 7)) * 6);
+    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2 + t * 6; prect(c, tx + Math.round(Math.cos(a) * 5), ty + Math.round(Math.sin(a) * 5), 2, 2, '#b9833f'); }
+    ptext(c, `NBA · ${s.date}`, cx, S.t, 8, Q.dim, 'center');
+    pxHandle(c, cx, 235, Q.dim, 'center');
+    return;
+  }
+  const u = t - t1;
+  ptext(c, `NBA · ${s.date}`, cx, S.t, 8, Q.dim, 'center');
+  if (s.zero && u < 0.6) { ptext(c, 'PERO…', cx, 120, 16, Q.fg, 'center'); return; }
+  const u2 = u - (s.zero ? 0.6 : 0);
+  if (sp) { const g = pclamp(u2 / 0.5), T = sp.title.slice(0, Math.round(g * sp.title.length)); ptext(c, T, cx + 1, 71, 16, PXC.ink, 'center'); ptext(c, T, cx, 70, 16, Q.hi, 'center'); }
+  const y0 = sp ? 100 : 80;
+  if (u2 > 0.2) { ptext(c, 'HOY SE', cx + 1, y0 + 1, 16, PXC.ink, 'center'); ptext(c, 'HOY SE', cx, y0, 16, sp ? Q.fg : Q.fg, 'center'); }
+  if (u2 > 0.4) { ptext(c, 'JUEGA', cx + 1, y0 + 19, 16, PXC.ink, 'center'); ptext(c, 'JUEGA', cx, y0 + 18, 16, Q.hi, 'center'); }
+  // un balón por partido de hoy, apareciendo uno tras otro
+  if (u2 > 0.6) {
+    const n = Math.min(s.nToday, 15), per = 5, shown = Math.min(n, Math.floor((u2 - 0.6) / 0.08) + 1);
+    for (let i = 0; i < shown; i++) { const r = Math.floor(i / per), inRow = Math.min(per, n - r * per), x = cx - inRow * 12 + (i % per) * 24 + 4, y = y0 + 46 + r * 22; pball(c, x, y, 2); }
+  }
+  if (u2 > 1.6) {
+    const by = 212, cw = S.r - S.l;
+    pbox(c, S.l, by, cw, 30, Q.hi, Q.star);
+    ptext(c, `${s.picks.length} DATOS`, cx, by + 4, 16, Q.bg, 'center');
+    ptext(c, 'PARA ESTA NOCHE', cx, by + 21, 8, Q.bg, 'center');
+  } else pxHandle(c, cx, 235, Q.dim, 'center');
+}
+
+// Selección automática: hasta 3 de la cartelera; se completa hasta 4 con datos de temporada de los equipos de hoy
+// y después con la liga, sin repetir equipos
+function previaAuto(items) {
+  const sel = new Set(), used = new Set();
+  const take = (it, i) => { sel.add(i); it.teams.forEach(t => used.add(t)); used.add(it.dot); };
+  items.forEach((it, i) => { if (it.previa && sel.size < PREVIA.maxPrevia) take(it, i); });
+  items.forEach((it, i) => { if ((it.season || it.liga) && sel.size < PREVIA.autoTotal && !used.has(it.dot)) take(it, i); });
+  return sel;
+}
+
+// Cierre de "Hoy se juega": la pregunta es sobre los partidos de hoy
+function pxPreviaOutro(c, s, t, P) {
+  const { w, h, S } = PX, cx = PXCX;
+  prect(c, 0, 0, w, h, P.bg);
+  const g = pclamp(pstep(t) / 0.5);
+  ptext(c, 'GAME OVER'.slice(0, Math.round(g * 9)), cx, 70, 16, P.hi, 'center');
+  if (t > 0.7) ptext(c, '¿Quién gana hoy?', cx, 108, 8, P.fg, 'center');
+  if (t > 1.0) { ptext(c, 'Cuéntalo en los', cx, 134, 8, P.dim, 'center'); ptext(c, 'comentarios', cx, 146, 8, P.dim, 'center'); }
+  const B = PXBEAT, k = Math.floor((t - 2 * B) / B);
+  if (t >= 2 * B) { ptext(c, 'CONTINUE?', cx, 172, 8, P.fg, 'center'); if (k < 3) ptext(c, String(3 - k), cx, 186, 16, P.hi, 'center'); }
+  if (k >= 3) { c.font = pf(8); const bw = Math.ceil(c.measureText('HOY HAY NBA').width) + 16, bx = Math.round(cx - bw / 2); pbox(c, bx, 184, bw, 20, P.hi, P.star); ptext(c, 'HOY HAY NBA', bx + 8, 190, 8, P.bg); }
+  if (t > 1.0) pxHandle(c, cx, 216, P.hi, 'center');
+  pball(c, S.r - 16, 230 - Math.round(Math.abs(Math.sin((t / B) * Math.PI)) * 18), 2);
+}
+
+// Texto de la publicación
+function previaCaption(date, picks) {
+  const sp = PREVIA.special[date.slice(5)];
+  const lines = picks.map((it, i) => {
+    let c = (it.capCtx != null ? it.capCtx : it.soc.ctx || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
+    const first = c.split(/[\s(]/)[0];
+    if (c && /^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(c) && !TEAMS.some(t => curioShort(t) === first)) c = c[0].toLowerCase() + c.slice(1); // los nombres de equipo quedan con mayúscula
+    return `${i + 1}. ${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}${c ? ', ' + c : ''}`;
+  });
+  const teamTags = [...new Set(picks.map(it => '#' + curioShort(it.dot).replace(/[^\p{L}\p{N}]/gu, '')))];
+  const tags = ['#NBA', '#NBAenEspañol', ...teamTags, '#baloncesto', '#basketball'].slice(0, 5);
+  return `Hoy se juega en la NBA · ${sp ? sp.title[0] + sp.title.slice(1).toLowerCase() + ' · ' : ''}${fmtDate(date)} 🗓️\n\n${lines.join('\n')}\n\n¿Quién gana hoy?\n\n${tags.join(' ')}`;
+}
+
+// ── Ventana "Hoy se juega" ──
+let pvState = null;
+function previaBuild(date) {
+  const src = curioSource(), prev = curioAddDays(date, -1), upTo = src.filter(g => g.date <= prev);
+  const fixtures = previaFixtures(date);
+  const teams = [...new Set(fixtures.flatMap(f => [f.local, f.away]))];
+  const cart = previaItems(upTo, date);
+  let season = [];
+  try { season = curioSeasonFacts(upTo, { date: prev, items: [], dayTeams: teams }); } catch (e) { season = []; }
+  const liga = previaLeagueItems(upTo, prev);
+  const items = [...cart, ...season, ...liga];
+  // Anoche sin partidos: según el calendario (o tus partidos si no hay calendario cargado)
+  const zero = curioDemo ? !(curioDemoGames || []).some(g => g.date === prev) : (SCHEDULE && SCHEDULE.length) ? !SCHEDULE.some(f => f.date === prev) : !src.some(g => g.date === prev);
+  return { date, fixtures, items, zero, nSeason: season.length };
+}
+function openPrevia() {
+  const today = curioDemo ? curioAddDays(curioSource().reduce((m, g) => (g.date > m ? g.date : m), ''), 1) : new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  pvState = { video: null, music: null }; PXMUSIC = null;
+  previaSetDate(today, true);
+  let ov = document.getElementById('cur-previa');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'cur-previa'; ov.className = 'profile-overlay'; ov.addEventListener('click', e => { if (e.target === ov) closePrevia(); }); document.body.appendChild(ov); }
+  ov.style.display = 'flex';
+  renderPrevia();
+}
+function closePrevia() { const ov = document.getElementById('cur-previa'); if (ov) ov.style.display = 'none'; if (pvState && pvState.video) URL.revokeObjectURL(pvState.video.url); pvState = null; }
+function pvReset() { if (pvState.video) { URL.revokeObjectURL(pvState.video.url); pvState.video = null; } }
+function previaSetDate(v, quiet) { if (!pvState || !v) return; pvState.B = previaBuild(v); pvState.sel = previaAuto(pvState.B.items); pvReset(); if (!quiet) renderPrevia(); }
+function togglePreviaItem(i) { const st = pvState; if (!st) return; if (st.sel.has(i)) st.sel.delete(i); else st.sel.add(i); pvReset(); renderPrevia(); }
+function setPreviaMusic(v) { if (!pvState) return; pvState.music = v || null; PXMUSIC = pvState.music; pvReset(); renderPrevia(); }
+const previaPicks = st => st.B.items.filter((it, i) => st.sel.has(i));
+function pvStatus(t) { const el = document.getElementById('pv-status'); if (el) el.textContent = t; }
+function renderPrevia() {
+  const st = pvState, ov = document.getElementById('cur-previa'); if (!st || !ov) return;
+  const B = st.B, picks = previaPicks(st), ok = B.fixtures.length && picks.length;
+  const slides = ok ? previaSlides(B.date, picks, B.zero) : null, secs = slides ? pxSlides(slides).reduce((a, s) => a + s.dur, 0) : 0, vid = st.video;
+  const row = (it, i) => `<label class="soc-row">
+      <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="togglePreviaItem(${i})">
+      <span class="soc-type">${curioEsc(it.label || CURIO_JTYPES[it.type].label)}</span>
+      <span class="soc-txt">${curioDot(it.dot)}<b>${curioEsc(curioShort(it.dot))}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.soc.head)}</span></label>`;
+  const group = (title, f, empty) => { const rows = B.items.map((it, i) => (f(it) ? row(it, i) : '')).join(''); return rows ? `<div class="soc-group">${title}</div>${rows}` : empty ? `<div class="soc-group">${title}</div><div class="soc-empty">${empty}</div>` : ''; };
+  const sp = PREVIA.special[B.date.slice(5)];
+  const info = !B.fixtures.length ? `No hay partidos el ${fmtDate(B.date)} en el calendario.` : `${fmtDate(B.date)}${sp ? ' · ' + sp.title.toLowerCase() : ''} · ${B.fixtures.length} partido${B.fixtures.length === 1 ? '' : 's'}${B.zero ? ' · anoche no hubo partidos' : ''}`;
+  ov.innerHTML = `<div class="profile-modal soc-modal">
+    <div class="soc-head">
+      <div><div class="profile-modal-title">Hoy se juega</div><div class="soc-sub">${info}</div></div>
+      <button type="button" class="del-btn" onclick="closePrevia()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="soc-style">
+      <span class="soc-sub">Fecha</span><input type="date" class="tb-date" value="${B.date}" onchange="previaSetDate(this.value)">
+      <span class="soc-sep"></span><span class="soc-sub">Música</span>
+      <select class="soc-music" onchange="setPreviaMusic(this.value)">
+        <option value="" ${!st.music ? 'selected' : ''}>Automática${slides ? ` (${pxThemeAuto(slides).name})` : ''}</option>
+        ${PXTHEMES.map(th => `<option value="${th.id}" ${st.music === th.id ? 'selected' : ''}>${th.name}</option>`).join('')}
+      </select>
+    </div>
+    ${B.fixtures.length ? `<div class="soc-list">
+      ${group('🗓️ La cartelera de hoy', it => it.previa, 'Ningún partido de hoy tiene un dato llamativo.')}
+      ${group('📅 Datos de temporada (opcionales)', it => it.season, 'Todavía no hay datos de temporada para los equipos de hoy: aparecen cuando llevan 10 partidos y están entre los 5 mejores o peores en algo.')}
+      ${group('📋 La liga', it => it.liga, '')}
+    </div>` : ''}
+    <div class="soc-strip" id="pv-strip"></div>
+    <div class="soc-actions">
+      <button type="button" class="btn btn-primary" onclick="previaMakeVideo()" ${ok ? '' : 'disabled'}>🎬 Generar video (${Math.round(secs)} s)</button>
+      <span class="soc-status" id="pv-status">${ok ? `${picks.length} dato${picks.length === 1 ? '' : 's'} + portada y cierre` : B.fixtures.length ? 'Marca al menos un dato' : ''}</span>
+    </div>
+    ${vid ? `<div class="soc-result">
+      <video src="${vid.url}" controls playsinline></video>
+      <div class="soc-result-side">
+        <div class="soc-sub">${vid.name} · ${(vid.blob.size / 1048576).toFixed(1)} MB${vid.codec === 'avc' || vid.codec === 'recorder' ? '' : ` · códec ${vid.codec.toUpperCase()} (tu navegador no trae H.264: Instagram podría rechazarlo)`}${!vid.audio ? ' · sin audio (tu navegador no pudo codificarlo)' : ''}</div>
+        ${curioCanShare(vid) ? `<button type="button" class="btn btn-primary" onclick="previaShare()">📲 Compartir</button>` : ''}
+        <button type="button" class="btn btn-secondary" onclick="curioDownloadBlob(pvState.video.blob, pvState.video.name)">⬇️ Descargar</button>
+      </div>
+    </div>` : ''}
+    ${ok ? `<div class="soc-cap">
+      <div class="soc-sub">Texto para la publicación</div>
+      <textarea id="pv-caption" readonly rows="7">${curioEsc(previaCaption(B.date, picks))}</textarea>
+      <button type="button" class="btn btn-secondary" onclick="previaCopy()">Copiar texto</button>
+    </div>` : ''}
+  </div>`;
+  if (slides) previaThumbs(slides);
+}
+async function previaThumbs(slides) {
+  const strip = document.getElementById('pv-strip'); if (!strip) return;
+  try { await document.fonts.load("8px 'Press Start 2P'"); } catch (e) {}
+  strip.innerHTML = '';
+  slides.forEach((s, i) => { const c = pixelThumb(slides, i); c.className = 'soc-thumb px'; strip.appendChild(c); });
+}
+async function previaMakeVideo() {
+  const st = pvState; if (!st) return;
+  const slides = previaSlides(st.B.date, previaPicks(st), st.B.zero);
+  try {
+    pvStatus('Generando video… 0%');
+    const r = await pixelRenderVideo(slides, p => pvStatus(`Generando video… ${Math.min(99, Math.round(p * 100))}%`));
+    if (!pvState) return;
+    pvReset();
+    pvState.video = { ...r, url: URL.createObjectURL(r.blob), name: `nba-hoy-se-juega-${st.B.date}.${r.ext}` };
+    renderPrevia();
+  } catch (e) { console.error('[hoy se juega] Error generando el video:', e); pvStatus('No se pudo generar el video: ' + (e && e.message ? e.message : e)); }
+}
+async function previaShare() {
+  const v = pvState && pvState.video; if (!v) return;
+  try { await navigator.share({ files: [new File([v.blob], v.name, { type: v.blob.type })], text: document.getElementById('pv-caption').value }); }
+  catch (e) { if (e && e.name !== 'AbortError') pvStatus('No se pudo compartir; usa Descargar.'); }
+}
+async function previaCopy() {
+  const ta = document.getElementById('pv-caption'); if (!ta) return;
+  try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); }
+  toast('Texto copiado ✓');
 }
 
 // ── Modo demo: temporada 2024-25 desde games.json, SOLO en memoria ──
