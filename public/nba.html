@@ -6065,7 +6065,8 @@ async function curioSocialCopy() {
 const PX = { w: 180, h: 320, s: 6, S: { l: 15, r: 155, t: 42, b: 243 } };
 const PXC = { ink: '#131313', white: '#ffffff', mint: '#3cffd0', red: '#e5383b', orange: '#f28c28', gray: '#6b6b6b', dark: '#0b0b0b' };
 const pf = (sz) => `${sz}px 'Press Start 2P'`;
-const pclean = s => String(s).replace(/−/g, '-');
+// En la fuente pixel las mayúsculas con tilde se ven como minúsculas: se escriben sin tilde (la Ñ sí se deja)
+const pclean = s => String(s).replace(/−/g, '-').replace(/[ÁÉÍÓÚ]/g, ch => 'AEIOU'['ÁÉÍÓÚ'.indexOf(ch)]);
 function prect(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
 function ptext(c, s, x, y, sz, col, align = 'left') {
   c.font = pf(sz); c.fillStyle = col; c.textBaseline = 'top'; c.textAlign = align;
@@ -6373,7 +6374,9 @@ function pxCardC(c, s, it, t, col) { // Marcador: el partido arriba en un tabler
   const { S } = PX, cw = S.r - S.l, { team, score, rival } = pxFoot(it);
   pbox(c, S.l, S.t - 2, cw, 32, PXC.ink, col.accent); pframe(c, S.l, S.t - 2, cw, 32, col.accent);
   for (let i = 0; i < cw; i += 4) if ((Math.floor(t * 4) + i / 4) % 2) prect(c, S.l + i + 1, S.t - 1, 2, 1, col.accent);
-  ptext(c, pwrap(c, team, cw - 70, 8, 1)[0], S.l + 5, S.t + 6, 8, '#ffffff'); ptext(c, score, S.r - 5, S.t + 6, 8, '#ffd23f', 'right');
+  // Si el nombre y el marcador no caben juntos en el tablero (p. ej. "Timberwolves 109-80"), va la abreviatura
+  c.font = pf(8); const tname = c.measureText(team).width + c.measureText(score).width + 18 <= cw ? team : pxAbbr(it.dot);
+  ptext(c, tname, S.l + 5, S.t + 6, 8, '#ffffff'); ptext(c, score, S.r - 5, S.t + 6, 8, '#ffd23f', 'right');
   ptext(c, pwrap(c, rival, cw - 40, 8, 1)[0] || '', S.l + 5, S.t + 17, 8, '#bdbdbd'); ptext(c, `${s.n}/${s.of}`, S.r - 5, S.t + 17, 8, '#bdbdbd', 'right');
   const sizes = [48, 32, 24, 16], sz = pxNumSize(c, it, sizes), head = pwrap(c, pxHead(it), cw, 8, 3), ctx = pxCtx(it) ? pwrap(c, pxCtx(it), cw, 8, 2) : [];
   const vt = pxVizTop(it), vh = pxVizH(it);
@@ -6591,11 +6594,14 @@ function pxHookStart(c, s, top, t, P) {
   for (let i = 0; i < 5; i++) prect(c, S.l - 4, 66 + i * 4, cw + 8, 2, col.accent); // franjas de juego viejo
   ptext(c, (top.label || CURIO_JTYPES[top.type].label).toUpperCase(), cx, 94, 8, col.text, 'center');
   ptext(c, 'HIGH SCORE', cx, 108, 8, col.accent, 'center');
-  const big = pclean(top.soc.big); let sz = 48; for (const z of [48, 32, 24, 16]) { c.font = pf(z); sz = z; if (c.measureText(big).width <= cw) break; }
+  // Todo se acomoda según cuántas líneas tenga el titular, para que nada se pise antes de "PRESS START"
+  const hl = pwrap(c, pxHead(top), cw, 8, 3), cap = hl.length >= 3 ? 24 : hl.length === 2 ? 32 : 48;
+  const big = pclean(top.soc.big); let sz = cap; for (const z of [48, 32, 24, 16].filter(z => z <= cap)) { c.font = pf(z); sz = z; if (c.measureText(big).width <= cw) break; }
   const show = t > 0.4 ? (t < 1.2 && Math.floor(t * 10) % 2 ? '' : big) : '';
   ptext(c, show, cx + 2, 124, sz, PXC.ink, 'center'); ptext(c, show, cx, 122, sz, '#ffffff', 'center');
-  if (t > 1.2) pwrap(c, pxHead(top), cw, 8, 2).forEach((l, i) => ptext(c, l, cx, 124 + sz + 10 + i * 12, 8, col.text, 'center'));
-  if (t > 1.8) ptext(c, `1P: ${curioShort(top.dot).toUpperCase()}`, cx, 196, 8, col.text, 'center');
+  const hy = 122 + sz + 10, py = hy + hl.length * 12 + 6;
+  if (t > 1.2) hl.forEach((l, i) => ptext(c, l, cx, hy + i * 12, 8, col.text, 'center'));
+  if (t > 1.8) ptext(c, `1P: ${curioShort(top.dot).toUpperCase()}`, cx, py, 8, col.accent, 'center');
   if (t > 0.3 && Math.floor(t / (B / 2)) % 2 === 0) ptext(c, 'PRESS START', cx, 214, 8, col.accent, 'center');
   pxCoverTag(c, s, cx, S.t, col.text); pxHandle(c, cx, 235, col.text, 'center');
 }
