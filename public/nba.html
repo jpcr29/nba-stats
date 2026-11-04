@@ -5810,7 +5810,7 @@ function curioSocialCaption(J, slides) {
   // en el texto de la publicación sí cabe lo que en el video se resume
   const lines = picks.map((it, i) => {
     if (it.cup) return `🏆 NBA Cup, ${it.capText}`; // las tablas no llevan número: no son un dato
-    if (it.tonight) return `${i + 1}. 🗓️ Esta noche · ${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}`;
+    if (it.tonight) { const tc = (it.capCtx || it.soc.ctx || '').replace(/\.$/, ''); return `${i + 1}. 🗓️ Esta noche · ${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}${tc ? ', ' + tc[0].toLowerCase() + tc.slice(1) : ''}`; }
     let c = (it.soc.ctx || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
     if (c && /^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(c)) c = c[0].toLowerCase() + c.slice(1); // "…, top 2 de la temporada"
     // Si el dato manual tiene jugador, la línea empieza por él: "Paul George: 38 puntos, …"
@@ -6226,7 +6226,11 @@ function pxCtx(it) {
     .replace(/Es su peor racha del año\./, 'Su peor racha del año.').replace(/Iguala su peor racha del año\./, 'Iguala su peor racha del año.')
     // el rival y si fue en casa o de visita ya salen en el pie; el "% de sus puntos" ya sale en el gráfico
     .replace(/(Remontada|Cayó|Ganó|Le ganó a)[^.]*\./g, '')
-    .replace(/El \d+% de sus puntos\./, '');
+    .replace(/El \d+% de sus puntos\./, '')
+    // en el video el contexto cabe en 2 líneas: "El 4º mejor cierre de la liga." → "4º mejor cierre de la liga."
+    .replace(/racha más larga de la temporada/, 'racha más larga del año')
+    .replace(/Nadie había [a-záéíóúñ]+ tanto esta temporada\./, 'Récord del año.')
+    .replace(/(^|\.\s)(El|La) (\d+[ºª]) /g, '$1$3 ');
   return c.replace(/\s+/g, ' ').trim();
 }
 let _pxAvg = null;
@@ -7841,12 +7845,13 @@ function previaItems(src, date) {
     // 1) Duelo de arriba: los dos entre los 3 primeros de su conferencia
     if (pL && pA && pL.pos <= 3 && pA.pos <= 3 && tbConfOf(L) === tbConfOf(A)) {
       const [a, b] = pL.pos < pA.pos ? [pL, pA] : [pA, pL];
-      cands.push({ s: 9, dot: a.team, big: `${a.pos}º vs ${b.pos}º`, head: `del ${tbConfOf(L)} se ven hoy`, ctx: `${sh(a.team)} (${a.w}-${a.l}) ante ${sh(b.team)} (${b.w}-${b.l}).` });
+      cands.push({ s: 9, dot: a.team, big: `${a.pos}º vs ${b.pos}º`, head: `del ${tbConfOf(L)} se ven hoy`, ctx: `${a.w}-${a.l} vs ${b.w}-${b.l}.`, cap: `${sh(a.team)} (${a.w}-${a.l}) ante ${sh(b.team)} (${b.w}-${b.l})` });
     }
     // 2) Racha en juego (4 o más)
     [L, A].forEach(t => {
       const st = previaStreak(season, t, prevDay), rival = t === L ? A : L;
-      if (st.n >= 4) cands.push({ s: 5 + st.n / 2, dot: t, big: String(st.n), head: st.w ? `victorias seguidas de ${sh(t)}: va por la ${st.n + 1}ª` : `derrotas seguidas de ${sh(t)}: ¿se corta hoy?`, ctx: `Hoy ${t === L ? 'en casa ante' : 'de visita ante'} ${sh(rival)}.` });
+      // titular corto (el rival y "hoy" ya salen en el pie): el remate va en el contexto
+      if (st.n >= 4) cands.push({ s: 5 + st.n / 2, dot: t, big: String(st.n), head: `${st.w ? 'victorias' : 'derrotas'} seguidas de ${sh(t)}`, ctx: st.w ? `Hoy va por la ${st.n + 1}ª.` : '¿Se corta hoy?' });
     });
     // 3) Lo que dice el modelo: el más parejo o el favorito más claro
     let pr = null; try { pr = predictWinProb(L, A, date, src); } catch (e) {}
@@ -7858,7 +7863,7 @@ function previaItems(src, date) {
     if (!cands.length) return;
     const c = cands.sort((a, b) => b.s - a.s)[0], rival = c.dot === L ? A : L;
     out.push({ type: 'previa', previa: true, kind: c.kind, label: 'Hoy se juega', value: c.big, dot: c.dot, teamLabel: c.dot, teams: [L, A], score: c.s,
-      hook: `${c.big} ${c.head}`, soc: { big: c.big, head: c.head, ctx: c.ctx, foot: `${c.dot === L ? 'vs' : '@'} ${sh(rival)} · hoy` } });
+      hook: `${c.big} ${c.head}`, soc: { big: c.big, head: c.head, ctx: c.ctx, foot: `${c.dot === L ? 'vs' : '@'} ${sh(rival)} · hoy` }, ...(c.cap ? { capCtx: c.cap } : {}) });
   });
   // un solo "moneda al aire" y un solo "favorito" (los mejores)
   const seen = new Set();
