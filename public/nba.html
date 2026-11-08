@@ -5234,9 +5234,11 @@ function curioJornadaItems(src, after) {
           { big: String(bt.streak.len), head: 'derrotas seguidas… y por fin ganó', ctx: `Ganó ${ante(home, o)}.`, foot: vsTxt });
       if (at && at.streak.len >= CURIO_J.streak && at.streak.won === won) {
         const len = at.streak.len, k = won ? 'W' : 'L', prevBest = bt ? (won ? bt.bestW : bt.bestL) : 0;
+        // Lo mejor de la liga contando también lo que pasó esta misma noche (si otro equipo llegó más lejos hoy, ya no es "la más larga")
+        const bestNow = Math.max(prevBest, ...after.teams.filter(x => x.team !== t).map(x => (won ? x.bestW : x.bestL)));
         const word = won ? 'victorias' : 'derrotas', mine = won ? 'su racha más larga del año' : 'su peor racha del año';
-        const ctx = len > leagueBest[k] ? ` Ya es la racha ${won ? 'más larga' : 'de derrotas más larga'} de la liga esta temporada.`
-          : len === leagueBest[k] ? ` Iguala la racha ${won ? 'más larga' : 'de derrotas más larga'} de la liga esta temporada.`
+        const ctx = len > bestNow ? ` Ya es la racha ${won ? 'más larga' : 'de derrotas más larga'} de la liga esta temporada.`
+          : len === bestNow ? ` Iguala la racha ${won ? 'más larga' : 'de derrotas más larga'} de la liga esta temporada.`
           : len > prevBest ? ` Es ${mine}.`
           : len === prevBest ? ` Iguala ${mine}.` : '';
         if (ctx || len % 5 === 0)
