@@ -7672,8 +7672,9 @@ function tbWeek(src, monday) {
   let wkBest = null, wkWorst = null;
   if (wk.length) {
     wkBest = [...wk].sort(bestKey)[0]; wkWorst = [...wk].sort(worstKey)[0];
-    wkBest.more = wk.filter(x => x.team !== wkBest.team && x.w === wkBest.w && x.l === wkBest.l).length;
-    wkWorst.more = wk.filter(x => x.team !== wkWorst.team && x.w === wkWorst.w && x.l === wkWorst.l).length;
+    // los demás con el mismo récord, en el mismo orden (se nombran: "TAMBIÉN 4-0: OKC LAL…")
+    wkBest.others = wk.filter(x => x.team !== wkBest.team && x.w === wkBest.w && x.l === wkBest.l).sort(bestKey).map(x => x.team);
+    wkWorst.others = wk.filter(x => x.team !== wkWorst.team && x.w === wkWorst.w && x.l === wkWorst.l).sort(worstKey).map(x => x.team);
   }
   return { monday, sun, start, first, arrows, week, missing, before: monday < first, wkBest, wkWorst, conf };
 }
@@ -7696,7 +7697,8 @@ function tbCaption(W) {
     if (dn && dn.mv < 0) parts.push(`⬇️ Más bajó: ${sh(dn.team)} (${dn.mv})`);
     if (parts.length) lines.push(parts.join(' · '));
   }
-  if (W.wkBest) { const b = W.wkBest, w = W.wkWorst; lines.push(`📅 La semana: mejor ${sh(b.team)} ${b.w}-${b.l}${b.more ? ` (y ${b.more} más)` : ''} · peor ${sh(w.team)} ${w.w}-${w.l}${w.more ? ` (y ${w.more} más)` : ''}`); }
+  if (W.wkBest) { const b = W.wkBest, w = W.wkWorst; const also = x => (x.others.length ? ` (también ${x.others.map(sh).join(', ').replace(/, ([^,]*)$/, ' y $1')})` : '');
+    lines.push(`📅 La semana: mejor ${sh(b.team)} ${b.w}-${b.l}${also(b)} · peor ${sh(w.team)} ${w.w}-${w.l}${also(w)}`); }
   const leaders = W.conf.map(C => C.rows[0]).filter(Boolean).map(r => '#' + sh(r.team).replace(/[^\p{L}\p{N}]/gu, ''));
   const tags = ['#NBA', '#NBAenEspañol', ...leaders, '#baloncesto', '#basketball'].slice(0, 5);
   return `La tabla NBA · Semana ${W.week} · ${fmtDate(W.monday)} 📊\n\n${lines.join('\n')}\n\n¿Quién sube la próxima semana?\n\n${tags.join(' ')}`;
@@ -7838,10 +7840,15 @@ function pxTablaWeekCard(c, s, it, t, col) {
     c.font = pf(8); const nm = curioShort(x.team).toUpperCase(), name = c.measureText(nm).width <= cw - 46 ? nm : pxAbbr(x.team);
     ptext(c, name, S.l + 46, jy + 2, 8, col.text);
     if (t > t0 + 0.3) { const rec = `${x.w}-${x.l}`; ptext(c, rec, S.l + 47, jy + 15, 32, PXC.ink); ptext(c, rec, S.l + 46, jy + 14, 32, tc); }
-    if (x.more && t > t0 + 0.6) ptext(c, `+${x.more} CON ${x.w}-${x.l}`, S.l, jy + 52, 8, dim);
+    // Empatados con el mismo récord: "TAMBIEN 4-0:" y sus abreviaturas (hasta 4; si son más, "OTROS 6 CON 4-0:")
+    const o = x.others || [];
+    if (o.length && t > t0 + 0.6) {
+      ptext(c, o.length > 4 ? `OTROS ${o.length} CON ${x.w}-${x.l}:` : `TAMBIEN ${x.w}-${x.l}:`, S.l, jy + 48, 8, dim);
+      ptext(c, o.slice(0, 4).map(pxAbbr).join(' ') + (o.length > 4 ? '…' : ''), S.l, jy + 58, 8, col.text);
+    }
   };
-  block('MEJOR SEMANA', it.best, S.t + 26, 0.4, upC);
-  block('PEOR SEMANA', it.worst, S.t + 104, 1.6, dnC);
+  block('MEJOR SEMANA', it.best, S.t + 24, 0.4, upC);
+  block('PEOR SEMANA', it.worst, S.t + 116, 1.6, dnC);
 }
 function pxTablaCover(c, s, t, P) {
   const { S } = PX, col = { bg: P.bg, text: P.fg, accent: P.hi };
