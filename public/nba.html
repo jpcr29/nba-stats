@@ -5046,6 +5046,8 @@ function renderCurioRachas() {
 // Cada cosa se compara con la temporada previa a ese día para decir qué tan rara es.
 // Lo de toda la temporada vive en los paneles de Explorar.
 const CURIO_J = {
+  // rachas en casa / de visita cortadas: mínimo de la racha (en casa ganar es lo común; de visita, perder)
+  side: { home: { w: 6, l: 5 }, away: { w: 5, l: 7 } },
   comeback: 8,       // pts abajo tras el 3er cuarto para contar como remontada
   comebackHalf: 12,  // ...o pts abajo al descanso
   blowout: 25,       // margen final para "paliza"
@@ -5277,6 +5279,24 @@ function curioJornadaItems(src, after) {
         if (side.length >= CURIO_J.firstMinSide && !won && side.every(x => x.won))
           add('first', '1ª', t, t, `${sh(t)} cae ${pf}-${pa} ante ${sh(o)}: su primera derrota ${where} de la temporada (venía ${side.length}-0).`, 1.6, [t, o],
             { big: '1ª', head: `derrota ${where} del año`, ctx: `Venía ${side.length}-0.`, foot: vsTxt });
+      }
+      // Rachas en casa / de visita que se cortan (sin repetir: si es la primera del año de ese lado
+      // ya está el dato de "primera vez", y si también se corta su racha general, sale solo esa)
+      if (bt) {
+        const side = bt.seq.filter(x => x.home === home), last = side.length ? side[side.length - 1].won : null;
+        let n = 0; for (let i = side.length - 1; i >= 0 && side[i].won === last; i--) n++;
+        const perfect = n === side.length, whereL = home ? 'en casa' : 'de visita', lbl = home ? 'Racha en casa' : 'Racha de visita';
+        const wS = side.filter(x => x.won).length + (won ? 1 : 0), lS = side.length + 1 - wS;
+        const min = CURIO_J.side[home ? 'home' : 'away'][last ? 'w' : 'l'];
+        const overallCut = bt.streak.won === last && bt.streak.len >= (last ? CURIO_J.streak : 5);
+        if (last !== null && last !== won && n >= min && !(perfect && side.length >= CURIO_J.firstMinSide) && !overallCut) {
+          if (!won) add('cut', 'V' + n, t, t, `${sh(t)} pierde ${pf}-${pa} ${ante(home, o)} y se le corta una racha de ${n} victorias seguidas ${whereL}.`, n / 2.5 + 0.5, [t, o],
+            { big: String(n), head: 'victorias seguidas… y se acabó', ctx: `Ahora va ${wS}-${lS} ${whereL}.`, foot: vsTxt });
+          else add('drought', 'D' + n, t, t, `${sh(t)} gana ${pf}-${pa} ${ante(home, o)} y corta ${n} derrotas seguidas ${whereL}.`, n / 2.5 + 0.3, null,
+            { big: String(n), head: 'derrotas seguidas… y por fin ganó', ctx: `Ahora va ${wS}-${lS} ${whereL}.`, foot: vsTxt });
+          // en la lista y en el texto de la publicación se dice dónde fue la racha; el contexto ya no lo repite
+          Object.assign(out[out.length - 1], { label: lbl, capHead: `${won ? 'derrotas' : 'victorias'} seguidas ${whereL}… y ${won ? 'por fin ganó' : 'se acabó'}`, capCtx: `Ahora va ${wS}-${lS}.` });
+        }
       }
     });
   });
@@ -5813,10 +5833,10 @@ function curioSocialCaption(J, slides) {
   const lines = picks.map((it, i) => {
     if (it.cup) return `🏆 NBA Cup, ${it.capText}`; // las tablas no llevan número: no son un dato
     if (it.tonight) { const tc = (it.capCtx || it.soc.ctx || '').replace(/\.$/, ''); return `${i + 1}. 🗓️ Esta noche · ${curioShort(it.dot)}: ${it.soc.big} ${it.soc.head}${tc ? ', ' + tc[0].toLowerCase() + tc.slice(1) : ''}`; }
-    let c = (it.soc.ctx || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
+    let c = (it.capCtx || it.soc.ctx || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
     if (c && /^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]/.test(c)) c = c[0].toLowerCase() + c.slice(1); // "…, top 2 de la temporada"
     // Si el dato manual tiene jugador, la línea empieza por él: "Paul George: 38 puntos, …"
-    const who = it.player || curioShort(it.dot), head = it.player ? it.capHead : it.soc.head;
+    const who = it.player || curioShort(it.dot), head = it.player || it.capHead ? it.capHead : it.soc.head;
     return `${i + 1}. ${who}: ${it.soc.big} ${head}${c ? ', ' + c : ''}`;
   });
   // Máximo 5 hashtags (límite de Instagram): #NBA #NBAenEspañol, luego los equipos en el orden de los datos,
@@ -5931,7 +5951,7 @@ function renderCurioSocial() {
   const rows = J.items.map((it, i) => (i === firstSeason ? '<div class="soc-group">📅 Datos de temporada (opcionales)</div>' : '') + (i === firstTonight ? `<div class="soc-group">🗓️ Esta noche · ${fmtDate(st.tonightDate)}</div>` : '') + (it.soc ? `<label class="soc-row">
       <input type="checkbox" ${st.sel.has(i) ? 'checked' : ''} onchange="toggleCurioSocialItem(${i})">
       <span class="soc-type">${it.manual ? '✍️ ' + curioEsc(it.label) : (it.label || CURIO_JTYPES[it.type].label)}</span>
-      <span class="soc-txt">${it.cup ? `🏆 ${curioEsc(it.capText)}` : `${curioDot(it.dot)}<b>${curioEsc(it.player || curioShort(it.dot))}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.player ? it.capHead : it.soc.head)}`}${it.manual ? `<button type="button" class="soc-del" title="Editar este dato" onclick="editCurioManual(${it.mid}, event)">✏️</button><button type="button" class="soc-del soc-del--x" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
+      <span class="soc-txt">${it.cup ? `🏆 ${curioEsc(it.capText)}` : `${curioDot(it.dot)}<b>${curioEsc(it.player || curioShort(it.dot))}:</b> ${curioEsc(it.soc.big)} ${curioEsc(it.player || it.capHead ? it.capHead : it.soc.head)}`}${it.manual ? `<button type="button" class="soc-del" title="Editar este dato" onclick="editCurioManual(${it.mid}, event)">✏️</button><button type="button" class="soc-del soc-del--x" title="Borrar este dato" onclick="deleteCurioManual(${it.mid}, event)">✕</button>` : ''}</span>
     </label>` : '')).join('') + (firstSeason < 0 ? '<div class="soc-group">📅 Datos de temporada (opcionales)</div><div class="soc-empty">Todavía no hay datos de temporada para los equipos de anoche: aparecen cuando llevan 10 partidos y están entre los 5 mejores o peores de la liga en algo.</div>' : '');
   const vid = st.video;
   ov.innerHTML = `<div class="profile-modal soc-modal">
