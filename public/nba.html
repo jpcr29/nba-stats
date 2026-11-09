@@ -6740,7 +6740,8 @@ function pixelDrawSlide(c, s, t, st) {
   if (s.kind === 'card') {
     const it = s.it, col = it.night || it.cup || it.tabla ? { bg: st.pal.bg, text: st.pal.fg, accent: st.pal.hi, dim: st.pal.dim } : curioSocialColors(it.dot);
     prect(c, 0, 0, w, h, col.bg);
-    if (it.tabla) pxTablaCard(c, s, it, t, col);
+    if (it.tablaWeek) pxTablaWeekCard(c, s, it, t, col);
+    else if (it.tabla) pxTablaCard(c, s, it, t, col);
     else if (it.cup) pxCardCupConf(c, s, it, t, col);
     else [pxCardA, pxCardB, pxCardC][(s.n - 1 + st.shift) % 3](c, s, it, t, col);
   } else if (s.kind === 'cover' && s.tabla) pxTablaCover(c, s, t, st.pal);
@@ -6981,7 +6982,8 @@ function pxSchedule(fx, slides) {
       const it = s.it, typ = it.type;
       fx.ding(T + 1.0);
       const V = T + PXV - 0.6; // tiempo cero del gráfico
-      if (it.tabla) { it.rows.forEach((r, i) => fx.note(T + 0.3 + i * 0.1, i < 6 ? 12 - i : i < 10 ? 6 - (i - 6) : 1)); }
+      if (it.tablaWeek) { fx.levelUp(T + 0.7); fx.error(T + 1.9); }
+      else if (it.tabla) { it.rows.forEach((r, i) => fx.note(T + 0.3 + i * 0.1, i < 6 ? 12 - i : i < 10 ? 6 - (i - 6) : 1)); }
       else if (it.cup) { it.cupGroups.forEach((G, k) => G.rows.forEach((r, i) => fx.note(T + PXCONF.g0 + k * PXCONF.gStep + 0.1 + i * PXCONF.rStep, 11 - i * 2 + (k % 2)))); }
       else if (it.manual) { if (!it.night && it.player) fx.hit(V + 0.6); }
       else if (it.season) { const SV = it.seasonViz; if (SV.kind === 'bars') { fx.sweep(V + 0.6, 1.0); fx.ding(V + 1.6); } else { const n = Math.min(SV.W + SV.L, 30); for (let i = 0; i < n; i++) fx.note(V + 0.6 + 1.0 * (i + 1) / n, i < SV.W ? Math.min(i, 13) : 0); } }
@@ -7659,14 +7661,28 @@ function tbWeek(src, monday) {
   const week = Math.floor((Date.parse(monday) - Date.parse(start)) / (7 * 864e5)) + 1;
   // Partidos del calendario hasta el domingo que no están registrados (solo con tus datos, no en el demo)
   const missing = curioDemo ? [] : (SCHEDULE || []).filter(f => f.date >= start && f.date <= sun && !season.some(g => g.date === f.date && ((g.local === f.local && g.away === f.away) || (g.local === f.away && g.away === f.local))));
-  return { monday, sun, start, first, arrows, week, missing, before: monday < first,
-    conf: ['Este', 'Oeste'].map(cf => ({ cf, rows: (now[cf] || []).map(r => { const p = prev && prev[cf].find(x => x.team === r.team); return { ...r, mv: p ? p.pos - r.pos : 0 }; }) })) };
+  const conf = ['Este', 'Oeste'].map(cf => ({ cf, rows: (now[cf] || []).map(r => { const p = prev && prev[cf].find(x => x.team === r.team); return { ...r, mv: p ? p.pos - r.pos : 0 }; }) }));
+  // La semana (lunes a domingo): mejor y peor récord de la liga.
+  // Mejor: % de victorias; a igual %, más victorias (4-0 antes que 3-0); con el mismo récord, el que más subió
+  // en la tabla; y si no, la mejor diferencia de puntos. Peor: igual al revés (más derrotas, el que más bajó, peor diferencia).
+  const mvOf = t => { for (const C of conf) { const r = C.rows.find(x => x.team === t); if (r) return r.mv; } return 0; };
+  const wk = Object.values(tbWeekRec(season, monday)).map(x => ({ ...x, mv: mvOf(x.team), pct: x.w / (x.w + x.l) }));
+  const bestKey = (a, b) => b.pct - a.pct || b.w - a.w || b.mv - a.mv || b.d - a.d;
+  const worstKey = (a, b) => a.pct - b.pct || b.l - a.l || a.mv - b.mv || a.d - b.d;
+  let wkBest = null, wkWorst = null;
+  if (wk.length) {
+    wkBest = [...wk].sort(bestKey)[0]; wkWorst = [...wk].sort(worstKey)[0];
+    wkBest.more = wk.filter(x => x.team !== wkBest.team && x.w === wkBest.w && x.l === wkBest.l).length;
+    wkWorst.more = wk.filter(x => x.team !== wkWorst.team && x.w === wkWorst.w && x.l === wkWorst.l).length;
+  }
+  return { monday, sun, start, first, arrows, week, missing, before: monday < first, wkBest, wkWorst, conf };
 }
 function tbSlides(W) {
   const date = fmtDate(W.monday), mode = W.arrows ? 'mv' : 'none';
   return [
     { kind: 'cover', tabla: true, date, week: W.week, monday: W.monday, picks: [], dur: 5 },
     ...W.conf.map((C, k) => ({ kind: 'card', date, it: { type: 'tabla', tabla: true, cf: C.cf, rows: C.rows, mode, dot: C.rows[0] ? C.rows[0].team : 'Boston Celtics', soc: { big: '', head: '', ctx: '', foot: '' } }, n: k + 1, of: 2, dur: 5 })),
+    ...(W.wkBest ? [{ kind: 'card', date, it: { type: 'tabla', tabla: true, tablaWeek: true, rows: [], best: W.wkBest, worst: W.wkWorst, dot: W.wkBest.team, soc: { big: '', head: '', ctx: '', foot: '' } }, n: 3, of: 3, dur: 5 }] : []),
     { kind: 'outro', tabla: true, n: 2, dur: 3.75 },
   ];
 }
@@ -7680,6 +7696,7 @@ function tbCaption(W) {
     if (dn && dn.mv < 0) parts.push(`⬇️ Más bajó: ${sh(dn.team)} (${dn.mv})`);
     if (parts.length) lines.push(parts.join(' · '));
   }
+  if (W.wkBest) { const b = W.wkBest, w = W.wkWorst; lines.push(`📅 La semana: mejor ${sh(b.team)} ${b.w}-${b.l}${b.more ? ` (y ${b.more} más)` : ''} · peor ${sh(w.team)} ${w.w}-${w.l}${w.more ? ` (y ${w.more} más)` : ''}`); }
   const leaders = W.conf.map(C => C.rows[0]).filter(Boolean).map(r => '#' + sh(r.team).replace(/[^\p{L}\p{N}]/gu, ''));
   const tags = ['#NBA', '#NBAenEspañol', ...leaders, '#baloncesto', '#basketball'].slice(0, 5);
   return `La tabla NBA · Semana ${W.week} · ${fmtDate(W.monday)} 📊\n\n${lines.join('\n')}\n\n¿Quién sube la próxima semana?\n\n${tags.join(' ')}`;
@@ -7801,6 +7818,30 @@ function pxTablaCard(c, s, it, t, col) {
     y += 10;
   });
   if (t > 2) { ptext(c, '1-6 PLAYOFFS', S.l, y + 3, 8, col.text); ptext(c, '7-10 PLAY-IN', S.l, y + 13, 8, wc); }
+}
+function tbWeekRec(src, monday) {
+  const from = curioAddDays(monday, -7), to = curioAddDays(monday, -1), R = {};
+  src.filter(g => g.date >= from && g.date <= to && g.cup !== 'final').forEach(g => [[g.local, g.ptsL, g.ptsA], [g.away, g.ptsA, g.ptsL]].forEach(([t, a, b]) => { const r = R[t] || (R[t] = { team: t, w: 0, l: 0, d: 0 }); if (a > b) r.w++; else r.l++; r.d += a - b; }));
+  return R;
+}
+// Tarjeta "LA SEMANA": la mejor y la peor semana de la liga (récord de lunes a domingo)
+function pxTablaWeekCard(c, s, it, t, col) {
+  const { S } = PX, cw = S.r - S.l, dim = pxMix(col.text, col.bg, 0.55);
+  const best = (a, b) => (curioContrast(a, col.bg) >= curioContrast(b, col.bg) ? a : b), upC = best('#3cffd0', '#005c3a'), dnC = best('#ff5a5a', '#7a0010');
+  c.font = pf(8); const lab = 'LA SEMANA', lw = c.measureText(lab).width + 8;
+  if (t > 0.1) pbox(c, S.l, S.t, lw, 14, col.accent, PXC.ink), ptext(c, lab, S.l + 4, S.t + 3, 8, col.bg);
+  const block = (title, x, y, t0, tc) => {
+    if (t < t0) return;
+    ptext(c, title, S.l, y, 8, tc);
+    const cc = curioSocialColors(x.team), jy = y + 14;
+    pjersey(c, S.l, jy, cc.bg, cc.accent, col.text, null, 3);
+    c.font = pf(8); const nm = curioShort(x.team).toUpperCase(), name = c.measureText(nm).width <= cw - 46 ? nm : pxAbbr(x.team);
+    ptext(c, name, S.l + 46, jy + 2, 8, col.text);
+    if (t > t0 + 0.3) { const rec = `${x.w}-${x.l}`; ptext(c, rec, S.l + 47, jy + 15, 32, PXC.ink); ptext(c, rec, S.l + 46, jy + 14, 32, tc); }
+    if (x.more && t > t0 + 0.6) ptext(c, `+${x.more} CON ${x.w}-${x.l}`, S.l, jy + 52, 8, dim);
+  };
+  block('MEJOR SEMANA', it.best, S.t + 26, 0.4, upC);
+  block('PEOR SEMANA', it.worst, S.t + 104, 1.6, dnC);
 }
 function pxTablaCover(c, s, t, P) {
   const { S } = PX, col = { bg: P.bg, text: P.fg, accent: P.hi };
