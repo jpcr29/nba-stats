@@ -4032,15 +4032,38 @@ function renderWinnerContext() {
   const rival = (team, g) => g.local === team ? g.away : g.local;
   const strong = (team, g) => (winPct[rival(team, g)] ?? 0) > 0.5;
 
-  const cell = (team, list, showPts) => {
-    if (!list.length) return `<div class="ouc-cell"><span style="color:var(--outline);">sin partidos</span></div>`;
+  // Posición en la liga y en su conferencia (por % de victorias, luego victorias)
+  const recOf = (t) => { const tg = before.filter(g => g.local === t || g.away === t); const w = tg.filter(g => won(t, g)).length; return { w, l: tg.length - w, n: tg.length }; };
+  const rankIn = (team, pool) => {
+    const ranked = pool.map(t => ({ t, ...recOf(t), pct: winPct[t] }))
+      .sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1) || b.w - a.w);
+    return ranked.findIndex(x => x.t === team) + 1;
+  };
+  const confOf = (t) => (typeof CUP_TEAM !== 'undefined' && CUP_TEAM[t]) ? CUP_TEAM[t].split(' ')[0] : null;
+  const header = (team, color) => {
+    const r = recOf(team);
+    const cf = confOf(team);
+    const confPool = cf ? TEAMS.filter(t => confOf(t) === cf) : null;
+    const pos = r.n ? `#${rankIn(team, TEAMS)} liga${cf ? ` · #${rankIn(team, confPool)} ${cf}` : ''}` : 'sin partidos';
+    return `<div style="display:flex;flex-direction:column;gap:2px;">
+      <div class="ouc-h" style="color:${color};">${team.split(' ').pop()}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;"><b>${r.w}-${r.l}</b> <span style="color:var(--outline);font-size:10px;">· ${pos}</span></div>
+    </div>`;
+  };
+  // Grupo del rival de hoy, para marcar la fila que aplica a este partido
+  const rivalStrongL = (winPct[away]  ?? 0) > 0.5;  // rival de local = visitante
+  const rivalStrongA = (winPct[local] ?? 0) > 0.5;  // rival de visitante = local
+  const rivalTag = '<small style="color:#e67e22;font-weight:700;">← rival de hoy</small>';
+
+  const cell = (team, list, showPts, isRival) => {
+    if (!list.length) return `<div class="ouc-cell"><span style="color:var(--outline);">sin partidos</span>${isRival ? rivalTag : ''}</div>`;
     const w = list.filter(g => won(team, g)).length;
     const pct = w / list.length * 100;
     const pts = showPts
       ? `<small>anota ${(list.reduce((a, g) => a + pf(team, g), 0) / list.length).toFixed(1)} · recibe ${(list.reduce((a, g) => a + pa(team, g), 0) / list.length).toFixed(1)}</small>`
       : '';
     return `<div class="ouc-cell">
-      <span><b>${w}-${list.length - w}</b> · ${pct.toFixed(0)}%</span>
+      <span><b>${w}-${list.length - w}</b> · ${pct.toFixed(0)}% ${isRival ? rivalTag : ''}</span>
       ${pts}
       <div class="ouc-bar"><div style="width:${pct}%;"></div></div>
     </div>`;
@@ -4051,17 +4074,17 @@ function renderWinnerContext() {
   const isB2B = (team, g) => restInfo(team, g.date, games).b2b;
   const close = (g) => Math.abs(g.ptsL - g.ptsA) <= 5;
 
-  const row = (lbl, fL, fA, pts) =>
-    `<div class="ouc-lbl">${lbl}</div>${cell(local, tgL.filter(fL), pts)}${cell(away, tgA.filter(fA), pts)}`;
+  const row = (lbl, fL, fA, pts, rivL = false, rivA = false) =>
+    `<div class="ouc-lbl">${lbl}</div>${cell(local, tgL.filter(fL), pts, rivL)}${cell(away, tgA.filter(fA), pts, rivA)}`;
 
   body.innerHTML = `
     <div class="ouc-grid" style="grid-template-columns:minmax(64px,0.8fr) minmax(0,1fr) minmax(0,1fr);">
       <div></div>
-      <div class="ouc-h" style="color:${colorL};">${shortL}</div>
-      <div class="ouc-h" style="color:${colorA};">${shortA}</div>
+      ${header(local, colorL)}
+      ${header(away, colorA)}
       ${row('Temporada', () => true, () => true, true)}
-      ${row('Vs récord ganador', g => strong(local, g), g => strong(away, g), true)}
-      ${row('Vs récord perdedor', g => !strong(local, g), g => !strong(away, g), true)}
+      ${row('Vs récord ganador', g => strong(local, g), g => strong(away, g), true, rivalStrongL, rivalStrongA)}
+      ${row('Vs récord perdedor', g => !strong(local, g), g => !strong(away, g), true, !rivalStrongL, !rivalStrongA)}
       ${row('Partidos cerrados (≤5)', close, close, false)}
       ${row('En back-to-back', g => isB2B(local, g), g => isB2B(away, g), false)}
     </div>
