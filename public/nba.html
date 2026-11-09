@@ -628,6 +628,20 @@
   .pred-breakdown{border:1px solid var(--hairline);border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:16px;}
   .pred-breakdown-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--outline);margin-bottom:2px;}
   .pred-factors{display:flex;flex-direction:column;gap:14px;}
+  .ouc-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);letter-spacing:0.5px;margin:4px 0 8px;}
+  .ouc-grid{display:grid;gap:10px 16px;align-items:center;}
+  .ouc-h{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--outline);}
+  .ouc-lbl{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);}
+  .ouc-cell{display:flex;flex-direction:column;gap:4px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .ouc-cell small{font-size:9px;color:var(--outline);}
+  .ouc-bar{height:6px;border-radius:9999px;background:var(--surface-low);overflow:hidden;}
+  .ouc-bar > div{height:100%;border-radius:9999px;background:var(--outline);opacity:0.55;}
+  .ouc-ladder .ouc-today{background:var(--surface-low);border-radius:8px;padding:4px 6px;}
+  .ouc-sum-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px;}
+  .ouc-sum{border:1px solid var(--hairline);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;}
+  .ouc-sum-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;}
+  .ouc-sum-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);line-height:1.5;}
+  @media (max-width:640px){ .ouc-sum-row{gap:6px;} .ouc-sum{padding:10px 8px;} .ouc-sum-val{font-size:17px;} .ouc-grid{gap:8px 6px;} .ouc-ladder .ouc-cell,.ouc-ladder .ouc-h{font-size:10px;} .ouc-ladder .ouc-today{padding:4px 2px;} .ouc-lbl{font-size:10px;} }
   .pred-factor-row{display:grid;grid-template-columns:200px 1fr 100px;align-items:center;gap:12px;}
   .pred-factor-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--outline);text-transform:uppercase;letter-spacing:0.8px;}
   .pred-factor-bar-outer{height:8px;border-radius:9999px;background:var(--surface-low);overflow:hidden;}
@@ -1501,6 +1515,18 @@
           <div class="pred-breakdown">
             <div class="pred-breakdown-title">Desglose del Modelo</div>
             <div class="pred-factors" id="pred-factors"></div>
+          </div>
+          <div class="pred-breakdown" id="win-ctx">
+            <div class="pred-breakdown-title">Ganador · Contexto</div>
+            <div id="win-ctx-body"></div>
+          </div>
+          <div class="pred-breakdown" id="ou-ctx">
+            <div class="pred-breakdown-title">Over/Under · Contexto</div>
+            <div id="ou-ctx-body"></div>
+            <div id="ou-ctx-chart-wrap" style="display:none;">
+              <div class="ouc-sub">Últimos 15 totales de cada equipo · la raya punteada es la línea de hoy</div>
+              <div style="position:relative;height:280px;"><canvas id="ou-ctx-chart"></canvas></div>
+            </div>
           </div>
           <div class="pred-recent-wrap">
             <div class="pred-recent-col" id="pred-recent-local"></div>
@@ -3826,6 +3852,8 @@ function runPrediction() {
     gpLocal, gpAway,
     ready: gpLocal >= WARMUP_MIN_GAMES && gpAway >= WARMUP_MIN_GAMES,
   };
+  currentOuCtx = { local, away, refDate, colorL, colorA };
+  renderWinnerContext();
 
   document.getElementById('pred-result').style.display = '';
   document.getElementById('pred-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3887,6 +3915,8 @@ let currentPredLocal = null;
 let currentPredAway  = null;
 let currentPredProbs = null;  // { probL, probA, predTotal }
 let currentPredWarmup = null; // { gpLocal, gpAway, ready }
+let currentOuCtx = null;      // { local, away, refDate, colorL, colorA }
+let ouCtxChart = null;
 let profileChartInst = null;
 let selectedProfileInModal = 'moderado';
 
@@ -3977,8 +4007,247 @@ function applyOddsFromCache(events, local, away) {
   calcBetSuggestions();
 }
 
+// ────────────────────────────────────────────────────
+//  CONTEXTO DEL GANADOR (solo datos observados)
+//  Lo que el modelo no ve: contra quién se lograron los resultados,
+//  cómo le va en partidos cerrados y en back-to-back.
+// ────────────────────────────────────────────────────
+function renderWinnerContext() {
+  const body = document.getElementById('win-ctx-body');
+  if (!body || !currentOuCtx) return;
+  const { local, away, refDate, colorL, colorA } = currentOuCtx;
+  const shortL = local.split(' ').pop(), shortA = away.split(' ').pop();
+  const before = games.filter(g => !refDate || g.date < refDate);
+
+  const won = (team, g) => g.local === team ? g.winner === 'L' : g.winner === 'A';
+  const pf  = (team, g) => g.local === team ? g.ptsL : g.ptsA;
+  const pa  = (team, g) => g.local === team ? g.ptsA : g.ptsL;
+
+  // Récord actual de cada equipo (hasta la fecha del partido)
+  const winPct = {};
+  TEAMS.forEach(t => {
+    const tg = before.filter(g => g.local === t || g.away === t);
+    winPct[t] = tg.length ? tg.filter(g => won(t, g)).length / tg.length : null;
+  });
+  const rival = (team, g) => g.local === team ? g.away : g.local;
+  const strong = (team, g) => (winPct[rival(team, g)] ?? 0) > 0.5;
+
+  const cell = (team, list, showPts) => {
+    if (!list.length) return `<div class="ouc-cell"><span style="color:var(--outline);">sin partidos</span></div>`;
+    const w = list.filter(g => won(team, g)).length;
+    const pct = w / list.length * 100;
+    const pts = showPts
+      ? `<small>anota ${(list.reduce((a, g) => a + pf(team, g), 0) / list.length).toFixed(1)} · recibe ${(list.reduce((a, g) => a + pa(team, g), 0) / list.length).toFixed(1)}</small>`
+      : '';
+    return `<div class="ouc-cell">
+      <span><b>${w}-${list.length - w}</b> · ${pct.toFixed(0)}%</span>
+      ${pts}
+      <div class="ouc-bar"><div style="width:${pct}%;"></div></div>
+    </div>`;
+  };
+
+  const tgL = before.filter(g => g.local === local || g.away === local);
+  const tgA = before.filter(g => g.local === away  || g.away === away);
+  const isB2B = (team, g) => restInfo(team, g.date, games).b2b;
+  const close = (g) => Math.abs(g.ptsL - g.ptsA) <= 5;
+
+  const row = (lbl, fL, fA, pts) =>
+    `<div class="ouc-lbl">${lbl}</div>${cell(local, tgL.filter(fL), pts)}${cell(away, tgA.filter(fA), pts)}`;
+
+  body.innerHTML = `
+    <div class="ouc-grid" style="grid-template-columns:minmax(64px,0.8fr) minmax(0,1fr) minmax(0,1fr);">
+      <div></div>
+      <div class="ouc-h" style="color:${colorL};">${shortL}</div>
+      <div class="ouc-h" style="color:${colorA};">${shortA}</div>
+      ${row('Temporada', () => true, () => true, true)}
+      ${row('Vs récord ganador', g => strong(local, g), g => strong(away, g), true)}
+      ${row('Vs récord perdedor', g => !strong(local, g), g => !strong(away, g), true)}
+      ${row('Partidos cerrados (≤5)', close, close, false)}
+      ${row('En back-to-back', g => isB2B(local, g), g => isB2B(away, g), false)}
+    </div>
+    <div class="ouc-sub" style="margin-top:6px;">Récord ganador = rival con más de 50% de victorias hoy · cerrados = diferencia final de 5 o menos</div>`;
+}
+
+// ────────────────────────────────────────────────────
+//  CONTEXTO OVER/UNDER (solo datos observados, sin sugerencias)
+//  Compara la línea de hoy con los totales reales de cada equipo
+//  en la temporada: récord O/U, escalera de líneas y gráfica.
+// ────────────────────────────────────────────────────
+function ouTeamGames(team, refDate) {
+  return games
+    .filter(g => (g.local === team || g.away === team) && (!refDate || g.date < refDate))
+    .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+}
+const ouTotal = (g) => g.ptsL + g.ptsA;
+const ouOT    = (g) => (g.otL || 0) + (g.otA || 0);
+
+function ouRecord(list, line) {
+  const n = list.length;
+  const o = list.filter(g => ouTotal(g) > line).length;
+  // Over que solo se dio gracias a la prórroga (sin OT habría quedado Under)
+  const byOT = list.filter(g => ouTotal(g) > line && ouOT(g) > 0 && ouTotal(g) - ouOT(g) < line).length;
+  return { n, o, byOT, pct: n ? o / n * 100 : 0 };
+}
+
+const ouAvg = (list) => list.length ? list.reduce((a, g) => a + ouTotal(g), 0) / list.length : null;
+
+// Celda "promedio del total (n)" para la tabla de contexto
+function ouAvgCell(list, isToday) {
+  const avg = ouAvg(list);
+  const tag = isToday ? ' <small style="color:#e67e22;font-weight:700;">← hoy</small>' : '';
+  if (avg === null) return `<div class="ouc-cell"><span style="color:var(--outline);">—</span></div>`;
+  return `<div class="ouc-cell"><span><b>${avg.toFixed(1)}</b> <small>(${list.length} PJ)</small>${tag}</span></div>`;
+}
+
+function ouCell(r) {
+  if (!r.n) return `<div class="ouc-cell"><span style="color:var(--outline);">sin partidos</span></div>`;
+  return `<div class="ouc-cell">
+    <span><b>${r.o}/${r.n}</b> Over · ${r.pct.toFixed(0)}%${r.byOT ? ` <small>*${r.byOT} por OT</small>` : ''}</span>
+    <div class="ouc-bar"><div style="width:${r.pct}%;"></div></div>
+  </div>`;
+}
+
+function renderOuContext() {
+  const body = document.getElementById('ou-ctx-body');
+  const wrap = document.getElementById('ou-ctx-chart-wrap');
+  if (!body || !currentOuCtx) return;
+  const { local, away, refDate, colorL, colorA } = currentOuCtx;
+  const line = parseFloat(document.getElementById('bet-ou-line').value) || null;
+  const shortL = local.split(' ').pop(), shortA = away.split(' ').pop();
+
+  if (!line) {
+    body.innerHTML = `<div class="ouc-lbl">Ingresa la línea de totales (en Sugerencias de Apuesta) para ver el contexto.</div>`;
+    wrap.style.display = 'none';
+    if (ouCtxChart) { ouCtxChart.destroy(); ouCtxChart = null; }
+    return;
+  }
+
+  const gL = ouTeamGames(local, refDate);
+  const gA = ouTeamGames(away, refDate);
+  const homeL = gL.filter(g => g.local === local);
+  const awayA = gA.filter(g => g.away === away);
+  // Partidos de ambos equipos sin duplicar los enfrentamientos entre ellos
+  const both = [...gL, ...gA.filter(g => !gL.includes(g))];
+
+  // ── 4. Resumen: modelo vs situación real vs línea ──
+  const modelTotal = currentPredProbs ? currentPredProbs.predTotal : null;
+  const sitAvg = ouAvg([...homeL, ...awayA.filter(g => !homeL.includes(g))]);
+  const avgHomeL = ouAvg(homeL), avgAwayA = ouAvg(awayA);
+  const diffTxt = (x) => x === null ? '' : `<small>${x - line >= 0 ? '+' : ''}${(x - line).toFixed(1)} vs línea</small>`;
+  const sumBox = (lbl, val, sub) => `<div class="ouc-sum"><div class="ouc-h">${lbl}</div><div class="ouc-sum-val">${val}</div><div class="ouc-sum-sub">${sub}</div></div>`;
+  const summaryHTML = `
+    <div class="ouc-sum-row">
+      ${sumBox('Modelo', modelTotal ?? '—', diffTxt(modelTotal))}
+      ${sumBox('Situación real', sitAvg === null ? '—' : sitAvg.toFixed(1),
+        `${shortL} en casa ${avgHomeL === null ? '—' : avgHomeL.toFixed(1)} · ${shortA} fuera ${avgAwayA === null ? '—' : avgAwayA.toFixed(1)}<br>${diffTxt(sitAvg)}`)}
+      ${sumBox('Línea', line, 'la que pusiste o trajo la API')}
+    </div>`;
+
+  // ── 6. Total según el contexto: descanso y tipo de partido ──
+  const isB2B = (team, g) => restInfo(team, g.date, games).b2b;
+  const margin = (g) => Math.abs(g.ptsL - g.ptsA);
+  const todayB2BL = refDate ? restInfo(local, refDate, games).b2b : null;
+  const todayB2BA = refDate ? restInfo(away, refDate, games).b2b : null;
+  const ctxRow = (lbl, fL, fA, todayL, todayA) => `<div class="ouc-lbl">${lbl}</div>${ouAvgCell(gL.filter(fL), todayL)}${ouAvgCell(gA.filter(fA), todayA)}`;
+  const contextHTML = `
+    <div class="ouc-sub" style="margin-top:18px;">Total promedio según el contexto</div>
+    <div class="ouc-grid" style="grid-template-columns:minmax(64px,0.8fr) minmax(0,1fr) minmax(0,1fr);">
+      <div></div>
+      <div class="ouc-h" style="color:${colorL};">${shortL}</div>
+      <div class="ouc-h" style="color:${colorA};">${shortA}</div>
+      ${ctxRow('Back-to-back', g => isB2B(local, g), g => isB2B(away, g), todayB2BL === true, todayB2BA === true)}
+      ${ctxRow('Con descanso', g => !isB2B(local, g), g => !isB2B(away, g), todayB2BL === false, todayB2BA === false)}
+      ${ctxRow('Cerrado (≤5)', g => margin(g) <= 5, g => margin(g) <= 5, false, false)}
+      ${ctxRow('Paliza (≥15)', g => margin(g) >= 15, g => margin(g) >= 15, false, false)}
+    </div>
+    <div class="ouc-sub" style="margin-top:6px;">Cerrado / paliza = diferencia final del marcador${refDate ? '' : ' · sin fecha del partido no se marca el descanso de hoy'}</div>`;
+
+  // ── 1. Récord contra la línea de hoy ──
+  const cols1 = 'minmax(64px,0.8fr) minmax(0,1fr) minmax(0,1fr)';
+  const row = (lbl, a, b) => `<div class="ouc-lbl">${lbl}</div>${ouCell(a)}${ouCell(b)}`;
+  const recordHTML = `
+    <div class="ouc-sub">Récord contra la línea de hoy: <b>${line}</b></div>
+    <div class="ouc-grid" style="grid-template-columns:${cols1};">
+      <div></div>
+      <div class="ouc-h" style="color:${colorL};">${shortL}</div>
+      <div class="ouc-h" style="color:${colorA};">${shortA}</div>
+      ${row('Temporada', ouRecord(gL, line), ouRecord(gA, line))}
+      ${row('Últimos 10', ouRecord(gL.slice(-10), line), ouRecord(gA.slice(-10), line))}
+      ${row('Condición hoy', ouRecord(homeL, line), ouRecord(awayA, line))}
+    </div>
+    <div class="ouc-sub" style="margin-top:6px;">Condición hoy: ${shortL} de local · ${shortA} de visitante</div>`;
+
+  // ── 2. Escalera de líneas ──
+  const steps = [-10, -5, 0, 5, 10];
+  const cols2 = `minmax(52px,0.8fr) repeat(${steps.length}, minmax(0,1fr))`;
+  const pctTxt = (list, ln) => { const r = ouRecord(list, ln); return r.n ? `${r.pct.toFixed(0)}%` : '—'; };
+  const ladderRow = (lbl, list, color) => `<div class="ouc-lbl" style="${color ? `color:${color};font-weight:700;` : ''}">${lbl}</div>` +
+    steps.map(st => `<div class="ouc-cell ${st === 0 ? 'ouc-today' : ''}" style="text-align:center;align-items:center;">${pctTxt(list, line + st)}</div>`).join('');
+  const ladderHTML = `
+    <div class="ouc-sub" style="margin-top:18px;">Escalera de líneas · % de partidos que pasaron cada línea</div>
+    <div class="ouc-grid ouc-ladder" style="grid-template-columns:${cols2};">
+      <div></div>
+      ${steps.map(st => `<div class="ouc-h ${st === 0 ? 'ouc-today' : ''}" style="text-align:center;">${(line + st).toFixed(1)}${st === 0 ? '<br><span style="font-weight:400;">hoy</span>' : ''}</div>`).join('')}
+      ${ladderRow(shortL, gL, colorL)}
+      ${ladderRow(shortA, gA, colorA)}
+      ${ladderRow('Ambos', both)}
+    </div>`;
+
+  body.innerHTML = summaryHTML + recordHTML + contextHTML + ladderHTML;
+
+  // ── 3. Gráfica de los últimos 15 totales ──
+  const lastL = gL.slice(-15), lastA = gA.slice(-15);
+  if (!lastL.length && !lastA.length) {
+    wrap.style.display = 'none';
+    if (ouCtxChart) { ouCtxChart.destroy(); ouCtxChart = null; }
+    return;
+  }
+  wrap.style.display = '';
+  const N = Math.max(lastL.length, lastA.length);
+  // Alineados a la derecha: el último partido de cada equipo queda en la misma posición
+  const toPts = (list, team) => list.map((g, i) => ({
+    x: N - list.length + i + 1, y: ouTotal(g), g, team,
+  }));
+  const ptsL = toPts(lastL, local), ptsA = toPts(lastA, away);
+
+  if (ouCtxChart) ouCtxChart.destroy();
+  ouCtxChart = new Chart(document.getElementById('ou-ctx-chart').getContext('2d'), {
+    type: 'scatter',
+    data: { datasets: [
+      { label: shortL, data: ptsL, backgroundColor: colorL, borderColor: colorL, pointRadius: 5, pointHoverRadius: 7 },
+      { label: shortA, data: ptsA, backgroundColor: colorA, borderColor: '#ffffff', borderWidth: 1, pointStyle: 'rectRot', pointRadius: 6, pointHoverRadius: 8 },
+      { label: `Línea ${line}`, type: 'line', data: [{ x: 0.5, y: line }, { x: N + 0.5, y: line }],
+        borderColor: '#e67e22', borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, fill: false },
+    ]},
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } },
+        tooltip: {
+          filter: (item) => item.datasetIndex < 2,
+          callbacks: {
+            label: (c) => {
+              const { g, team } = c.raw;
+              const rival = g.local === team ? g.away : g.local;
+              const where = g.local === team ? 'vs' : '@';
+              const ot = ouOT(g) > 0 ? ' (OT)' : '';
+              return `${fmtDate(g.date)} · ${where} ${rival} · ${g.ptsL}-${g.ptsA} = ${ouTotal(g)}${ot}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { min: 0.5, max: N + 0.5, ticks: { display: false }, grid: { display: false }, title: { display: true, text: '← más antiguos · más recientes →', font: { size: 10 } } },
+        y: { grid: { color: 'rgba(128,128,128,0.15)' }, title: { display: true, text: 'Total de puntos', font: { size: 10 } } },
+      },
+    },
+  });
+}
+
 // ── Motor de sugerencias ────────────────────────────────────────────────────
 function calcBetSuggestions() {
+  renderOuContext(); // la tarjeta de contexto O/U depende de la misma línea
   if (!currentPredLocal || !currentPredProbs) return;
   const grid = document.getElementById('bet-suggest-grid');
 
