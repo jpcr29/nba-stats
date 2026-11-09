@@ -1268,7 +1268,7 @@
 
 <div class="form-card" id="bets-card" style="display:none;">
   <div class="form-title" style="font-size:26px;margin-bottom:4px;">Apuestas de este Partido</div>
-  <div class="form-subtitle" id="bets-card-sub" style="margin-bottom:16px;">Hasta 2 apuestas por partido (una O/U y una ML). Se resuelven solas en cuanto el partido tenga resultado.</div>
+  <div class="form-subtitle" id="bets-card-sub" style="margin-bottom:16px;">Hasta 2 apuestas por partido (una O/U y una ML), simuladas a $5.000 fijos. Se resuelven solas en cuanto el partido tenga resultado.</div>
   <div id="bets-list"></div>
   <div id="bet-add-form" style="display:none;margin-top:20px;padding-top:20px;border-top:1px dashed var(--hairline);">
     <div class="stats-4col">
@@ -1301,14 +1301,24 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Apuesta</label>
-        <input type="number" id="fb-apuesta" placeholder="" step="0.5">
-      </div>
-      <div class="form-group">
         <label>Cuota</label>
         <input type="number" id="fb-cuota" placeholder="" step="0.001">
       </div>
+      <div class="form-group" id="fb-cuota2-group" style="display:none;">
+        <label title="Opcional: sirve para saber qué habría hecho el modelo">Cuota del otro equipo</label>
+        <input type="number" id="fb-cuota2" placeholder="opcional" step="0.001">
+      </div>
+      <div class="form-group">
+        <label>Confianza</label>
+        <select id="fb-conf">
+          <option value="">-</option>
+          <option value="1">1 · Baja</option>
+          <option value="2">2 · Media</option>
+          <option value="3">3 · Alta</option>
+        </select>
+      </div>
     </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);margin-top:8px;">Monto simulado fijo: $5.000 por apuesta. Al guardar se registra también qué habría hecho el modelo.</div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="saveBet()">Guardar Apuesta</button>
       <button class="btn btn-secondary" onclick="hideBetAddForm()">Cancelar</button>
@@ -1616,11 +1626,13 @@
   <div class="bt-container">
     <div>
       <div class="form-title" style="font-size:36px;">Seguimiento de Apuestas</div>
-      <div class="form-subtitle" style="margin-bottom:0;">Desempeño real de tus apuestas registradas — calculado sobre los partidos que ingresaste con datos de apuesta</div>
+      <div class="form-subtitle" style="margin-bottom:0;">Apuestas simuladas a $5.000 fijos (sin plata real). Se compara lo que tú elegiste con lo que habría hecho el modelo en esos mismos partidos y cuotas.</div>
     </div>
     <div class="bt-summary-grid" id="ap-metrics"></div>
-    <div class="bt-section-title">Curva de P&amp;L Acumulado (real)</div>
+    <div class="bt-section-title">P&amp;L Acumulado · Tú vs Modelo</div>
     <div class="bt-curve-wrap"><canvas id="ap-bankroll-chart" height="90"></canvas></div>
+    <div class="bt-section-title">¿Dónde aciertas más?</div>
+    <div id="ap-breakdown"></div>
     <div class="bt-section-title">Historial de Apuestas</div>
     <div class="bt-filter">
       <input class="search-input bt-search" type="text" placeholder="Buscar equipo..." id="ap-search" oninput="renderApuestas()">
@@ -1629,11 +1641,12 @@
         <option value="won">✔ Ganadas</option>
         <option value="lost">✘ Perdidas</option>
         <option value="pending">⏳ Pendientes</option>
+        <option value="disagree">⇄ Contra el modelo</option>
       </select>
     </div>
     <div class="bt-table-wrap">
-      <div class="bt-table-header" style="grid-template-columns:80px 1fr 1fr 90px 60px 70px 90px 80px;">
-        <div>Fecha</div><div>Local</div><div>Visitante</div><div>Mercado</div><div>Cuota</div><div>Apuesta</div><div>Resultado</div><div>P&amp;L</div>
+      <div class="bt-table-header" id="ap-thead" style="grid-template-columns:74px 1fr 1fr 80px 52px 44px 1.1fr 70px 90px;">
+        <div>Fecha</div><div>Local</div><div>Visitante</div><div>Tu pick</div><div>Cuota</div><div>Conf.</div><div>Modelo</div><div>Resultado</div><div>P&amp;L</div>
       </div>
       <div id="ap-tbody"></div>
     </div>
@@ -2239,7 +2252,7 @@ function renderBetsCard() {
                 : '<span style="color:var(--outline);font-size:10px;font-family:\'JetBrains Mono\',monospace;">Pendiente</span>';
     return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border:1px solid var(--hairline);border-radius:16px;margin-bottom:8px;flex-wrap:wrap;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:12px;">
-        <strong>${mercadoLabel(b)}</strong> &nbsp;·&nbsp; Cuota ${b.cuota} &nbsp;·&nbsp; Apuesta ${b.apuesta}
+        <strong>${mercadoLabel(b)}</strong> &nbsp;·&nbsp; Cuota ${b.cuota} &nbsp;·&nbsp; Conf. ${b.confianza || '-'} &nbsp;·&nbsp; ${modelPickText(b)}
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         ${badge}
@@ -2257,6 +2270,7 @@ function onFbMercadoChange() {
   document.getElementById('fb-linea-group').style.display = mercado === 'OU' ? '' : 'none';
   document.getElementById('fb-ou-group').style.display = mercado === 'OU' ? '' : 'none';
   document.getElementById('fb-mlsel-group').style.display = mercado === 'ML' ? '' : 'none';
+  document.getElementById('fb-cuota2-group').style.display = mercado === 'ML' ? '' : 'none';
 }
 
 function showBetAddForm(betId) {
@@ -2272,8 +2286,9 @@ function showBetAddForm(betId) {
   document.getElementById('fb-linea').value = bet && bet.linea != null ? bet.linea : '';
   document.getElementById('fb-ou').value = bet ? (bet.ou || '') : '';
   document.getElementById('fb-mlsel').value = bet ? (bet.mlSel || '') : '';
-  document.getElementById('fb-apuesta').value = bet && bet.apuesta != null ? bet.apuesta : '';
   document.getElementById('fb-cuota').value = bet && bet.cuota != null ? bet.cuota : '';
+  document.getElementById('fb-cuota2').value = bet && bet.cuotaRival != null ? bet.cuotaRival : '';
+  document.getElementById('fb-conf').value = bet && bet.confianza ? String(bet.confianza) : '';
   onFbMercadoChange();
 
   // No se puede elegir de nuevo un mercado que ya tiene apuesta en este partido
@@ -2296,8 +2311,9 @@ function hideBetAddForm() {
   document.getElementById('fb-linea').value = '';
   document.getElementById('fb-ou').value = '';
   document.getElementById('fb-mlsel').value = '';
-  document.getElementById('fb-apuesta').value = '';
   document.getElementById('fb-cuota').value = '';
+  document.getElementById('fb-cuota2').value = '';
+  document.getElementById('fb-conf').value = '';
   onFbMercadoChange();
   renderBetsCard();
 }
@@ -2314,11 +2330,13 @@ function saveBet() {
   const ou      = v('fb-ou');
   const mlSel   = v('fb-mlsel');
   const cuota   = n('fb-cuota') || null;
-  const apuesta = n('fb-apuesta') || null;
+  const cuotaRival = n('fb-cuota2') || null;
+  const confianza  = parseInt(v('fb-conf')) || null;
 
   if (!mercado)                  { toast('Elige un mercado (O/U o ML).', 'var(--red)'); return; }
   if (!cuota || cuota <= 1)      { toast('La cuota debe ser mayor a 1.', 'var(--red)'); return; }
-  if (!apuesta || apuesta <= 0)  { toast('El monto de la apuesta debe ser mayor a 0.', 'var(--red)'); return; }
+  if (!confianza)                { toast('Elige tu confianza (1, 2 o 3).', 'var(--red)'); return; }
+  if (cuotaRival !== null && cuotaRival <= 1) { toast('La cuota del otro equipo debe ser mayor a 1.', 'var(--red)'); return; }
   if (mercado === 'OU' && (linea === null || !ou)) { toast('Completa línea y O/U.', 'var(--red)'); return; }
   if (mercado === 'ML' && !mlSel)                  { toast('Elige el ganador (Local o Visitante).', 'var(--red)'); return; }
 
@@ -2326,13 +2344,21 @@ function saveBet() {
     ((b.local === local && b.away === away) || (b.local === away && b.away === local)));
   if (dup) { toast(`Ya existe una apuesta ${mercado} para este partido — edítala en vez de crear otra.`, 'var(--red)'); return; }
 
+  const prev = editingBetId ? bets.find(b => b.id === editingBetId) : null;
   const bet = {
     id: editingBetId || (`${date}_${local}_${away}_${mercado}`.replace(/\s+/g, '_') + '_' + Date.now()),
-    date, local, away, mercado, cuota, apuesta,
+    date, local, away, mercado, cuota,
+    apuesta: STAKE_SIMPLE,          // monto simulado fijo
+    confianza,
+    cuotaRival: mercado === 'ML' ? cuotaRival : null,
     linea: mercado === 'OU' ? linea : null,
     ou: mercado === 'OU' ? ou : '',
     mlSel: mercado === 'ML' ? mlSel : '',
+    // Fecha/hora de registro: queda guardada para cruzarla más adelante con
+    // una base de cuotas de cierre (CLV) sin tener que buscarlas a mano.
+    createdAt: (prev && prev.createdAt) || new Date().toISOString(),
   };
+  bet.model = computeModelSnapshot(bet);
 
   const idx = bets.findIndex(b => b.id === editingBetId);
   if (editingBetId && idx !== -1) bets[idx] = bet;
@@ -3068,14 +3094,139 @@ function showTeamSelector() {
 //  partido correspondiente, si ya tiene marcador cargado.
 // ────────────────────────────────────────────────────
 
-function getBetGames() {
-  return bets.map(b => ({ ...b, ganada: resolveBetResult(b) }));
+// Monto simulado fijo (igual que en football-stats). No es plata real:
+// sirve para medir en pesos cómo te iría con un tamaño constante.
+const STAKE_SIMPLE = 5000;
+
+const fmtCOP = (x) => `${x >= 0 ? '+' : '−'}$${Math.round(Math.abs(x)).toLocaleString('es-CO')}`;
+
+// Mismos umbrales que las tarjetas de sugerencia de la pantalla Predicción
+// (calcBetSuggestions). Si cambias uno, cambia el otro.
+function modelUnitsML(edgePP) { return edgePP <= 0 ? 0 : edgePP < 3 ? 0.75 : edgePP < 7 ? 1.5 : 2.5; }
+function modelUnitsOU(absd)   { return absd < 3 ? 0 : absd < 7 ? 0.75 : absd < 11 ? 1.5 : 2.5; }
+
+// Corre fn() viendo solo los partidos ANTERIORES a la fecha de la apuesta,
+// para que el modelo no "vea" el resultado del propio partido.
+function withGamesBefore(date, fn) {
+  const all = games;
+  games = all.filter(g => g.date < date);
+  try { return fn(); } finally { games = all; }
 }
 
+// Qué habría hecho el modelo con este mismo partido y estas cuotas.
+function computeModelSnapshot(bet) {
+  try {
+    return withGamesBefore(bet.date, () => {
+      const warm = teamGamesPlayed(bet.local) >= WARMUP_MIN_GAMES && teamGamesPlayed(bet.away) >= WARMUP_MIN_GAMES;
+      const snap = { warm, pick: null, cuota: null, units: 0, plays: false, note: '' };
+      if (bet.mercado === 'ML') {
+        const { probL, probA } = predictWinProb(bet.local, bet.away, bet.date, games);
+        const pick = probL >= probA ? 'L' : 'A';
+        const pickProb = pick === 'L' ? probL : probA;
+        snap.pick = pick; snap.prob = +pickProb.toFixed(4);
+        const userSide = bet.mlSel;
+        const cuotaPick  = pick === userSide ? bet.cuota : bet.cuotaRival;
+        const cuotaOther = pick === userSide ? bet.cuotaRival : bet.cuota;
+        if (!cuotaPick) { snap.note = 'sin cuota del otro equipo'; return snap; }
+        let mkt;
+        if (cuotaOther) {
+          const a = 1 / cuotaPick, b = 1 / cuotaOther;
+          mkt = a / (a + b);
+        } else {
+          mkt = (1 / cuotaPick) / 1.045; // aproximación quitando un margen típico
+          snap.note = 'mercado aproximado';
+        }
+        snap.cuota = cuotaPick;
+        snap.edgePP = +((pickProb - mkt) * 100).toFixed(1);
+        snap.units = warm ? modelUnitsML(snap.edgePP) : 0;
+      } else if (bet.mercado === 'OU') {
+        const sc = computeProjectedScore(bet.local, bet.away);
+        const predTotal = sc.ptsA + sc.ptsB;
+        const diff = predTotal - bet.linea;
+        snap.pick = diff >= 0 ? 'O' : 'U';
+        snap.predTotal = predTotal;
+        snap.diff = +diff.toFixed(1);
+        snap.cuota = bet.cuota; // O/U casi siempre se paga igual a ambos lados
+        snap.units = warm ? modelUnitsOU(Math.abs(diff)) : 0;
+      }
+      if (!warm) snap.note = 'calentamiento';
+      snap.plays = snap.units > 0;
+      return snap;
+    });
+  } catch (e) {
+    console.error('Snapshot del modelo falló:', e);
+    return null;
+  }
+}
+
+// Apuestas viejas sin snapshot: se calcula al vuelo (no se guarda).
+function getModel(bet) { return bet.model || computeModelSnapshot(bet); }
+
+function resolvePick(bet, pick) {
+  const game = findGameForFixture(bet);
+  if (!game || !pick) return undefined;
+  if (bet.mercado === 'OU') {
+    const total = game.ptsL + game.ptsA;
+    if (total === bet.linea) return undefined;
+    return (pick === 'O' ? total > bet.linea : total < bet.linea) ? 'SI' : 'NO';
+  }
+  if (bet.mercado === 'ML') return pick === game.winner ? 'SI' : 'NO';
+  return undefined;
+}
+
+function pickLabel(bet, pick) {
+  if (!pick) return '-';
+  if (bet.mercado === 'ML') return pick === 'L' ? 'Local' : 'Visit.';
+  return `${pick} ${bet.linea}`;
+}
+
+function modelPickText(bet) {
+  const m = getModel(bet);
+  if (!m || !m.pick) return 'Modelo: —';
+  const same = bet.mercado === 'ML' ? m.pick === bet.mlSel : m.pick === bet.ou;
+  const lbl = pickLabel(bet, m.pick);
+  if (!m.plays) return `Modelo: ${lbl} (no juega${m.note ? ' · ' + m.note : ''})`;
+  return `Modelo: ${lbl} · ${m.units}u ${same ? '· coincide' : '· distinto'}`;
+}
+
+function getBetGames() {
+  return bets.map(b => {
+    const m = getModel(b);
+    const ganada = resolveBetResult(b);
+    const modelGanada = m && m.pick ? resolvePick(b, m.pick) : undefined;
+    const userPick = b.mercado === 'ML' ? b.mlSel : b.ou;
+    return { ...b, ganada, m, modelGanada, agree: m && m.pick ? m.pick === userPick : null };
+  });
+}
+
+// P&L con monto fijo (se ignora el monto viejo que tuvieran apuestas antiguas).
 function betPL(g) {
-  if (g.ganada === 'SI') return g.apuesta * (g.cuota - 1);
-  if (g.ganada === 'NO') return -g.apuesta;
-  return null; // pendiente: no se ha ingresado 'real' o 'linea' todavía
+  if (g.ganada === 'SI') return STAKE_SIMPLE * (g.cuota - 1);
+  if (g.ganada === 'NO') return -STAKE_SIMPLE;
+  return null;
+}
+function modelPL(g, useUnits) {
+  if (!g.m || !g.m.plays || !g.m.cuota) return null;
+  const stake = STAKE_SIMPLE * (useUnits ? g.m.units : 1);
+  if (g.modelGanada === 'SI') return stake * (g.m.cuota - 1);
+  if (g.modelGanada === 'NO') return -stake;
+  return null;
+}
+
+// Resumen de una lista de apuestas resueltas: acierto y acierto mínimo para no perder
+// (con monto fijo, quedas en cero si aciertas 1 / cuota promedio).
+function summarize(list, getCuota, isWin, getPL) {
+  const n = list.length;
+  const w = list.filter(isWin).length;
+  const pl = list.reduce((s, g) => s + getPL(g), 0);
+  const avgC = n ? list.reduce((s, g) => s + getCuota(g), 0) / n : 0;
+  return { n, w, pl, acc: n ? w / n * 100 : 0, be: avgC ? 100 / avgC : 0 };
+}
+
+function accLine(r) {
+  if (!r.n) return 'sin apuestas resueltas';
+  const ok = r.acc >= r.be;
+  return `<span style="color:${ok ? 'var(--win)' : 'var(--lose)'};">${r.acc.toFixed(1)}%</span> acierto · mínimo ${r.be.toFixed(1)}%`;
 }
 
 function renderApuestas() {
@@ -3088,33 +3239,35 @@ function renderApuestas() {
     if (filter === 'won') return g.ganada === 'SI';
     if (filter === 'lost') return g.ganada === 'NO';
     if (filter === 'pending') return g.ganada !== 'SI' && g.ganada !== 'NO';
+    if (filter === 'disagree') return g.agree === false;
     return true;
   });
   filteredBets.sort((a,b) => a.date < b.date ? 1 : -1);
 
   const resolved = allBets.filter(g => g.ganada === 'SI' || g.ganada === 'NO');
   const pending  = allBets.filter(g => g.ganada !== 'SI' && g.ganada !== 'NO');
-  const won      = resolved.filter(g => g.ganada === 'SI');
-  const totalApostado = resolved.reduce((s,g) => s + g.apuesta, 0);
-  const totalPL        = resolved.reduce((s,g) => s + betPL(g), 0);
-  const roi     = totalApostado ? (totalPL / totalApostado * 100) : 0;
-  const winRate = resolved.length ? (won.length / resolved.length * 100) : 0;
 
+  const you = summarize(resolved, g => g.cuota, g => g.ganada === 'SI', betPL);
+  const modelResolved = allBets.filter(g => g.m && g.m.plays && g.m.cuota && (g.modelGanada === 'SI' || g.modelGanada === 'NO'));
+  const mod  = summarize(modelResolved, g => g.m.cuota, g => g.modelGanada === 'SI', g => modelPL(g, false));
+  const modU = modelResolved.reduce((s, g) => s + modelPL(g, true), 0);
+
+  const plColor = (x) => x >= 0 ? 'var(--win)' : 'var(--lose)';
   document.getElementById('ap-metrics').innerHTML = `
     <div class="bt-metric">
-      <div class="bt-metric-label">P&amp;L Total</div>
-      <div class="bt-metric-value" style="color:${totalPL>=0?'var(--win)':'var(--lose)'};">${totalPL>=0?'+':''}${totalPL.toFixed(2)}</div>
-      <div class="bt-metric-sub">${resolved.length} apuestas resueltas</div>
+      <div class="bt-metric-label">Tú · P&amp;L</div>
+      <div class="bt-metric-value" style="color:${plColor(you.pl)};">${fmtCOP(you.pl)}</div>
+      <div class="bt-metric-sub">${you.n} resueltas · ${you.w}W – ${you.n - you.w}L</div>
     </div>
     <div class="bt-metric">
-      <div class="bt-metric-label">ROI Real</div>
-      <div class="bt-metric-value" style="color:${roi>=0?'var(--win)':'var(--lose)'};">${roi>=0?'+':''}${roi.toFixed(1)}%</div>
-      <div class="bt-metric-sub">sobre ${totalApostado.toFixed(2)} apostado</div>
+      <div class="bt-metric-label">Tú · Acierto</div>
+      <div class="bt-metric-value">${you.n ? you.acc.toFixed(1) + '%' : '—'}</div>
+      <div class="bt-metric-sub">${you.n ? `mínimo para no perder: ${you.be.toFixed(1)}%` : 'sin apuestas resueltas'}</div>
     </div>
     <div class="bt-metric">
-      <div class="bt-metric-label">Win Rate</div>
-      <div class="bt-metric-value">${winRate.toFixed(1)}%</div>
-      <div class="bt-metric-sub">${won.length}W – ${resolved.length-won.length}L</div>
+      <div class="bt-metric-label">Modelo · P&amp;L</div>
+      <div class="bt-metric-value" style="color:${plColor(mod.pl)};">${fmtCOP(mod.pl)}</div>
+      <div class="bt-metric-sub">${mod.n} jugadas · ${mod.n ? accLine(mod) : 'sin jugadas resueltas'}<br>con sus unidades: <span style="color:${plColor(modU)};">${fmtCOP(modU)}</span></div>
     </div>
     <div class="bt-metric">
       <div class="bt-metric-label">Pendientes</div>
@@ -3123,39 +3276,91 @@ function renderApuestas() {
     </div>
   `;
 
-  // Curva de P&L acumulado, en orden cronológico, solo apuestas resueltas
-  const sortedResolved = [...resolved].sort((a,b) => a.date < b.date ? -1 : 1);
-  let running = 0;
+  // ── Tú vs modelo y por confianza ──
+  const agreeL = resolved.filter(g => g.agree === true);
+  const disL   = resolved.filter(g => g.agree === false && (g.modelGanada === 'SI' || g.modelGanada === 'NO'));
+  const rAgree = summarize(agreeL, g => g.cuota, g => g.ganada === 'SI', betPL);
+  const rDisYou = summarize(disL, g => g.cuota, g => g.ganada === 'SI', betPL);
+  const disModelW = disL.filter(g => g.modelGanada === 'SI').length;
+
+  const confRows = [3, 2, 1, null].map(c => {
+    const list = resolved.filter(g => (g.confianza || null) === c);
+    if (c === null && !list.length) return '';
+    const r = summarize(list, g => g.cuota, g => g.ganada === 'SI', betPL);
+    return `<div class="bt-row" style="grid-template-columns:1.2fr 60px 1.8fr 100px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${c ? 'Confianza ' + c : 'Sin confianza (antiguas)'}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${r.n}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${accLine(r)}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${plColor(r.pl)};">${r.n ? fmtCOP(r.pl) : '—'}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ap-breakdown').innerHTML = `
+    <div class="bt-table-wrap">
+      <div class="bt-table-header" style="grid-template-columns:1.2fr 60px 1.8fr 100px;">
+        <div>Tú vs modelo</div><div>N</div><div>Acierto</div><div>Tu P&amp;L</div>
+      </div>
+      <div class="bt-row" style="grid-template-columns:1.2fr 60px 1.8fr 100px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">Elegiste lo mismo que el modelo</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${rAgree.n}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${accLine(rAgree)}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${plColor(rAgree.pl)};">${rAgree.n ? fmtCOP(rAgree.pl) : '—'}</div>
+      </div>
+      <div class="bt-row" style="grid-template-columns:1.2fr 60px 1.8fr 100px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">Fuiste contra el modelo</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${rDisYou.n}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${rDisYou.n ? `tú ${rDisYou.w} – modelo ${disModelW}` : 'sin casos todavía'}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${plColor(rDisYou.pl)};">${rDisYou.n ? fmtCOP(rDisYou.pl) : '—'}</div>
+      </div>
+    </div>
+    <div class="bt-table-wrap" style="margin-top:16px;">
+      <div class="bt-table-header" style="grid-template-columns:1.2fr 60px 1.8fr 100px;">
+        <div>Por confianza</div><div>N</div><div>Acierto</div><div>P&amp;L</div>
+      </div>
+      ${confRows}
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);margin-top:10px;">Con menos de ~200 apuestas estos números se mueven mucho por suerte: úsalos como tendencia, no como veredicto.</div>
+  `;
+
+  // ── Curvas de P&L acumulado: tú, modelo plano y modelo con unidades ──
+  const sortedResolved = [...resolved].sort((a,b) =>
+    a.date !== b.date ? (a.date < b.date ? -1 : 1) : ((a.createdAt || '') < (b.createdAt || '') ? -1 : 1));
+  let rYou = 0, rMod = 0, rModU = 0;
   const curveLabels = ['Inicio'];
-  const curveData = [0];
+  const dYou = [0], dMod = [0], dModU = [0];
   sortedResolved.forEach(g => {
-    running += betPL(g);
+    rYou += betPL(g);
+    rMod += modelPL(g, false) || 0;
+    rModU += modelPL(g, true) || 0;
     curveLabels.push(fmtDate(g.date));
-    curveData.push(+running.toFixed(2));
+    dYou.push(Math.round(rYou)); dMod.push(Math.round(rMod)); dModU.push(Math.round(rModU));
   });
 
   const ctx = document.getElementById('ap-bankroll-chart').getContext('2d');
   if (apBankrollChart) apBankrollChart.destroy();
   apBankrollChart = new Chart(ctx, {
     type: 'line',
-    data: { labels: curveLabels, datasets: [{
-      label: 'P&L acumulado',
-      data: curveData,
-      borderColor: 'var(--violet)',
-      backgroundColor: 'rgba(82,0,255,0.08)',
-      fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2,
-    }]},
+    data: { labels: curveLabels, datasets: [
+      { label: 'Tú', data: dYou, borderColor: '#5200ff', backgroundColor: 'rgba(82,0,255,0.08)', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+      { label: 'Modelo ($5.000 fijo)', data: dMod, borderColor: '#e67e22', fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+      { label: 'Modelo (con unidades)', data: dModU, borderColor: '#e67e22', borderDash: [5, 4], fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5 },
+    ]},
     options: {
       responsive: true,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: true, labels: { boxWidth: 12, font: { size: 10 } } },
+        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${fmtCOP(c.parsed.y)}` } },
+      },
       scales: {
-        y: { grid: { color: 'var(--surface-high)' } },
+        y: { grid: { color: 'rgba(128,128,128,0.15)' }, ticks: { callback: (val) => '$' + Number(val).toLocaleString('es-CO') } },
         x: { ticks: { maxTicksLimit: 10 }, grid: { display: false } }
       }
     }
   });
 
-  // Tabla
+  // ── Tabla ──
+  const cols = '74px 1fr 1fr 80px 52px 44px 1.1fr 70px 90px';
+  document.getElementById('ap-thead').style.gridTemplateColumns = cols;
   const tbody = document.getElementById('ap-tbody');
   const empty = document.getElementById('ap-empty');
   if (!filteredBets.length) {
@@ -3163,19 +3368,28 @@ function renderApuestas() {
     empty.style.display = '';
   } else {
     empty.style.display = 'none';
+    const mono = "font-family:'JetBrains Mono',monospace;font-size:11px;";
     tbody.innerHTML = filteredBets.map(g => {
       const pl = betPL(g);
       const resultBadge = g.ganada === 'SI' ? '<span class="bt-badge W">✔</span>'
                         : g.ganada === 'NO' ? '<span class="bt-badge L">✘</span>'
                         : '<span style="color:var(--outline);font-size:10px;">Pendiente</span>';
-      const plText = pl === null ? '—' : (pl >= 0 ? `<span class="bt-pl-pos">+${pl.toFixed(2)}</span>` : `<span class="bt-pl-neg">${pl.toFixed(2)}</span>`);
-      return `<div class="bt-row ${g.ganada==='SI'?'correct':g.ganada==='NO'?'wrong':''}" style="grid-template-columns:80px 1fr 1fr 90px 60px 70px 90px 80px;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);">${fmtDate(g.date)}</div>
+      const plText = pl === null ? '—' : (pl >= 0 ? `<span class="bt-pl-pos">${fmtCOP(pl)}</span>` : `<span class="bt-pl-neg">${fmtCOP(pl)}</span>`);
+      let modelCell = '<span style="color:var(--outline);">—</span>';
+      if (g.m && g.m.pick) {
+        const mark = g.modelGanada === 'SI' ? ' ✔' : g.modelGanada === 'NO' ? ' ✘' : '';
+        const tag = g.m.plays ? `${g.m.units}u` : 'no juega';
+        const col = g.agree ? 'var(--outline)' : '#e67e22';
+        modelCell = `<span style="color:${col};" title="${g.m.note || ''}">${pickLabel(g, g.m.pick)} · ${tag}${mark}</span>`;
+      }
+      return `<div class="bt-row ${g.ganada==='SI'?'correct':g.ganada==='NO'?'wrong':''}" style="grid-template-columns:${cols};">
+        <div style="${mono}color:var(--outline);">${fmtDate(g.date)}</div>
         <div class="bt-team">${g.local}</div>
         <div class="bt-team">${g.away}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${mercadoLabel(g)}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.cuota??'-'}</div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;">${g.apuesta??'-'}</div>
+        <div style="${mono}">${mercadoLabel(g)}</div>
+        <div style="${mono}">${g.cuota??'-'}</div>
+        <div style="${mono}">${g.confianza || '-'}</div>
+        <div style="${mono}">${modelCell}</div>
         <div>${resultBadge}</div>
         <div>${plText}</div>
       </div>`;
