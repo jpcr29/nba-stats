@@ -3565,7 +3565,7 @@ function computeRecentForm(team, n = 10, list = games) {
   const modifier = Math.max(-60, Math.min(60, avgMargin * 5.0));
   const winsRecent = results.filter(r => r === 'W').length;
 
-  return { modifier, last: results, winsRecent, totalRecent: teamGames.length };
+  return { modifier, last: results, winsRecent, totalRecent: teamGames.length, avgMargin };
 }
 
 // ─── COMPONENTE 3: FACTOR LOCAL ───
@@ -3786,7 +3786,10 @@ function runPrediction() {
     },
     {
       name: 'Forma Reciente',
-      desc: `${local.split(' ').pop()} ${formL.winsRecent}W–${formL.totalRecent - formL.winsRecent}L (last ${formL.totalRecent}) · ${away.split(' ').pop()} ${formA.winsRecent}W–${formA.totalRecent - formA.winsRecent}L (last ${formA.totalRecent})`,
+      desc: (() => {
+        const mg = (f) => f.avgMargin == null ? '' : ` · margen ${f.avgMargin >= 0 ? '+' : ''}${f.avgMargin.toFixed(1)}`;
+        return `${local.split(' ').pop()} ${formL.winsRecent}W–${formL.totalRecent - formL.winsRecent}L${mg(formL)} · ${away.split(' ').pop()} ${formA.winsRecent}W–${formA.totalRecent - formA.winsRecent}L${mg(formA)} (últimos ${Math.max(formL.totalRecent, formA.totalRecent)}, pesan más los recientes)`;
+      })(),
       bar: Math.abs(formL.modifier - formA.modifier) / 120,
       color: formL.modifier >= formA.modifier ? colorL : colorA,
       label: formL.modifier >= 0 ? `+${Math.round(formL.modifier)} Elo` : `${Math.round(formL.modifier)} Elo`,
