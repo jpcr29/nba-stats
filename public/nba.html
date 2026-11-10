@@ -1599,6 +1599,11 @@
             </div>
             <!-- Sugerencias calculadas -->
             <div class="bet-suggest-grid" id="bet-suggest-grid"></div>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:14px;">
+              <button class="btn btn-secondary" id="model-pick-btn" style="display:none;" onclick="commitModelPick()">📌 Registrar pick del modelo</button>
+              <div id="model-pick-status" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);flex:1;min-width:200px;"></div>
+            </div>
+            <div id="pred-day-summary" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-top:8px;"></div>
           </div>
         </div>
       </div>
@@ -1659,6 +1664,13 @@
     <div class="bt-curve-wrap"><canvas id="ap-bankroll-chart" height="90"></canvas></div>
     <div class="bt-section-title">¿Dónde aciertas más?</div>
     <div id="ap-breakdown"></div>
+    <div class="bt-section-title">Modelo · todos los partidos</div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:12px;">
+      <button class="btn btn-primary" id="ap-auto-btn" onclick="registerTodayModelPicks()">🤖 Registrar picks del modelo de hoy</button>
+      <span id="ap-auto-status" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--outline);"></span>
+    </div>
+    <div id="ap-day-summary" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;margin-bottom:12px;"></div>
+    <div id="ap-model-all"></div>
     <div class="bt-section-title">Historial de Apuestas</div>
     <div class="bt-filter">
       <input class="search-input bt-search" type="text" placeholder="Buscar equipo..." id="ap-search" oninput="renderApuestas()">
@@ -1874,6 +1886,7 @@ async function loadGamesFromFirestore(uid) {
            : Array.isArray(snap.data().pendingBets) ? snap.data().pendingBets // migración desde el esquema anterior
            : [];
       cupFinal = snap.data().cupFinal || null; // Final de la NBA Cup: aparte, no cuenta para el modelo
+      modelPicks = Array.isArray(snap.data().modelPicks) ? snap.data().modelPicks : [];
     } else {
       games = JSON.parse(JSON.stringify(SEED_DATA));
       bets = [];
@@ -1960,11 +1973,14 @@ let teamFilter = 'all';
 let teamChart = null;
 let apBankrollChart = null;
 let bets = [];
+// Picks del modelo de TODOS los partidos que abres en Predicción (apueste o no).
+// Uno por partido; se actualiza si cambias cuotas/línea, hasta que el partido tenga resultado.
+let modelPicks = [];
 let editingBetId = null; // id de la apuesta que se está editando en el formulario, o null si es nueva
 
 function save() {
   if (!currentUid) return;
-  db.collection('nba_data').doc(currentUid).set({ games, bets, cupFinal }).catch(e => console.error('Error guardando en Firestore:', e));
+  db.collection('nba_data').doc(currentUid).set({ games, bets, cupFinal, modelPicks }).catch(e => console.error('Error guardando en Firestore:', e));
 }
 
 function showSection(id) {
@@ -3348,6 +3364,8 @@ function renderApuestas() {
     <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--outline);margin-top:10px;">Con menos de ~200 apuestas estos números se mueven mucho por suerte: úsalos como tendencia, no como veredicto.</div>
   `;
 
+  renderModelAllGames();
+
   // ── Curvas de P&L acumulado: tú, modelo plano y modelo con unidades ──
   const sortedResolved = [...resolved].sort((a,b) =>
     a.date !== b.date ? (a.date < b.date ? -1 : 1) : ((a.createdAt || '') < (b.createdAt || '') ? -1 : 1));
@@ -4008,6 +4026,303 @@ function applyOddsFromCache(events, local, away) {
 }
 
 // ────────────────────────────────────────────────────
+//  REGISTRO DEL MODELO EN TODOS LOS PARTIDOS
+// ────────────────────────────────────────────────────
+function setModelPickStatus(txt) {
+  const el = document.getElementById('model-pick-status');
+  if (el) el.textContent = txt;
+}
+
+// Qué haría el modelo con estas probabilidades y cuotas (sin escalar por perfil)
+function modelPickParts({ probL, probA, predTotal, mlL, mlA, ouLn, ouOd }) {
+  const ml = (mlL && mlA) ? (() => {
+    const a = 1 / mlL, b = 1 / mlA;
+    const pick = probL >= probA ? 'L' : 'A';
+    const prob = pick === 'L' ? probL : probA;
+    const mkt  = pick === 'L' ? a / (a + b) : b / (a + b);
+    const edgePP = +((prob - mkt) * 100).toFixed(1);
+    return { pick, prob: +prob.toFixed(4), mkt: +mkt.toFixed(4), edgePP,
+             cuota: pick === 'L' ? mlL : mlA, cuotaL: mlL, cuotaA: mlA, units: modelUnitsML(edgePP) };
+  })() : null;
+  const ou = (ouLn && predTotal) ? (() => {
+    const diff = +(predTotal - ouLn).toFixed(1);
+    return { pick: diff >= 0 ? 'O' : 'U', predTotal, line: ouLn, diff, cuota: ouOd || 1.909, units: modelUnitsOU(Math.abs(diff)) };
+  })() : null;
+  return { ml, ou };
+}
+
+// Cuotas de un evento de the-odds-api (primer bookmaker con datos, como en Predicción)
+function extractEventOdds(ev) {
+  let mlHome = null, mlAway = null, ouLine = null, ouOdds = null;
+  const homeLast = (ev.home_team || '').split(' ').pop().toLowerCase();
+  for (const book of ev.bookmakers || []) {
+    for (const market of book.markets || []) {
+      if (market.key === 'h2h' && !mlHome) {
+        for (const o of market.outcomes) {
+          if (o.name.toLowerCase().includes(homeLast)) mlHome = o.price; else mlAway = o.price;
+        }
+      }
+      if (market.key === 'totals' && !ouLine) {
+        const over = market.outcomes.find(o => o.name === 'Over');
+        if (over) { ouLine = over.point; ouOdds = over.price; }
+      }
+    }
+    if (mlHome && mlAway && ouLine) break;
+  }
+  return { mlHome, mlAway, ouLine, ouOdds };
+}
+
+function findOddsEvent(events, local, away) {
+  const lLast = local.split(' ').pop().toLowerCase(), aLast = away.split(' ').pop().toLowerCase();
+  return events.find(ev => {
+    const h = (ev.home_team || '').toLowerCase(), a = (ev.away_team || '').toLowerCase();
+    return (h.includes(lLast) || h.includes(local.toLowerCase())) && (a.includes(aLast) || a.includes(away.toLowerCase()));
+  });
+}
+
+async function getOddsEvents() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(ODDS_CACHE_KEY) || 'null');
+    if (cached && Date.now() - cached.ts < ODDS_CACHE_TTL) return cached.data;
+  } catch (e) {}
+  const url = `https://api.the-odds-api.com/v4/sports/basketball_nba/odds/?apiKey=${ODDS_API_KEY}&regions=us&markets=h2h,totals&oddsFormat=decimal`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const events = await resp.json();
+  try { localStorage.setItem(ODDS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: events })); } catch (e) {}
+  return events;
+}
+
+// Botón: el modelo registra sus picks de todos los partidos de hoy, "a ciegas".
+// No toca los partidos que ya tengan pick (por ejemplo, uno que corregiste a mano).
+async function registerTodayModelPicks() {
+  const status = document.getElementById('ap-auto-status');
+  const btn = document.getElementById('ap-auto-btn');
+  const today = new Date().toLocaleDateString('en-CA');
+  const fixtures = SCHEDULE.filter(f => f.date === today && !findGameForFixture(f));
+  if (!fixtures.length) { status.textContent = 'No hay partidos de hoy pendientes en el calendario.'; return; }
+
+  btn.disabled = true; status.textContent = 'Buscando cuotas...';
+  let events;
+  try { events = await getOddsEvents(); }
+  catch (e) { status.textContent = 'No se pudieron traer las cuotas (API). Intenta más tarde.'; btn.disabled = false; return; }
+
+  const c = { nuevos: 0, yaTenia: 0, sinCuotas: 0, empezados: 0, calentamiento: 0 };
+  const now = Date.now();
+  fixtures.forEach(f => {
+    const id = `${f.date}_${f.local}_${f.away}`.replace(/\s+/g, '_');
+    if (modelPicks.some(m => m.id === id)) { c.yaTenia++; return; }
+    const ev = findOddsEvent(events, f.local, f.away);
+    if (!ev) { c.sinCuotas++; return; }
+    if (ev.commence_time && new Date(ev.commence_time).getTime() <= now) { c.empezados++; return; }
+    if (teamGamesPlayed(f.local) < WARMUP_MIN_GAMES || teamGamesPlayed(f.away) < WARMUP_MIN_GAMES) { c.calentamiento++; return; }
+    const o = extractEventOdds(ev);
+    if (!(o.mlHome && o.mlAway) && !o.ouLine) { c.sinCuotas++; return; }
+    const { probL, probA } = predictWinProb(f.local, f.away, f.date);
+    const sc = computeProjectedScore(f.local, f.away);
+    const parts = modelPickParts({ probL, probA, predTotal: sc.ptsA + sc.ptsB,
+      mlL: o.mlHome, mlA: o.mlAway, ouLn: o.ouLine, ouOd: o.ouOdds });
+    const ts = new Date().toISOString();
+    modelPicks.push({ id, date: f.date, local: f.local, away: f.away, ...parts, source: 'auto', firstAt: ts, updatedAt: ts });
+    c.nuevos++;
+  });
+  if (c.nuevos) save();
+  btn.disabled = false;
+  const extra = [
+    c.yaTenia && `${c.yaTenia} ya tenían pick`,
+    c.sinCuotas && `${c.sinCuotas} sin cuotas`,
+    c.empezados && `${c.empezados} ya empezaron`,
+    c.calentamiento && `${c.calentamiento} en calentamiento`,
+  ].filter(Boolean).join(' · ');
+  status.textContent = `✔ ${c.nuevos} picks registrados${extra ? ' · ' + extra : ''}`;
+  toast(`Modelo: ${c.nuevos} picks registrados`);
+  renderApuestas();
+}
+
+function deleteModelPick(id) {
+  modelPicks = modelPicks.filter(m => m.id !== id);
+  save();
+  toast('Pick del modelo eliminado', 'var(--red)');
+  renderApuestas();
+}
+
+let lastPickInputs = null; // cuotas/probabilidades del partido abierto en Predicción
+
+// Solo revisa el estado (NO guarda). Se llama cada vez que cambian las cuotas.
+function recordModelPick(inputs) {
+  lastPickInputs = inputs;
+  updateModelPickUI();
+}
+
+// Devuelve { ok, msg, id, ctx } según si el partido abierto se puede registrar
+function modelPickCheck() {
+  const ctx = currentOuCtx;
+  if (!ctx || !ctx.refDate) return { ok: false, msg: 'Este cruce no tiene fecha en el calendario: no se puede registrar el pick del modelo.' };
+  const { local, away, refDate } = ctx;
+  const id = `${refDate}_${local}_${away}`.replace(/\s+/g, '_');
+  if (findGameForFixture({ date: refDate, local, away })) return { ok: false, id, msg: 'Partido ya jugado: el registro del modelo está cerrado.' };
+  if (refDate < new Date().toLocaleDateString('en-CA')) return { ok: false, id, msg: 'Partido de una fecha pasada sin resultado: no se registra.' };
+  return { ok: true, id, ctx };
+}
+
+function updateModelPickUI() {
+  renderTodaySummary();
+  const btn = document.getElementById('model-pick-btn');
+  if (!btn) return;
+  const chk = modelPickCheck();
+  const prev = chk.id ? modelPicks.find(m => m.id === chk.id) : null;
+  const hora = (iso) => new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  if (!chk.ok) {
+    btn.style.display = 'none';
+    setModelPickStatus((prev ? `📌 Registrado (${fmtDate(prev.date)} ${hora(prev.updatedAt)}) · ` : '') + chk.msg);
+    return;
+  }
+  btn.style.display = '';
+  btn.textContent = prev ? '🔄 Actualizar pick del modelo' : '📌 Registrar pick del modelo';
+  setModelPickStatus(prev
+    ? `Registrado a las ${hora(prev.updatedAt)}${prev.source === 'auto' ? ' (con el botón del día)' : ''} · si cambiaste cuotas o línea, presiona actualizar.`
+    : 'Sin registrar. Revisa que las cuotas y la línea sean las de tu casa y presiona registrar.');
+}
+
+// Resumen del día: cuántos partidos de hoy ya tienen pick del modelo
+function todayPicksSummary() {
+  const today = new Date().toLocaleDateString('en-CA');
+  const fx = SCHEDULE.filter(f => f.date === today);
+  if (!fx.length) return '';
+  const pid = (f) => `${f.date}_${f.local}_${f.away}`.replace(/\s+/g, '_');
+  const withPick = fx.filter(f => modelPicks.some(m => m.id === pid(f))).length;
+  const missing = fx.filter(f => !modelPicks.some(m => m.id === pid(f)) && !findGameForFixture(f)).length;
+  if (!missing) return `✔ Hoy: ${fx.length} partidos · ${withPick} con pick del modelo · día completo`;
+  return `⚠ Hoy: ${fx.length} partidos · ${withPick} con pick del modelo · faltan ${missing}`;
+}
+
+function renderTodaySummary() {
+  const txt = todayPicksSummary();
+  ['pred-day-summary', 'ap-day-summary'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = txt;
+    el.style.color = txt.startsWith('⚠') ? '#e67e22' : 'var(--outline)';
+  });
+}
+
+// Botón de Predicción: guarda lo que haría el modelo con las cuotas que están en pantalla
+function commitModelPick() {
+  const chk = modelPickCheck();
+  if (!chk.ok || !lastPickInputs) { updateModelPickUI(); return; }
+  const { local, away, refDate } = chk.ctx;
+  const { ml, ou } = modelPickParts(lastPickInputs);
+  if (!ml && !ou) { toast('Ingresa las cuotas ML o la línea de totales.', 'var(--red)'); return; }
+  const now = new Date().toISOString();
+  const prev = modelPicks.find(m => m.id === chk.id);
+  const rec = { id: chk.id, date: refDate, local, away, ml, ou, source: 'manual', firstAt: prev ? prev.firstAt : now, updatedAt: now };
+  modelPicks = modelPicks.filter(m => m.id !== chk.id).concat(rec);
+  save();
+  toast(prev ? 'Pick del modelo actualizado' : 'Pick del modelo registrado');
+  renderTodaySummary();
+  updateModelPickUI();
+}
+
+// Resuelve un pick del modelo contra el resultado ('SI' | 'NO' | undefined)
+function resolveModelPick(rec, market) {
+  const game = findGameForFixture(rec);
+  const m = rec[market];
+  if (!game || !m) return undefined;
+  if (market === 'ml') {
+    const winnerTeam = game.winner === 'L' ? game.local : game.away;
+    const pickTeam = m.pick === 'L' ? rec.local : rec.away;
+    return winnerTeam === pickTeam ? 'SI' : 'NO';
+  }
+  const total = game.ptsL + game.ptsA;
+  if (total === m.line) return undefined;
+  return (m.pick === 'O' ? total > m.line : total < m.line) ? 'SI' : 'NO';
+}
+
+function renderModelAllGames() {
+  renderTodaySummary();
+  const el = document.getElementById('ap-model-all');
+  if (!el) return;
+  const mono = "font-family:'JetBrains Mono',monospace;font-size:11px;";
+  const plColor = (x) => x >= 0 ? 'var(--win)' : 'var(--lose)';
+  const pendingN = modelPicks.filter(r => !findGameForFixture(r)).length;
+
+  const table = (market, title) => {
+    const items = modelPicks
+      .filter(r => r[market])
+      .map(r => ({ r, m: r[market], res: resolveModelPick(r, market) }))
+      .filter(x => x.res === 'SI' || x.res === 'NO');
+    const groups = [
+      ['Apuesta 0.75u', x => x.m.units === 0.75],
+      ['Apuesta 1.5u',  x => x.m.units === 1.5],
+      ['Brecha muy grande 2.5u', x => x.m.units === 2.5],
+      ['<b>Total cuando apuesta</b>', x => x.m.units > 0],
+      ['No juega <small>(si hubiera jugado su lado)</small>', x => x.m.units === 0],
+    ];
+    const cols = '1.5fr 50px 1.8fr 100px 100px';
+    const rows = groups.map(([lbl, f], i) => {
+      const list = items.filter(f);
+      const r = summarize(list, x => x.m.cuota, x => x.res === 'SI',
+        x => x.res === 'SI' ? STAKE_SIMPLE * (x.m.cuota - 1) : -STAKE_SIMPLE);
+      const plU = list.reduce((a, x) => a + (x.res === 'SI' ? STAKE_SIMPLE * x.m.units * (x.m.cuota - 1) : -STAKE_SIMPLE * x.m.units), 0);
+      const isNo = i === 4;
+      return `<div class="bt-row" style="grid-template-columns:${cols};${i === 3 ? 'border-top:1px solid var(--hairline);' : ''}">
+        <div style="${mono}">${lbl}</div>
+        <div style="${mono}">${r.n}</div>
+        <div style="${mono}">${accLine(r)}</div>
+        <div style="${mono}color:${plColor(r.pl)};">${r.n ? fmtCOP(r.pl) : '—'}</div>
+        <div style="${mono}color:${isNo || !r.n ? 'var(--outline)' : plColor(plU)};">${isNo || !r.n ? '—' : fmtCOP(plU)}</div>
+      </div>`;
+    }).join('');
+    return `<div class="bt-table-wrap" style="margin-top:12px;">
+      <div class="bt-table-header" style="grid-template-columns:${cols};">
+        <div>${title}</div><div>N</div><div>Acierto</div><div>$5.000 fijo</div><div>Con unidades</div>
+      </div>${rows}</div>`;
+  };
+
+  el.innerHTML = `
+    <div style="${mono}color:var(--outline);">Se registra con el botón de Predicción (con tus cuotas) o con el botón del día. ${modelPicks.length} partidos registrados · ${pendingN} pendientes de resultado.</div>
+    ${table('ml', 'Moneyline')}
+    ${table('ou', 'Over/Under')}
+    <div style="${mono}font-size:10px;color:var(--outline);margin-top:10px;">Si "No juega" acierta igual o más que "Cuando apuesta", el filtro del modelo no está eligiendo bien. Si las filas de más unidades aciertan más, sus unidades tienen sentido.</div>
+    ${picksList()}`;
+}
+
+function picksList() {
+  if (!modelPicks.length) return '';
+  const mono = "font-family:'JetBrains Mono',monospace;font-size:11px;";
+  const cols = '74px 1.4fr 1.2fr 1.2fr 56px 36px';
+  const mark = (r) => r === 'SI' ? ' ✔' : r === 'NO' ? ' ✘' : '';
+  const mlTxt = (r) => {
+    if (!r.ml) return '<span style="color:var(--outline);">—</span>';
+    const side = (r.ml.pick === 'L' ? r.local : r.away).split(' ').pop();
+    const tag = r.ml.units ? `${r.ml.units}u` : 'no juega';
+    return `<span style="color:${r.ml.units ? 'inherit' : 'var(--outline)'};">${side} ${r.ml.cuota} · ${tag}${mark(resolveModelPick(r, 'ml'))}</span>`;
+  };
+  const ouTxt = (r) => {
+    if (!r.ou) return '<span style="color:var(--outline);">—</span>';
+    const tag = r.ou.units ? `${r.ou.units}u` : 'no juega';
+    return `<span style="color:${r.ou.units ? 'inherit' : 'var(--outline)'};">${r.ou.pick} ${r.ou.line} · ${tag}${mark(resolveModelPick(r, 'ou'))}</span>`;
+  };
+  const rows = [...modelPicks].sort((a, b) => a.date < b.date ? 1 : -1).map(r => `
+    <div class="bt-row" style="grid-template-columns:${cols};">
+      <div style="${mono}color:var(--outline);">${fmtDate(r.date)}</div>
+      <div style="${mono}">${r.local.split(' ').pop()} vs ${r.away.split(' ').pop()}</div>
+      <div style="${mono}">${mlTxt(r)}</div>
+      <div style="${mono}">${ouTxt(r)}</div>
+      <div style="${mono}color:var(--outline);">${r.source === 'auto' ? 'del día' : 'manual'}</div>
+      <div><button class="btn btn-secondary" style="height:26px;padding:0 8px;font-size:11px;" onclick="deleteModelPick('${r.id}')" title="Borrar">🗑</button></div>
+    </div>`).join('');
+  return `<details style="margin-top:14px;">
+    <summary style="${mono}cursor:pointer;color:var(--outline);">Ver picks registrados (${modelPicks.length}) · aquí puedes borrar los de prueba</summary>
+    <div class="bt-table-wrap" style="margin-top:10px;">
+      <div class="bt-table-header" style="grid-template-columns:${cols};">
+        <div>Fecha</div><div>Partido</div><div>ML</div><div>O/U</div><div>Origen</div><div></div>
+      </div>${rows}
+    </div>
+  </details>`;
+}
+
+// ────────────────────────────────────────────────────
 //  CONTEXTO DEL GANADOR (solo datos observados)
 //  Lo que el modelo no ve: contra quién se lograron los resultados,
 //  cómo le va en partidos cerrados y en back-to-back.
@@ -4083,6 +4398,7 @@ function renderWinnerContext() {
       ${header(local, colorL)}
       ${header(away, colorA)}
       ${row('Temporada', () => true, () => true, true)}
+      ${row(`Condición hoy<br><small style="font-size:9px;">${shortL} en casa · ${shortA} de visita</small>`, g => g.local === local, g => g.away === away, true)}
       ${row('Vs récord ganador', g => strong(local, g), g => strong(away, g), true, rivalStrongL, rivalStrongA)}
       ${row('Vs récord perdedor', g => !strong(local, g), g => !strong(away, g), true, !rivalStrongL, !rivalStrongA)}
       ${row('Partidos cerrados (≤5)', close, close, false)}
@@ -4276,6 +4592,8 @@ function calcBetSuggestions() {
 
   // ── Calentamiento del modelo: igual que en el backtest (warmup = 10 PJ/equipo) ──
   if (currentPredWarmup && !currentPredWarmup.ready) {
+    setModelPickStatus('Calentamiento: el modelo todavía no registra picks para este partido.');
+    { const b = document.getElementById('model-pick-btn'); if (b) b.style.display = 'none'; }
     const faltanL = Math.max(0, WARMUP_MIN_GAMES - currentPredWarmup.gpLocal);
     const faltanA = Math.max(0, WARMUP_MIN_GAMES - currentPredWarmup.gpAway);
     grid.innerHTML = `
@@ -4360,6 +4678,8 @@ function calcBetSuggestions() {
     cards.push({ type:'Over/Under', cls:'no-edge', pick:'—',
       detail:'Ingresa la línea de totales', size:'—', reason:'Línea requerida', sizeColor:'var(--outline)' });
   }
+
+  recordModelPick({ probL, probA, predTotal, mlL, mlA, ouLn, ouOd });
 
   grid.innerHTML = cards.map(c => `
     <div class="bet-suggest-card ${c.cls}">
