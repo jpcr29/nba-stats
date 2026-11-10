@@ -3144,7 +3144,10 @@ const fmtCOP = (x) => `${x >= 0 ? '+' : '−'}$${Math.round(Math.abs(x)).toLocal
 
 // Mismos umbrales que las tarjetas de sugerencia de la pantalla Predicción
 // (calcBetSuggestions). Si cambias uno, cambia el otro.
-function modelUnitsML(edgePP) { return edgePP <= 0 ? 0 : edgePP < 3 ? 0.75 : edgePP < 7 ? 1.5 : 2.5; }
+// ML: decide por VALOR ESPERADO con la cuota que cobras (prob × cuota − 1), en %.
+// Así el margen de la casa cuenta: si el modelo no supera lo que exige la cuota, no juega.
+function modelUnitsML(evPct) { return evPct <= 0 ? 0 : evPct < 4 ? 0.75 : evPct < 8 ? 1.5 : 2.5; }
+const mlValuePct = (prob, cuota) => +((prob * cuota - 1) * 100).toFixed(1);
 function modelUnitsOU(absd)   { return absd < 3 ? 0 : absd < 7 ? 0.75 : absd < 11 ? 1.5 : 2.5; }
 
 // Corre fn() viendo solo los partidos ANTERIORES a la fecha de la apuesta,
@@ -3160,7 +3163,7 @@ function computeModelSnapshot(bet) {
   try {
     return withGamesBefore(bet.date, () => {
       const warm = teamGamesPlayed(bet.local) >= WARMUP_MIN_GAMES && teamGamesPlayed(bet.away) >= WARMUP_MIN_GAMES;
-      const snap = { warm, pick: null, cuota: null, units: 0, plays: false, note: '' };
+      const snap = { v: 2, warm, pick: null, cuota: null, units: 0, plays: false, note: '' };
       if (bet.mercado === 'ML') {
         const { probL, probA } = predictWinProb(bet.local, bet.away, bet.date, games);
         const pick = probL >= probA ? 'L' : 'A';
@@ -3180,7 +3183,8 @@ function computeModelSnapshot(bet) {
         }
         snap.cuota = cuotaPick;
         snap.edgePP = +((pickProb - mkt) * 100).toFixed(1);
-        snap.units = warm ? modelUnitsML(snap.edgePP) : 0;
+        snap.evPct = mlValuePct(pickProb, cuotaPick);
+        snap.units = warm ? modelUnitsML(snap.evPct) : 0;
       } else if (bet.mercado === 'OU') {
         const sc = computeProjectedScore(bet.local, bet.away);
         const predTotal = sc.ptsA + sc.ptsB;
@@ -3202,7 +3206,7 @@ function computeModelSnapshot(bet) {
 }
 
 // Apuestas viejas sin snapshot: se calcula al vuelo (no se guarda).
-function getModel(bet) { return bet.model || computeModelSnapshot(bet); }
+function getModel(bet) { return (bet.model && bet.model.v === 2) ? bet.model : computeModelSnapshot(bet); }
 
 function resolvePick(bet, pick) {
   const game = findGameForFixture(bet);
@@ -4041,8 +4045,10 @@ function modelPickParts({ probL, probA, predTotal, mlL, mlA, ouLn, ouOd }) {
     const prob = pick === 'L' ? probL : probA;
     const mkt  = pick === 'L' ? a / (a + b) : b / (a + b);
     const edgePP = +((prob - mkt) * 100).toFixed(1);
-    return { pick, prob: +prob.toFixed(4), mkt: +mkt.toFixed(4), edgePP,
-             cuota: pick === 'L' ? mlL : mlA, cuotaL: mlL, cuotaA: mlA, units: modelUnitsML(edgePP) };
+    const cuota = pick === 'L' ? mlL : mlA;
+    const evPct = mlValuePct(prob, cuota);
+    return { pick, prob: +prob.toFixed(4), mkt: +mkt.toFixed(4), edgePP, evPct,
+             cuota, cuotaL: mlL, cuotaA: mlA, units: modelUnitsML(evPct), rule: 'valor' };
   })() : null;
   const ou = (ouLn && predTotal) ? (() => {
     const diff = +(predTotal - ouLn).toFixed(1);
@@ -4634,21 +4640,24 @@ function calcBetSuggestions() {
     const mktProb    = modelLocal ? mktProbL : mktProbA;
     const pickDec    = modelLocal ? mlL : mlA;
     const pickName   = modelLocal ? currentPredLocal : currentPredAway;
-    const edgePP     = (pickProb - mktProb) * 100;
-    const valueLine  = `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%  ·  ${edgePP >= 0 ? '+' : ''}${edgePP.toFixed(0)}pp  ·  ${pickDec.toFixed(2)}`;
+    const needPct    = 100 / pickDec;                 // lo que hay que acertar para no perder
+    const evPct      = mlValuePct(pickProb, pickDec);  // valor esperado con la cuota real
+    const units      = modelUnitsML(evPct);
+    const valueLine  = `Modelo ${(pickProb*100).toFixed(1)}%  ·  Mercado ${(mktProb*100).toFixed(1)}%  ·  Necesitas ${needPct.toFixed(1)}% (cuota ${pickDec.toFixed(2)})  ·  Valor ${evPct >= 0 ? '+' : ''}${evPct.toFixed(1)}%`;
+    const short      = pickName.split(' ').pop();
 
-    if (edgePP <= 0) {
-      cards.push({ type:'Moneyline', cls:'no-edge', pick: pickName.split(' ').pop(),
-        detail: valueLine, size:'—', reason:'El mercado le da igual o más probabilidad que el modelo — sin discrepancia a favor', sizeColor:'var(--outline)' });
-    } else if (edgePP < 3) {
-      cards.push({ type:'Moneyline', cls:'apostable', pick: pickName.split(' ').pop(),
-        detail: valueLine, size: sizeText(0.75), reason:'Discrepancia chica · tamaño prudente si decides jugarlo', sizeColor:'var(--win)' });
-    } else if (edgePP < 7) {
-      cards.push({ type:'Moneyline', cls:'apostable', pick: pickName.split(' ').pop(),
-        detail: valueLine, size: sizeText(1.5), reason:'Discrepancia media · tamaño prudente si decides jugarlo', sizeColor:'var(--win)' });
+    if (units === 0) {
+      cards.push({ type:'Moneyline', cls:'no-edge', pick: short,
+        detail: valueLine, size:'—', reason:`Sin valor: a esta cuota necesitas acertar ${needPct.toFixed(1)}% y el modelo da ${(pickProb*100).toFixed(1)}%`, sizeColor:'var(--outline)' });
+    } else if (units === 0.75) {
+      cards.push({ type:'Moneyline', cls:'apostable', pick: short,
+        detail: valueLine, size: sizeText(0.75), reason:'Valor chico · tamaño prudente si decides jugarlo', sizeColor:'var(--win)' });
+    } else if (units === 1.5) {
+      cards.push({ type:'Moneyline', cls:'apostable', pick: short,
+        detail: valueLine, size: sizeText(1.5), reason:'Valor medio · tamaño prudente si decides jugarlo', sizeColor:'var(--win)' });
     } else {
-      cards.push({ type:'Moneyline', cls:'excluded', pick: pickName.split(' ').pop(),
-        detail: valueLine, size: sizeText(2.5), reason:'⚠ Brecha muy grande — suele indicar info que le falta al modelo, no una ganga. Míralo con cuidado', sizeColor:'#e67e22' });
+      cards.push({ type:'Moneyline', cls:'excluded', pick: short,
+        detail: valueLine, size: sizeText(2.5), reason:'⚠ Valor muy alto — suele indicar info que le falta al modelo, no una ganga. Míralo con cuidado', sizeColor:'#e67e22' });
     }
   } else {
     cards.push({ type:'Moneyline', cls:'no-edge', pick:'—',
